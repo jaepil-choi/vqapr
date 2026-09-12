@@ -110,6 +110,23 @@ each decision's evidence. A worker of a batch starts with one BLAS thread (`OPEN
 and its siblings, unless you set them), because a BLAS that may use every core reserves memory for
 each one. Measure one run alone and size `--jobs` by that, not by core count.
 
+### A long research journey
+
+When several strategies share expensive factors, keep this order:
+
+1. `vqapr check <datamodel-run>` and `vqapr run <datamodel-run>` to materialize them once.
+2. Confirm the derived dataset with `vqapr list datasets` and `vqapr show datamodel <record>`.
+3. Check every consumer run, then run one strategy alone to observe its elapsed time and peak
+   memory.
+4. Run the consumer ids sequentially for a comparable baseline.
+5. Only then use `--jobs N`, choosing `N` from available memory rather than CPU count alone.
+6. Inspect and export the completed records; compare result contents as well as elapsed time when
+   evaluating an optimization.
+
+Do not move shared work back into each strategy merely to avoid the producer step. That repeats
+the same joins and calculations in every process and can make both sequential and parallel runs
+slower.
+
 A YAML path handed to `run` or `check` is refused by name — both take a registered id.
 
 ### 6. Confirm

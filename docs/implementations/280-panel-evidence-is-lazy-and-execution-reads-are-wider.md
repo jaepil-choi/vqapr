@@ -1,4 +1,4 @@
-# 268 — Panel evidence is lazy and execution reads are wider
+# 280 — Panel evidence is lazy and execution reads are wider
 
 | | |
 |---|---|
@@ -101,3 +101,10 @@ KOSPI200 이력 전체 309종목으로 다시 확인했다. 기준판의 DataMod
 DataModel 419,686행과 다섯 전략의 account/fill/weight 15개 표는 기준판과 파일 SHA-256까지
 같았다. 최종 실제 자료 보고서는
 `experiments/exp_252_actual_dw_full_user_path/outputs/PERFORMANCE-REPORT.md`에 있다.
+
+## 현재 develop 이식
+
+- 측정값은 조건을 고정한 `v0.15.0` 시험 결과로 유지함
+- 변경 코드는 `develop`의 `v0.16.0` 구조에 병합함
+- 실행 자료 경로 변경을 따라 `src/vqapr/data/execution_table.py`에 적용함
+- Panel 계약 집중 검사와 현재 전체 검사를 다시 실행해 호환성을 확인함

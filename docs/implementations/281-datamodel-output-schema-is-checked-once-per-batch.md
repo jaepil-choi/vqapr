@@ -1,4 +1,4 @@
-# 269 — DataModel output schema is checked once per batch
+# 281 — DataModel output schema is checked once per batch
 
 | | |
 |---|---|
@@ -38,7 +38,7 @@
 ## 검증
 
 - 같은 키 객체가 세 행에 반복될 때 문자 검사가 한 번인지 집중 검사함
-- 기존 `tests/domain/test_shapes.py`의 모양·거절 계약을 함께 실행함
+- 현재 `tests/data/test_shapes.py`의 모양·거절 계약을 함께 실행함
 - 실제 DW 기준판과 후보의 DataModel 전체 결과 및 전략 결과를 전수 비교함
 - 실제 DW DataModel 반복 중앙값은 15.936초에서 9.722초로 39.0% 줄었음
 - 프로파일의 출력 정규화·검증 누적 시간은 15.619초에서 3.429초로 줄었음
@@ -54,3 +54,9 @@
 - 값 하나하나의 유효성 검사는 여전히 Python에서 수행함
 - 10분 이상 사용자 전략을 재현하지 못했으므로 장시간 사용자 코드에서의 전체 비율은 알 수 없음
 - 열 단위 DataModel 출력은 별도 공개 API 설계와 호환성 검토가 필요함
+
+## 현재 develop 이식
+
+- 측정값은 조건을 고정한 `v0.15.0` 시험 결과로 유지함
+- 변경 코드는 `v0.16.0`에서 행 계약이 이동한 `src/vqapr/domain/rows.py`에 적용함
+- 공개 작성 표면은 현재 `vqapr.public`을 사용하며 집중 검사를 다시 통과함

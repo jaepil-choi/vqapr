@@ -90,6 +90,11 @@ What the read verbs hand back, and **the lookback member that is silently wrong 
 cross-sectional question**, are in [references/reading-inputs.md](references/reading-inputs.md).
 Read it before declaring a lookback: the wrong one passes every check.
 
+If several strategies need the same expensive joins, rolling values, ranks, or predictions, do
+not repeat that preparation in each strategy. Materialize it once with a DataModel, then declare
+the resulting dataset as an input here. Keep only portfolio-specific scoring and capital
+allocation in the strategy.
+
 ## The four things to get right
 
 **Memory.** `self.memory` is strict JSON, restored before every `decide()` and snapshotted after.
