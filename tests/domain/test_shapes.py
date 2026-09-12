@@ -13,7 +13,7 @@ from decimal import Decimal
 import pytest
 
 from vqapr import authoring, public
-from vqapr.domain.shapes import CrossSection, Grain, Observation, Panel, Series
+from vqapr.domain.shapes import CrossSection, Grain, Observation, Panel, Series, normalize_rows
 from vqapr.domain.shapes import Grain as ShapesGrain
 
 AT = datetime(2024, 3, 5, 15, 30, tzinfo=UTC)
@@ -83,3 +83,23 @@ def test_the_public_door_names_the_shapes_an_author_receives() -> None:
     assert public.CrossSection is CrossSection
     assert public.Series is Series
     assert isinstance(Panel, type)
+
+
+def test_repeated_output_field_names_are_validated_once_per_row_batch() -> None:
+    """A large DataModel batch repeats a tiny schema; its names need one character scan."""
+
+    class CountingKey(str):
+        scans = 0
+
+        def __iter__(self):
+            type(self).scans += 1
+            return super().__iter__()
+
+    field = CountingKey("score")
+
+    assert normalize_rows(({field: 1.0}, {field: 2.0}, {field: 3.0})) == (
+        {"score": 1.0},
+        {"score": 2.0},
+        {"score": 3.0},
+    )
+    assert CountingKey.scans == 1

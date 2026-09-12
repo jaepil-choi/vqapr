@@ -18,7 +18,7 @@ from vqapr.data.lookback import (
     Lookback,
     RowsLookback,
 )
-from vqapr.data.panel import Panel, panel_identity
+from vqapr.data.panel import Panel, PanelWindow, panel_identity
 from vqapr.data.requirements import DataRequirement
 from vqapr.data.resolution import resolve_field
 from vqapr.data.sources import SourceSpec, physical_digest
@@ -46,6 +46,52 @@ class AccessRecord:
     lower_bound: datetime | None
     actual_rows: Mapping[str, Mapping[str, int]]
     max_available_at: datetime | None
+
+
+class _PanelActualRows(Mapping[str, Mapping[str, int]]):
+    """Per-name counts backed by a panel window, materialized only when a reader asks.
+
+    A strategy normally needs the values and the point-in-time source references, not the count
+    for every name. Building 1,800 nested dictionaries for every field read retained millions of
+    objects until a long run finished. This mapping keeps the public `actual_rows` contract while
+    doing that work only for the rare diagnostic reader that inspects it.
+    """
+
+    __slots__ = ("_field", "_window")
+
+    def __init__(self, window: PanelWindow, field: str) -> None:
+        self._window = window
+        self._field = field
+
+    def __getitem__(self, instrument: str) -> Mapping[str, int]:
+        position = self._window.panel.position(instrument)
+        valid = self._window.panel.validity(self._field)
+        count = int(valid[self._window.start : self._window.stop, position].sum())
+        return {self._field: count}
+
+    def __iter__(self):
+        return iter(self._window.panel.names)
+
+    def __len__(self) -> int:
+        return len(self._window.panel.names)
+
+    def _as_dict(self) -> dict[str, dict[str, int]]:
+        valid = self._window.panel.validity(self._field)[
+            self._window.start : self._window.stop
+        ]
+        totals = valid.sum(axis=0).tolist()
+        return {
+            name: {self._field: int(count)}
+            for name, count in zip(self._window.panel.names, totals, strict=True)
+        }
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Mapping):
+            return False
+        return self._as_dict() == dict(other)
+
+    def __repr__(self) -> str:
+        return repr(self._as_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +172,7 @@ class DuckDbObservationStore:
         "__digests",
         "__horizon",
         "__opened",
+        "__panel_shapes",
         "__panels",
         "__requirements",
         "__session",
@@ -165,6 +212,10 @@ class DuckDbObservationStore:
         # which is the life of one run. Two strategies in one run reading one dataset see one
         # object. Keyed by content identity, so the same bytes build the same key.
         self.__panels: dict[str, Panel] = {}
+        # The content identity is expensive by design: it hashes every instrument name. Most
+        # reads ask for another slice of a panel already held by this run, so find that object by
+        # its small declaration shape first and derive the content identity only on a cache miss.
+        self.__panel_shapes: dict[tuple[str, tuple[str, ...]], list[Panel]] = {}
 
     def _grid_bound(
         self, source: SourceSpec, available_at_field: str, evaluation_time: datetime, rows: int
@@ -232,9 +283,25 @@ class DuckDbObservationStore:
         source_digest = self._digest(source.path)
         names = tuple(instruments) if keyed_by_instrument else ()
         bounds = self._scan_bounds(source, registration, declared, evaluation_time)
-        identity = panel_identity(source_digest, str(first.dataset_id), fields, names, bounds)
-        panel = self.__panels.get(identity)
-        cube = self._cube(str(first.dataset_id))
+        dataset_id = str(first.dataset_id)
+        expected_bounds = bounds if self.__horizon is not None else None
+        shape = (dataset_id, fields)
+        panel = next(
+            (
+                candidate
+                for candidate in self.__panel_shapes.get(shape, ())
+                if candidate.source_digest == source_digest
+                and candidate.instruments == names
+                and candidate.bounds == expected_bounds
+            ),
+            None,
+        )
+        identity = ""
+        cube = None
+        if panel is None:
+            identity = panel_identity(source_digest, dataset_id, fields, names, bounds)
+            panel = self.__panels.get(identity)
+            cube = self._cube(dataset_id)
         if (
             panel is None
             and cube is not None
@@ -274,6 +341,8 @@ class DuckDbObservationStore:
                 source_digest=source_digest,
                 bounds=bounds if self.__horizon is not None else None,
             )
+        if not any(candidate is panel for candidate in self.__panel_shapes.get(shape, ())):
+            self.__panel_shapes.setdefault(shape, []).append(panel)
         # `lookback_fits_grain` already refused the one kind a panel cannot take; this only lets
         # the window's signature see it.
         lookback = first.lookback
@@ -290,9 +359,7 @@ class DuckDbObservationStore:
             evaluation_time=evaluation_time,
             instruments=names,
             lower_bound=window.lower_bound,
-            actual_rows={name: {field: count} for name, count in window.counts().items()}
-            if keyed_by_instrument
-            else {},
+            actual_rows=_PanelActualRows(window, field) if keyed_by_instrument else {},
             max_available_at=window.max_available_at,
         )
         return window, access
