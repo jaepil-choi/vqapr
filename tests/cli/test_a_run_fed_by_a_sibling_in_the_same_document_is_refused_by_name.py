@@ -16,12 +16,12 @@ import pytest
 
 from vqapr.cli.main import main
 
-_MODEL = """from vqapr import authoring as va
+_MODEL = """from vqapr import public as vq
 
-class Ratio(va.DataModel):
+class Ratio(vq.DataModel):
     def inputs(self):
-        return {"prices": va.DatasetInput(
-            dataset_id='price_daily', fields=('close',), lookback=va.RowsLookback(rows=1)
+        return {"prices": vq.DatasetInput(
+            dataset_id='price_daily', fields=('close',), lookback=vq.RowsLookback(rows=1)
         )}
 
     def compute(self, context):
@@ -76,7 +76,7 @@ runs:
     start: "2024-03-05T00:00:00+09:00"
     end: "2024-03-07T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       ratio:
         dataset_id: ratio_values
@@ -86,7 +86,7 @@ runs:
     start: "2024-03-05T00:00:00+09:00"
     end: "2024-03-07T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: ratio_values}}
+    schedule: {{every: 1d, at: "16:00", days_from: ratio_values}}
     datamodels:
       ratio:
         dataset_id: ratio_again
@@ -105,6 +105,6 @@ runs:
     assert "run 'upstream' in this same document will write" in failure["observed"]
     assert "split the document" in failure["fix"]
     assert "register and run 'upstream' first" in failure["fix"]
-    assert failure["source"]["key_path"] == "runs.downstream.agenda.days_from"
+    assert failure["source"]["key_path"] == "runs.downstream.schedule.days_from"
     # Nothing was registered: the document is one transaction.
     assert not (tmp_path / ".vqapr" / "workspace.yaml").exists()

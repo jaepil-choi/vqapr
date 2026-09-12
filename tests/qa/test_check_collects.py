@@ -30,18 +30,24 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from vqapr.account.account import AccountMode
 from vqapr.cli.check import check
-from vqapr.data.datasets import DatasetRegistration
-from vqapr.data.sources import SourceSpec
-from vqapr.data.validation import verify_source
-from vqapr.domain.account_state import AccountSnapshot
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.extension.fingerprint import fingerprint_component
-from vqapr.flow.declaration import judgments as judgments_module
-from vqapr.project.run import RunAgenda, RunDefinition, RunExecution, RunFill, StrategyEntry
-from vqapr.project.store import Workspace
+from vqapr.component.fingerprint import fingerprint_component
+from vqapr.component.reference import ComponentRef
+from vqapr.data.dataset import DatasetRegistration
+from vqapr.data.source import SourceSpec
+from vqapr.data.verification import verify_source
+from vqapr.domain.account import AccountMode, AccountSnapshot
+from vqapr.domain.wiring import Role
 from vqapr.public import register_instruments
+from vqapr.run.preflight import checks as judgments_module
+from vqapr.workspace.registry import Workspace
+from vqapr.workspace.run_definition import (
+    RunSchedule,
+    RunDefinition,
+    RunExecution,
+    RunFill,
+    StrategyEntry,
+)
 
 _SPAN = (datetime(2024, 1, 2, tzinfo=UTC), datetime(2025, 1, 2, tzinfo=UTC))
 
@@ -64,7 +70,7 @@ def workspace(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _register_component(root: Path, component_id: str, kind: ComponentKind, source: Path) -> None:
+def _register_component(root: Path, component_id: str, kind: Role, source: Path) -> None:
     object_name = source.read_text(encoding="utf-8").split("class ", 1)[1].split("(", 1)[0]
     with Workspace.transaction(root) as t:
         t.register_component(
@@ -129,19 +135,19 @@ def _run_ready(root: Path, *, short: bool, reads: str = "prices") -> str:
         "        return Hold(reason='qa probe')\n",
         encoding="utf-8",
     )
-    _register_component(root, "my-strat", ComponentKind.STRATEGY_MODEL, source)
+    _register_component(root, "my-strat", Role.STRATEGY_MODEL, source)
     venue = root / "venue.py"
     venue.write_text(
         "from decimal import Decimal\n"
-        "from vqapr.exchange.venue import AcademicExchange, TradeRule\n"
-        "from vqapr.exchange.listings import ListingAccess\n"
+        "from vqapr.public import AcademicExchange, TradeRule\n"
+        "from vqapr.public import ListingAccess\n"
         "class Venue(AcademicExchange):\n"
         "    def __init__(self):\n"
         "        super().__init__({'A': TradeRule('A', Decimal('1'), Decimal('1'), False,"
         " ListingAccess.SIGNED)})\n",
         encoding="utf-8",
     )
-    _register_component(root, "venue", ComponentKind.EXCHANGE, venue)
+    _register_component(root, "venue", Role.EXCHANGE, venue)
     # Declared, so preflight reaches the refusal this fixture is built for rather than stopping
     # at `roster.absent` -- which is a judgment code, and this test counts the non-judgment one.
     register_instruments(root, {"A": "stock"})
@@ -151,7 +157,7 @@ def _run_ready(root: Path, *, short: bool, reads: str = "prices") -> str:
                 run_id="probe",
                 strategy=StrategyEntry("my-strat"),
                 timezone="Asia/Seoul",
-                agenda=RunAgenda(every="1d", at=(time(15, 30),)),
+                schedule=RunSchedule(every="1d", at=(time(15, 30),)),
                 instruments=("A",),
                 exchange="venue",
                 execution=RunExecution(

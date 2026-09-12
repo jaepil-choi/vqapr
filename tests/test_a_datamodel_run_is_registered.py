@@ -17,21 +17,21 @@ from zoneinfo import ZoneInfo
 import pytest
 import yaml
 
-from vqapr.account.account import AccountMode
-from vqapr.data.datasets import DatasetRegistration
-from vqapr.data.sources import SourceSpec
-from vqapr.project.registration import apply
-from vqapr.domain.account_state import AccountSnapshot
+from vqapr.component.reference import ComponentRef
+from vqapr.data.dataset import DatasetRegistration
+from vqapr.data.source import SourceSpec
+from vqapr.domain.account import AccountMode, AccountSnapshot
 from vqapr.domain.errors import VqaprError
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.project.run import (
+from vqapr.domain.wiring import Role
+from vqapr.workspace.registration import apply
+from vqapr.workspace.registry import Workspace
+from vqapr.workspace.run_definition import (
     DataModelEntry,
     RunDefinition,
     RunExecution,
     RunFill,
     StrategyEntry,
 )
-from vqapr.project.store import Workspace
 
 KST = ZoneInfo("Asia/Seoul")
 SESSIONS = (date(2024, 3, 6), date(2024, 3, 7))
@@ -41,7 +41,7 @@ _RUN_READY: dict[str, object] = {
     "start": "2024-03-06T00:00:00+09:00",
     "end": "2024-03-08T00:00:00+09:00",
     "timezone": "Asia/Seoul",
-    "agenda": {"every": "1d", "at": "16:00", "days_from": "prices"},
+    "schedule": {"every": "1d", "at": "16:00", "days_from": "prices"},
     "writes": "reversal_2d",
 }
 """A `runs.<id>` body with everything but its models, for each test to add one kind to."""
@@ -55,7 +55,7 @@ def _definition(**overrides: object) -> RunDefinition:
         "datamodel": ENTRY,
         "instruments": ("A", "B"),
         "timezone": "Asia/Seoul",
-        "agenda": {"every": "1d", "at": time(16, 0), "days_from": "prices"},
+        "schedule": {"every": "1d", "at": time(16, 0), "days_from": "prices"},
         "start": datetime(2024, 3, 6, tzinfo=KST),
         "end": datetime(2024, 3, 8, tzinfo=KST),
     }
@@ -83,8 +83,8 @@ def workspace(tmp_path: Path) -> Workspace:
             SourceSpec.of("prices-source", tmp_path / "prices"),
         )
     for name, kind in (
-        ("reversal", ComponentKind.DATA_MODEL),
-        ("ou-k0", ComponentKind.STRATEGY_MODEL),
+        ("reversal", Role.DATA_MODEL),
+        ("ou-k0", Role.STRATEGY_MODEL),
     ):
         with Workspace.transaction(space) as t:
             t.register_component(
@@ -235,7 +235,7 @@ def test_a_run_naming_a_datamodel_that_is_not_one_is_refused_by_name(
         (
             {
                 **_RUN_READY,
-                "agenda": {"every": "1d", "at": "16:00"},
+                "schedule": {"every": "1d", "at": "16:00"},
                 "strategies": {"ou-k0": None},
                 "execution": {
                     "dataset": "venue-daily",

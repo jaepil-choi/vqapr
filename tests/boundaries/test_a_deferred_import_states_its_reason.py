@@ -23,10 +23,15 @@ from __future__ import annotations
 import ast
 import pathlib
 
-CEILING = 9  # record `234`: `cli/list_.py` reads the roster through the one door, at the top
-"""Was 10 after record `191`. Record `234` (one validation door) replaced `cli/list_.py`'s deferred
+CEILING = 7  # record `277`: `cli/show.py` loads a component through the workspace's one door
+"""Was 9 after record `234`. Record `277` (the CLI reads through the surfaces) replaced
+`cli/show.py`'s function-local component loaders -- one per kind, two in `_model` and one in the
+compliance branch -- with one `workspace.registry.load_registered` imported beside the names it
+now takes from `vqapr.public`.
+
+Was 10 after record `191`. Record `234` (one validation door) replaced `cli/list_.py`'s deferred
 `build_roster`/`read_roster_table` pair with module-level imports of `data/validation.verify_roster`
-and `domain/instruments.build_roster`: `project/store.py` already imports the door at the top, so
+and `domain/instruments.build_roster`: `workspace/registry.py` already imports the door at the top, so
 there was no cycle to hide.
 
 Was 12 after record `186` (the lazy roster import in `exchange/listings.py` moved to the top).
@@ -62,10 +67,10 @@ ratchet was counting — `project.py` alone deferred nearly all of its own. Reco
 more out of `strategy_bridge`, which stopped importing `vqapr.public` at all once the Flow took
 over stamping the intent. Lowering the constant in the same commit is what this ratchet is for.
 
-Was 104 before that. Record `115` hoisted five function-local imports out of `flow/roster.py` and
+Was 104 before that. Record `115` hoisted five function-local imports out of `run/roster.py` and
 `flow/records.py` that had been deferred inside `vqapr.public`, where the facade sits above
 everything; that justification did not travel when the code moved to `flow/`, and
-`flow/orchestration.py` already imports `vqapr.workspace` (now `vqapr.project.store`) eagerly.
+`run/assemble.py` already imports `vqapr.workspace` (now `vqapr.workspace.registry`) eagerly.
 
 This number may go DOWN freely; it may not go up.
 

@@ -16,8 +16,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from tests.cli.test_krx_cost_journey import ETF, STOCK, _STRATEGY, _cli, _declaration, _parquets
-from vqapr.domain.instruments import export_roster
+from tests.cli.test_krx_cost_journey import _STRATEGY, ETF, STOCK, _cli, _declaration, _parquets
+from vqapr.domain.instrument import export_roster
 from vqapr.record import read_strategy_record, read_table, strategy_refs
 
 _ZONE = ZoneInfo("Asia/Seoul")
@@ -38,7 +38,7 @@ def _run(run_id: str, exchange: str) -> dict[str, object]:
         "writes": f"{run_id}-weights",
         "strategy": {"component": "rotate"},
         "timezone": "Asia/Seoul",
-        "agenda": {"every": "1d", "at": "04:00"},
+        "schedule": {"every": "1d", "at": "04:00"},
         "exchange": exchange,
         "execution": {"dataset": "venue-daily", "trade_price": "close", "fill": {"at": "15:30"}},
         "start": datetime(2024, 3, 5, 0, tzinfo=_ZONE).isoformat(),

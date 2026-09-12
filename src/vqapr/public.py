@@ -8,46 +8,43 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vqapr.account.account import AccountMode
-from vqapr.analysis.performance import drawdown, nav_series, returns
-from vqapr.analysis.signal import (
-    decay,
-    hit_rate,
-    information_coefficient,
-    rank_information_coefficient,
+from vqapr.component.account_view import EconomicAccountView
+from vqapr.component.base import Call, Component, Part, Tool
+from vqapr.component.compliance.base import Compliance, ComplianceCall, ComplianceFinding
+from vqapr.component.compliance.report import ComplianceReport
+from vqapr.component.compliance.shipped import SHIPPED_COMPLIANCE, shipped_compliance_path
+from vqapr.component.conformance import conformance
+from vqapr.component.datamodel import DataCall, DataModel
+from vqapr.component.exchange.academic import AcademicExchange
+from vqapr.component.exchange.base import ExecutionCall
+from vqapr.component.exchange.krx import (
+    KrxExchange,
+    KrxSettings,
+    KrxTradeRule,
+    krx_listings,
+    krx_rules,
 )
-from vqapr.authoring import (
-    Compliance,
-    ComplianceCall,
-    ComplianceFinding,
-    Component,
-    DataModel,
-    DatasetInput,
-    Hold,
-    Part,
-    Rebalance,
-    StrategyModel,
-    Tool,
-)
-from vqapr.authoring.context import DataModelContext, StrategyModelContext
-from vqapr.authoring.records import TableSpec
-from vqapr.compliance.builtin import SHIPPED_COMPLIANCE, shipped_compliance_path
-from vqapr.compliance.evaluation import ComplianceReport
-from vqapr.data.datasets import DatasetRegistration, ExecutionRole
+from vqapr.component.reads import DatasetInput, requirements_for
+from vqapr.component.reference import ComponentRef
+from vqapr.component.strategy.base import StrategyCall, StrategyModel
+from vqapr.component.strategy.decision import Hold, Rebalance
+from vqapr.component.strategy.history import AccountHistory, AccountHistoryInput
+from vqapr.component.strategy.recorder import TableSpec
+from vqapr.data.dataset import DatasetRegistration, ExecutionRole, Grain
+from vqapr.data.execution_table import ExecutionTable, ExecutionTableSpec
 from vqapr.data.lookback import CalendarLookback, InstantsLookback, RowsLookback
-from vqapr.data.panel import PanelWindow
-from vqapr.data.requirements import DataRequirement
-from vqapr.data.sources import SourceSpec
+from vqapr.data.observation import Observation
+from vqapr.data.panel import CrossSection, PanelWindow, Series
+from vqapr.data.requirement import DataRequirement
+from vqapr.data.source import SourceSpec
 from vqapr.data.store import ObservationBatch
-from vqapr.data.windows import ModelWindow
-from vqapr.domain.account_state import AccountSnapshot
-from vqapr.domain.agendas import (
-    OperationOccurrence,
-)
-from vqapr.domain.costs import FillCost, SideCost
+from vqapr.data.window import ModelWindow
+from vqapr.domain.account import AccountMode, AccountSnapshot, Mark, MarkBatch
+from vqapr.domain.cost import FillCost, SideCost
 from vqapr.domain.errors import Stage, Status, VqaprError
-from vqapr.domain.fills import ZeroDealtReason
-from vqapr.domain.instruments import (
+from vqapr.domain.fill import ExactExecutionTarget, FillRule, ZeroDealtReason
+from vqapr.domain.instants import LocalInstantDeclaration, declare_local_instant
+from vqapr.domain.instrument import (
     EtfInstrument,
     FactorInstrument,
     IndexInstrument,
@@ -60,50 +57,24 @@ from vqapr.domain.instruments import (
     instrument,
     instruments,
 )
-from vqapr.domain.shapes import CrossSection, Grain, Series
-from vqapr.domain.values import (
-    LocalInstantDeclaration,
-    Mark,
-    MarkBatch,
-    Side,
-    declare_local_instant,
+from vqapr.domain.intent import (
+    Budget,
+    EconomicPortfolioIntent,
+    IntentSourceRef,
+    PortfolioDirection,
+    PortfolioTarget,
 )
-from vqapr.exchange.conventions import ExactExecutionTarget, FillRule
-from vqapr.exchange.execution_table import (
-    ExecutionTable,
-    ExecutionTableSpec,
-)
-from vqapr.exchange.listings import (
+from vqapr.domain.listing import (
     ExchangeRulesView,
     ExecutionFieldRequirement,
     ListingAccess,
+    Side,
     TradeRule,
     TradeTerms,
     trade_rules_by_kind,
 )
-from vqapr.exchange.venue import AcademicExchange, ExecutionCall
-from vqapr.exchange.venues.krx import (
-    KrxExchange,
-    KrxSettings,
-    KrxTradeRule,
-    krx_listings,
-    krx_rules,
-)
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.extension.conformance import conformance
-from vqapr.flow.declaration.frozen import FrozenAgenda, FrozenDataModel, FrozenRun, FrozenStrategy
-from vqapr.flow.engine.artifacts import SimulationFailure
-
-# Orchestration, evidence and roster reading moved to their owning layers by record `111`.
-# Re-exported unchanged so every caller and every emitted scaffold keeps working. The `as` form is
-# deliberate: it marks these as intentional re-exports, which is both what they are and what stops
-# a lint autofix from deleting them as unused.
-from vqapr.flow.freeze import contract_report as contract_report
-from vqapr.flow.freeze import freeze_strategy_record as freeze_strategy_record
-from vqapr.flow.orchestration import RunResult, StrategyOutcome, preflight_run, run
-from vqapr.flow.roster import registered_roster as registered_roster
-from vqapr.flow.roster import roster_report as roster_report
-from vqapr.flow.run.loop import DataModelResult, SimulationResult, callback_evidence
+from vqapr.domain.schedule import ScheduledEvent
+from vqapr.domain.wiring import Role
 from vqapr.portfolio.allocation import (
     AllocationInvariants,
     AllocationSign,
@@ -111,19 +82,55 @@ from vqapr.portfolio.allocation import (
     validate_allocation,
 )
 from vqapr.portfolio.bounds import intersect, no_short, single_name_cap
-from vqapr.portfolio.budgets import Budget, PortfolioDirection
-from vqapr.portfolio.diagnostics import TickerNetting, net_members
-from vqapr.portfolio.intents import EconomicPortfolioIntent, IntentSourceRef, PortfolioTarget
+from vqapr.portfolio.netting import TickerNetting, net_members
 from vqapr.portfolio.optimize import QUANTUM, OptimizeRefusal, OptimizeResult, optimize
-from vqapr.portfolio.weighting import (
+from vqapr.portfolio.weights import (
     WeightingRefusal,
     equal_weight,
     proportional_weight,
     rescale,
     signal_weight,
 )
+from vqapr.record import (
+    RunRecordMissing,
+    read_run_record,
+    read_strategy_record,
+    run_ids,
+    strategy_refs,
+)
+from vqapr.record import read_typed_table as read_strategy_table
+from vqapr.report.compose import run_report, strategy_report
+from vqapr.report.document import RunReport, StrategyReport
+from vqapr.report.metrics import drawdown, nav_series, returns
+from vqapr.run.assemble import RunResult, StrategyOutcome, freeze, run
+from vqapr.run.engine.calls import DataModelContext, StrategyModelContext
+from vqapr.run.engine.failure import SimulationFailure
+from vqapr.run.engine.loop import DataModelResult, SimulationResult, callback_evidence
+from vqapr.run.preflight.frozen import FrozenDataModel, FrozenRun, FrozenSchedule, FrozenStrategy
 
-# One door into the extension authorities: `vqapr.extension.*`, never `vqapr._internal.*`.
+# Orchestration, evidence and roster reading moved to their owning layers by record `111`.
+# Re-exported unchanged so every caller and every emitted scaffold keeps working. The `as` form is
+# deliberate: it marks these as intentional re-exports, which is both what they are and what stops
+# a lint autofix from deleting them as unused.
+from vqapr.run.recording import contract_report as contract_report
+from vqapr.run.recording import freeze_strategy_record as freeze_strategy_record
+from vqapr.run.roster import registered_roster as registered_roster
+from vqapr.run.roster import roster_report as roster_report
+from vqapr.signals.evaluation import (
+    decay,
+    hit_rate,
+    information_coefficient,
+    rank_information_coefficient,
+)
+from vqapr.signals.transform import (
+    NeutralizationRefusal,
+    fama_french_assign,
+    fama_french_cut_points,
+    neutralize,
+    rank,
+)
+
+# One door into the extension authorities: `vqapr.component.*`, never `vqapr._internal.*`.
 # (The four `register_*` below left `extension/` for `project/` at record `196` -- the write
 # half is the workspace's -- but they are still reached by one path, which is the rule here.)
 # The adapters below are transitional and scheduled for deletion, and that is the reason to use
@@ -134,42 +141,31 @@ from vqapr.portfolio.weighting import (
 # bypass without the reasoning (`docs/issues/archive/029`; the rule is in
 # `docs/design/agent-first-surface.md`, and `tests/boundaries/test_internal_has_one_door.py`
 # enforces it).
-from vqapr.project.registration import (
+from vqapr.workspace.registration import (
     register_compliance,
     register_data_model,
     register_exchange,
     register_instruments,
     register_strategy_model,
 )
-from vqapr.project.registration import register_dataset as register_dataset
-from vqapr.project.run import (
+from vqapr.workspace.registration import register_dataset as register_dataset
+from vqapr.workspace.registry import Workspace
+from vqapr.workspace.run_definition import (
     ComplianceSet,
     DataModelEntry,
-    RunAgenda,
     RunDefinition,
     RunExecution,
     RunFill,
+    RunSchedule,
     StrategyEntry,
 )
-from vqapr.project.store import Workspace
-from vqapr.record import (
-    RunRecordMissing,
-    read_run_record,
-    read_strategy_record,
-    run_ids,
-    strategy_refs,
-)
-from vqapr.record import read_typed_table as read_strategy_table
-from vqapr.report.document import RunReport, StrategyReport
-from vqapr.report.record import run_report, strategy_report
-from vqapr.transforms.cross_section import rank
-from vqapr.transforms.fama_french import fama_french_assign, fama_french_cut_points
-from vqapr.transforms.neutralize import NeutralizationRefusal, neutralize
 
 __all__ = (
     "QUANTUM",
     "SHIPPED_COMPLIANCE",
     "AcademicExchange",
+    "AccountHistory",
+    "AccountHistoryInput",
     "AccountMode",
     "AccountSnapshot",
     "AllocationInvariants",
@@ -177,15 +173,16 @@ __all__ = (
     "AllocationViolation",
     "Budget",
     "CalendarLookback",
+    "Call",
     "Compliance",
     "ComplianceCall",
     "ComplianceFinding",
     "ComplianceReport",
     "ComplianceSet",
     "Component",
-    "ComponentKind",
     "ComponentRef",
     "CrossSection",
+    "DataCall",
     "DataModel",
     "DataModelContext",
     "DataModelEntry",
@@ -193,6 +190,7 @@ __all__ = (
     "DataRequirement",
     "DatasetInput",
     "DatasetRegistration",
+    "EconomicAccountView",
     "EconomicPortfolioIntent",
     "EtfInstrument",
     "ExactExecutionTarget",
@@ -205,9 +203,9 @@ __all__ = (
     "FactorInstrument",
     "FillCost",
     "FillRule",
-    "FrozenAgenda",
     "FrozenDataModel",
     "FrozenRun",
+    "FrozenSchedule",
     "FrozenStrategy",
     "Grain",
     "Hold",
@@ -226,13 +224,13 @@ __all__ = (
     "MarkBatch",
     "ModelWindow",
     "NeutralizationRefusal",
+    "Observation",
     # The two halves of what a Model is handed. `ObservationBatch` is the return type of the one
     # method a DataModel author can call, and it was reachable only by opening installed source:
     # not in `__all__`, absent from the skill, and with no docstring naming its row keys or
     # ordering (`docs/issues/archive/031`). `ModelWindow` was importable but undeclared, while the
     # component scaffolds have always emitted `from vqapr.public import ... ModelWindow`.
     "ObservationBatch",
-    "OperationOccurrence",
     "OptimizeRefusal",
     "OptimizeResult",
     "PanelWindow",
@@ -240,14 +238,16 @@ __all__ = (
     "PortfolioDirection",
     "PortfolioTarget",
     "Rebalance",
+    "Role",
     "RowsLookback",
-    "RunAgenda",
     "RunDefinition",
     "RunExecution",
     "RunFill",
     "RunRecordMissing",
     "RunReport",
     "RunResult",
+    "RunSchedule",
+    "ScheduledEvent",
     "Series",
     "Side",
     "SideCost",
@@ -257,6 +257,7 @@ __all__ = (
     "Stage",
     "Status",
     "StockInstrument",
+    "StrategyCall",
     "StrategyEntry",
     "StrategyModel",
     "StrategyModelContext",
@@ -280,6 +281,7 @@ __all__ = (
     "export_roster",
     "fama_french_assign",
     "fama_french_cut_points",
+    "freeze",
     "hit_rate",
     "information_coefficient",
     "instrument",
@@ -292,7 +294,6 @@ __all__ = (
     "neutralize",
     "no_short",
     "optimize",
-    "preflight_run",
     "proportional_weight",
     "rank",
     "rank_information_coefficient",
@@ -306,6 +307,7 @@ __all__ = (
     "register_instruments",
     "register_run",
     "register_strategy_model",
+    "requirements_for",
     "rescale",
     "returns",
     "run",

@@ -2,10 +2,10 @@
 
 Two properties make this verb worth having, and both are about what it does NOT do.
 
-**It collects.** `preflight_run` raises on the first thing it finds, which is right for a
+**It collects.** `freeze` raises on the first thing it finds, which is right for a
 gate standing in front of a run: the first refusal is the reason the run must not start, and
 proving the rest costs time the caller did not ask for. But it makes preparing a declaration a
-sequence of round trips -- fix the dataset, re-run, learn the agenda is missing, re-run, learn the
+sequence of round trips -- fix the dataset, re-run, learn the schedule is missing, re-run, learn the
 account holds an unlisted name. `check` runs the same judgments and reports every INDEPENDENT one
 together, so an agent repairing its own setup receives the whole list.
 
@@ -34,16 +34,15 @@ from typing import Any
 
 from vqapr.cli.envelope import success
 from vqapr.cli.run import preflight_refusal, refuse_a_path
-from vqapr.domain.errors import Stage, VqaprError
-from vqapr.domain.inputs import InputError
-from vqapr.flow.declaration.judgments import JUDGMENT_CODES
-from vqapr.flow.declaration.verify import RunVerdict, verify_run
+from vqapr.domain.errors import InputError, Stage, VqaprError
 from vqapr.public import Workspace
+from vqapr.run.preflight.checks import JUDGMENT_CODES
+from vqapr.run.preflight.verdict import RunVerdict, preflight
 
 STAGE = Stage.CHECK
 
 SIMULATION_CODES = frozenset(JUDGMENT_CODES)
-"""The judgments this verb makes about a registered RUN -- `flow/declaration/judgments.py`'s list,
+"""The judgments this verb makes about a registered RUN -- `run/preflight/checks.py`'s list,
 not a copy.
 
 This was a hand-written tuple of the codes the judges raise, and it drifted: a judge was added
@@ -62,7 +61,7 @@ The two named here (`cli/run.preflight_refusal`) carry a bare `TypeError`/`Value
 framework invariant, which has no structured body of its own and would otherwise surface as an
 `unhandled` failure.
 
-`judgment.blocked` (`flow/declaration/judgments.JUDGMENT_BLOCKED`) is deliberately NOT here. It is
+`judgment.blocked` (`run/preflight/checks.JUDGMENT_BLOCKED`) is deliberately NOT here. It is
 the entry for a judgment that could not answer; on the run path `RunVerdict.require_frozen` raises
 it, while this verb reads the same verdict and reports such an entry under `blocked`, never under
 `failures`.
@@ -107,7 +106,7 @@ def check(target: str | Path, project_root: Path) -> dict[str, Any]:
     workspace: Workspace | None = None
     definition: object | None = None
     # One reading of the declaration serves both the judgments phase and the preflight phase
-    # (`flow/declaration/verify.py`): the judgments' answers and the freeze's refusal come out
+    # (`run/preflight/verdict.py`): the judgments' answers and the freeze's refusal come out
     # of one call, made when the first of the two phases asks.
     verdict: RunVerdict | None = None
     phases = _PHASES
@@ -136,7 +135,7 @@ def check(target: str | Path, project_root: Path) -> dict[str, Any]:
                 # reported as passed.
                 assert definition is not None
                 if verdict is None:
-                    verdict = verify_run(workspace, definition)  # type: ignore[arg-type]
+                    verdict = preflight(workspace, definition)  # type: ignore[arg-type]
                 # A blocked judgment is a `Failure` (`judgment.blocked`, status 500/502 by its
                 # cause, `observed` naming the judge, the exception whole in `cause`), rendered
                 # through the one shape -- under `blocked`, not `failures`, because nothing was
@@ -151,7 +150,7 @@ def check(target: str | Path, project_root: Path) -> dict[str, Any]:
                 # the judgments read (`docs/issues/archive/070`).
                 assert workspace is not None and definition is not None
                 if verdict is None:
-                    verdict = verify_run(workspace, definition)  # type: ignore[arg-type]
+                    verdict = preflight(workspace, definition)  # type: ignore[arg-type]
                 if verdict.refusal is not None:
                     raise verdict.refusal
         except VqaprError as error:
@@ -162,7 +161,7 @@ def check(target: str | Path, project_root: Path) -> dict[str, Any]:
             refused = list(error.failures)
             if phase.name == "preflight":
                 # The freeze proves again what the judgments already answered, for callers that
-                # freeze without judging. Occurrences the judgments listed are not listed a second
+                # freeze without judging. Events the judgments listed are not listed a second
                 # time under the freeze's code (record `259`: 403 of them were, and the second
                 # listing's repair was wrong for 402).
                 listed = {tuple(entry["examples"]) for entry in failures if entry["examples"]}

@@ -27,12 +27,13 @@ import pytest
 # `InvocationRecorder` are the authoring contract's, and the failure envelope moved into `flow`
 # (already listed), so one name covers what two did.
 FORBIDDEN = (
-    "vqapr.account",
+    # `vqapr.account` was listed until record `268` folded the package into `domain/account.py`,
+    # where the mark values `report.metrics` reads live beside the Account authority, so the
+    # module can no longer separate them; the leaves still take no account as an argument.
     "vqapr.data",
-    "vqapr.authoring.records",
-    "vqapr.exchange",
-    "vqapr.flow",
-    "vqapr.authoring.context",
+    "vqapr.component.strategy.recorder",
+    "vqapr.component.exchange",
+    "vqapr.run",
     # `vqapr.runtime` was listed here until one-shape Step 7 (record 162) moved its agendas to
     # `domain/` (which a leaf may import) and its envelopes into `flow/loop` (already listed).
     "duckdb",
@@ -43,11 +44,9 @@ FORBIDDEN = (
 # import and the boundary suite would stay green. The alphas of the next milestone import all of
 # them, so the coverage has to precede the code that leans on it.
 LEAF_MODULES = (
-    "vqapr.transforms.cross_section",
-    "vqapr.transforms.fama_french",
-    "vqapr.transforms.neutralize",
-    "vqapr.analysis.signal",
-    "vqapr.analysis.performance",
+    "vqapr.signals.transform",
+    "vqapr.signals.evaluation",
+    "vqapr.report.metrics",
 )
 
 

@@ -17,12 +17,12 @@ import pytest
 
 from vqapr.cli.main import main
 
-_MODEL = """from vqapr import authoring as va
+_MODEL = """from vqapr import public as vq
 
-class Ratio(va.DataModel):
+class Ratio(vq.DataModel):
     def inputs(self):
-        return {"prices": va.DatasetInput(
-            dataset_id='price_daily', fields=('close',), lookback=va.RowsLookback(rows=2)
+        return {"prices": vq.DatasetInput(
+            dataset_id='price_daily', fields=('close',), lookback=vq.RowsLookback(rows=2)
         )}
 
     def compute(self, context):
@@ -59,7 +59,7 @@ def _run_block(run_id: str, dataset_id: str) -> str:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       ratio:
         dataset_id: {dataset_id}

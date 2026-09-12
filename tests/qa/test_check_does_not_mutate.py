@@ -21,18 +21,24 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from vqapr.account.account import AccountMode
 from vqapr.cli.check import check
-from vqapr.data.datasets import DatasetRegistration
-from vqapr.data.sources import SourceSpec
-from vqapr.domain.account_state import AccountSnapshot
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.extension.fingerprint import fingerprint_component
-from vqapr.project.run import RunAgenda, RunDefinition, RunExecution, RunFill, StrategyEntry
-from vqapr.domain.inputs import InputError
+from vqapr.component.fingerprint import fingerprint_component
+from vqapr.component.reference import ComponentRef
+from vqapr.data.dataset import DatasetRegistration
+from vqapr.data.source import SourceSpec
+from vqapr.domain.account import AccountMode, AccountSnapshot
+from vqapr.domain.errors import InputError
+from vqapr.domain.wiring import Role
 from vqapr.public import register_dataset as pub_register_dataset
 from vqapr.public import register_instruments
-from vqapr.project.store import WORKSPACE_DIRECTORY, Workspace
+from vqapr.workspace.registry import WORKSPACE_DIRECTORY, Workspace
+from vqapr.workspace.run_definition import (
+    RunSchedule,
+    RunDefinition,
+    RunExecution,
+    RunFill,
+    StrategyEntry,
+)
 
 _SPAN = (datetime(2024, 1, 2, tzinfo=UTC), datetime(2025, 1, 2, tzinfo=UTC))
 
@@ -100,11 +106,11 @@ def _run_ready_workspace(root: Path, marker: Path, *, evil_body: str) -> str:
         t.register_component(
             ComponentRef.of(
                 "evil",
-                ComponentKind.STRATEGY_MODEL,
+                Role.STRATEGY_MODEL,
                 source,
                 "Strategy",
                 fingerprint=fingerprint_component(
-                    source, kind=ComponentKind.STRATEGY_MODEL, object_name="Strategy"
+                    source, kind=Role.STRATEGY_MODEL, object_name="Strategy"
                 ),
             )
         )
@@ -112,8 +118,8 @@ def _run_ready_workspace(root: Path, marker: Path, *, evil_body: str) -> str:
     venue_source = root / "venue.py"
     venue_source.write_text(
         "from decimal import Decimal\n"
-        "from vqapr.exchange.venue import AcademicExchange, TradeRule\n"
-        "from vqapr.exchange.listings import ListingAccess\n"
+        "from vqapr.public import AcademicExchange, TradeRule\n"
+        "from vqapr.public import ListingAccess\n"
         "class Venue(AcademicExchange):\n"
         "    def __init__(self):\n"
         "        super().__init__({'A': TradeRule('A', Decimal('1'), Decimal('1'), False,\n"
@@ -124,11 +130,11 @@ def _run_ready_workspace(root: Path, marker: Path, *, evil_body: str) -> str:
         t.register_component(
             ComponentRef.of(
                 "venue",
-                ComponentKind.EXCHANGE,
+                Role.EXCHANGE,
                 venue_source,
                 "Venue",
                 fingerprint=fingerprint_component(
-                    venue_source, kind=ComponentKind.EXCHANGE, object_name="Venue"
+                    venue_source, kind=Role.EXCHANGE, object_name="Venue"
                 ),
             )
         )
@@ -165,14 +171,14 @@ def _run_ready_workspace(root: Path, marker: Path, *, evil_body: str) -> str:
     )
 
     # One session at 09:00 Seoul, decided before the 15:30 fill; the run declares it directly
-    # (record `148`), so nothing about the agenda is registered separately.
+    # (record `148`), so nothing about the schedule is registered separately.
     with Workspace.transaction(root) as t:
         t.register_run(
             RunDefinition(
                 run_id="probe",
                 strategy=StrategyEntry("evil"),
                 timezone="Asia/Seoul",
-                agenda=RunAgenda(every="1d", at=(time(9, 0),)),
+                schedule=RunSchedule(every="1d", at=(time(9, 0),)),
                 instruments=("A",),
                 exchange="venue",
                 execution=RunExecution(

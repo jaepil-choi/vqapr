@@ -9,9 +9,8 @@ from types import SimpleNamespace
 import duckdb
 import pytest
 
-import vqapr.flow.orchestration as orchestration
 import vqapr.public as public
-from vqapr.project.store import Workspace
+import vqapr.run.assemble as orchestration
 from vqapr.public import (
     QUANTUM,
     SHIPPED_COMPLIANCE,
@@ -29,7 +28,6 @@ from vqapr.public import (
     ComplianceReport,
     ComplianceSet,
     Component,
-    ComponentKind,
     ComponentRef,
     CrossSection,
     DataModel,
@@ -40,8 +38,8 @@ from vqapr.public import (
     EtfInstrument,
     ExecutionRole,
     FactorInstrument,
-    FrozenAgenda,
     FrozenRun,
+    FrozenSchedule,
     Hold,
     IndexInstrument,
     Instrument,
@@ -49,13 +47,14 @@ from vqapr.public import (
     IntentSourceRef,
     ListingAccess,
     LocalInstantDeclaration,
-    OperationOccurrence,
     OptimizeRefusal,
     OptimizeResult,
     PortfolioDirection,
     PortfolioTarget,
+    Role,
     RowsLookback,
     RunDefinition,
+    ScheduledEvent,
     Series,
     Side,
     SimulationFailure,
@@ -67,8 +66,8 @@ from vqapr.public import (
     TradeRule,
     VqaprError,
     callback_evidence,
+    freeze,
     optimize,
-    preflight_run,
     register_data_model,
     register_dataset,
     register_strategy_model,
@@ -76,6 +75,7 @@ from vqapr.public import (
     shipped_compliance_path,
     validate_allocation,
 )
+from vqapr.workspace.registry import Workspace
 
 
 def _registration(**overrides) -> DatasetRegistration:
@@ -103,7 +103,7 @@ def test_public_exports_are_fixed() -> None:
             CalendarLookback,
             CrossSection,
             Component,
-            ComponentKind,
+            Role,
             ComponentRef,
             Compliance,
             ComplianceCall,
@@ -114,7 +114,7 @@ def test_public_exports_are_fixed() -> None:
             DataModelContext,
             DataRequirement,
             EconomicPortfolioIntent,
-            FrozenAgenda,
+            FrozenSchedule,
             FrozenRun,
             Instrument,
             InstrumentKind,
@@ -126,7 +126,7 @@ def test_public_exports_are_fixed() -> None:
             AllocationSign,
             AllocationViolation,
             Hold,
-            OperationOccurrence,
+            ScheduledEvent,
             OptimizeRefusal,
             OptimizeResult,
             PortfolioDirection,
@@ -145,7 +145,7 @@ def test_public_exports_are_fixed() -> None:
             StrategyModelContext,
             callback_evidence,
             optimize,
-            preflight_run,
+            freeze,
             register_data_model,
             register_strategy_model,
             run,
@@ -159,6 +159,8 @@ def test_public_exports_are_fixed() -> None:
         "QUANTUM",
         "SHIPPED_COMPLIANCE",
         "AcademicExchange",
+        "AccountHistory",
+        "AccountHistoryInput",
         "AccountMode",
         "AccountSnapshot",
         "AllocationInvariants",
@@ -166,15 +168,16 @@ def test_public_exports_are_fixed() -> None:
         "AllocationViolation",
         "Budget",
         "CalendarLookback",
+        "Call",
         "Compliance",
         "ComplianceCall",
         "ComplianceFinding",
         "ComplianceReport",
         "ComplianceSet",
         "Component",
-        "ComponentKind",
         "ComponentRef",
         "CrossSection",
+        "DataCall",
         "DataModel",
         "DataModelContext",
         "DataModelEntry",
@@ -182,6 +185,7 @@ def test_public_exports_are_fixed() -> None:
         "DataRequirement",
         "DatasetInput",
         "DatasetRegistration",
+        "EconomicAccountView",
         "EconomicPortfolioIntent",
         "EtfInstrument",
         "ExactExecutionTarget",
@@ -194,9 +198,9 @@ def test_public_exports_are_fixed() -> None:
         "FactorInstrument",
         "FillCost",
         "FillRule",
-        "FrozenAgenda",
         "FrozenDataModel",
         "FrozenRun",
+        "FrozenSchedule",
         "FrozenStrategy",
         "Grain",
         "Hold",
@@ -215,8 +219,8 @@ def test_public_exports_are_fixed() -> None:
         "MarkBatch",
         "ModelWindow",
         "NeutralizationRefusal",
+        "Observation",
         "ObservationBatch",
-        "OperationOccurrence",
         "OptimizeRefusal",
         "OptimizeResult",
         "PanelWindow",
@@ -224,14 +228,16 @@ def test_public_exports_are_fixed() -> None:
         "PortfolioDirection",
         "PortfolioTarget",
         "Rebalance",
+        "Role",
         "RowsLookback",
-        "RunAgenda",
         "RunDefinition",
         "RunExecution",
         "RunFill",
         "RunRecordMissing",
         "RunReport",
         "RunResult",
+        "RunSchedule",
+        "ScheduledEvent",
         "Series",
         "Side",
         "SideCost",
@@ -241,6 +247,7 @@ def test_public_exports_are_fixed() -> None:
         "Stage",
         "Status",
         "StockInstrument",
+        "StrategyCall",
         "StrategyEntry",
         "StrategyModel",
         "StrategyModelContext",
@@ -264,6 +271,7 @@ def test_public_exports_are_fixed() -> None:
         "export_roster",
         "fama_french_assign",
         "fama_french_cut_points",
+        "freeze",
         "hit_rate",
         "information_coefficient",
         "instrument",
@@ -276,7 +284,6 @@ def test_public_exports_are_fixed() -> None:
         "neutralize",
         "no_short",
         "optimize",
-        "preflight_run",
         "proportional_weight",
         "rank",
         "rank_information_coefficient",
@@ -290,6 +297,7 @@ def test_public_exports_are_fixed() -> None:
         "register_instruments",
         "register_run",
         "register_strategy_model",
+        "requirements_for",
         "rescale",
         "returns",
         "run",
@@ -417,14 +425,14 @@ def test_public_run_uses_frozen_initial_model_memory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The strategy layer's frozen memory reaches the loaded strategy, detached (record `139`)."""
-    from vqapr.flow.declaration.frozen import FrozenStrategy
+    from vqapr.run.preflight.frozen import FrozenStrategy
 
     memory = {"carry": [1]}
     layer = object.__new__(FrozenStrategy)
     for name, value in {
         "config": SimpleNamespace(component=SimpleNamespace(component_id="s")),
         "compliance": SimpleNamespace(rules=()),
-        "agenda": SimpleNamespace(occurrences=()),
+        "schedule": SimpleNamespace(events=()),
         "requirements": (),
         "compliance_requirements": (),
         "initial_model_memory": memory,
@@ -480,10 +488,10 @@ def test_public_run_uses_frozen_initial_model_memory(
 
     monkeypatch.setattr(
         orchestration,
-        "preflight_run",
+        "freeze",
         lambda *_args: pytest.fail("run must not preflight a FrozenRun"),
     )
-    # `run` lives in `vqapr.flow.orchestration` since record `111`, so the loader it calls is
+    # `run` lives in `vqapr.run.assemble` since record `111`, so the loader it calls is
     # patched there. `vqapr.public.run` is the same function object, re-exported.
     monkeypatch.setattr(orchestration, "load_strategy_model", lambda *_a, **_k: strategy)
     monkeypatch.setattr(orchestration, "load_exchange", lambda *_args, **_kwargs: object())
@@ -522,8 +530,8 @@ def test_a_non_positive_execution_price_is_measured_without_creating_a_workspace
         )
     finally:
         con.close()
-    from vqapr.data.datasets import DatasetRegistration
-    from vqapr.data.validation import verify_source
+    from vqapr.data.dataset import DatasetRegistration
+    from vqapr.data.verification import verify_source
 
     registration = DatasetRegistration.of(
         "krx-daily",

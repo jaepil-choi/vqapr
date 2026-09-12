@@ -1,6 +1,6 @@
 """`run.complete` says what the orders did, not only that the simulation executed.
 
-`docs/issues/archive/039`. A market-neutral run returned `{"ok": true, "occurrences": 732,
+`docs/issues/archive/039`. A market-neutral run returned `{"ok": true, "events": 732,
 "account_version": 244}`. Its long side landed on 0.500 at every rebalance; its short side never
 did, and by December the book carried **+9.1% of NAV in unintended net long exposure** -- a strategy
 whose whole premise is neutrality running a material directional bet.
@@ -22,10 +22,10 @@ from __future__ import annotations
 import dataclasses
 from types import SimpleNamespace
 
-from vqapr.analysis.execution import fill_summary
-from vqapr.flow.run.context import FRAMEWORK_TABLES
-from vqapr.flow.engine.run_state import AcceptedRunState
-from vqapr.flow.run.loop import SimulationResult
+from vqapr.record.schema import FRAMEWORK_TABLES
+from vqapr.report.metrics import fill_summary
+from vqapr.run.engine.loop import SimulationResult
+from vqapr.run.engine.run_state import AcceptedRunState
 
 
 def _result(*tables: tuple[str, tuple[dict[str, object], ...]]) -> SimpleNamespace:
@@ -140,7 +140,7 @@ def test_the_envelope_reads_the_shape_the_real_result_has() -> None:
     """The bug this file's helper was written to stop repeating.
 
     The envelope's table readers used to read `result.tables`. `SimulationResult` has no such attribute -- it
-    has `occurrences` and `final_state` -- so the component-declared half of `docs/issues/archive/024`
+    has `events` and `final_state` -- so the component-declared half of `docs/issues/archive/024`
     reported nothing in production, while its unit test passed a `SimpleNamespace(tables=...)` and
     stayed green for a week. Both envelope fields now read one helper, and this pins the path that
     helper walks against the real types.

@@ -26,13 +26,13 @@ from vqapr.public import (
     AccountMode,
     AccountSnapshot,
     DatasetRegistration,
-    RunAgenda,
     RunDefinition,
     RunExecution,
     RunFill,
+    RunSchedule,
     SourceSpec,
     StrategyEntry,
-    preflight_run,
+    freeze,
     register_dataset,
     register_exchange,
     register_instruments,
@@ -45,7 +45,7 @@ sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parent
 OUTPUTS = ROOT / "outputs"
 PROJECT = OUTPUTS / "project"
-VERIFIED_AGAINST = "vqapr-0.15.0"
+VERIFIED_AGAINST = "vqapr-0.16.0"
 LAST_VERIFIED_AT = "2026-09-10"
 
 SESSIONS = (date(2024, 3, 5), date(2024, 3, 6), date(2024, 3, 7))
@@ -172,9 +172,9 @@ count is the table's density -- exactly what `UC-TIME-002` lets vary."""
 def _signature(result: Any) -> dict[str, Any]:
     """What a run is, reduced to values two runs can be compared on.
 
-    `SimulationResult` carries object identity - occurrence ids minted per run, trace objects -
+    `SimulationResult` carries object identity - event ids minted per run, trace objects -
     so comparing the results themselves would report a difference that means nothing. Two
-    halves (design §3): `outcome` is what the STRATEGY clock and the account say -- how the
+    halves (design §3): `outcome` is what the SCHEDULE clock and the account say -- how the
     account ended, how many decisions were made and settled -- and must not move with the
     execution table's density (`UC-TIME-002`); `market_clock` is how many instants the book was
     valued at, which IS the table's density and moves with it on purpose (record `206`).
@@ -184,7 +184,7 @@ def _signature(result: Any) -> dict[str, Any]:
     lifecycle: dict[str, int] = {}
     for entry in final_state.lifecycle_trace:
         lifecycle[entry.kind.value] = lifecycle.get(entry.kind.value, 0) + 1
-    decisions = sum(1 for trace in result.occurrences if type(trace).__name__ == "OccurrenceTrace")
+    decisions = sum(1 for trace in result.events if type(trace).__name__ == "EventTrace")
     return {
         "outcome": {
             "account_version": snapshot.version,
@@ -201,7 +201,7 @@ def _signature(result: Any) -> dict[str, Any]:
         },
         "market_clock": {
             "valuations": lifecycle.get("MARKED", 0),
-            "instants": len(result.occurrences) - decisions,
+            "instants": len(result.events) - decisions,
         },
     }
 
@@ -237,7 +237,7 @@ td,th{{padding:.4rem;border:1px solid #ddd}}
 <h1>Execution input registration: declare, register, run</h1>
 <p>Every VQAPR import in this entry point comes from <code>vqapr.public</code>, the surface
 the shipped CLI stands on. The authored strategy in <code>show001_models.py</code> implements
-<code>vqapr.authoring.StrategyModel</code> and returns only <code>Hold</code>/<code>Rebalance</code>
+<code>vqapr.public.StrategyModel</code> and returns only <code>Hold</code>/<code>Rebalance</code>
 - the loader adapts it and the framework stamps every identity fact (intent id, strategy id,
 source refs, account version) itself.</p>
 <h2>Execution input rows (10:00 rows are deliberately non-selected)</h2>{execution_rows}
@@ -289,7 +289,7 @@ def main() -> None:
         # non-empty. See README.
         strategy=StrategyEntry("showcase-strategy"),
         timezone=KST,
-        agenda=RunAgenda(every="1d", at=(time(4, 0),)),
+        schedule=RunSchedule(every="1d", at=(time(4, 0),)),
         exchange="showcase-exchange",
         execution=_fill("krx-daily"),
         start=datetime.fromisoformat(f"2024-03-05T00:00:00{OFFSET}"),
@@ -301,7 +301,7 @@ def main() -> None:
     )
 
     # --- One real run -------------------------------------------------------------------
-    dense_summary = _signature(run(PROJECT, preflight_run(PROJECT, definition)).result())
+    dense_summary = _signature(run(PROJECT, freeze(PROJECT, definition)).result())
 
     # --- Density invariance -------------------------------------------------------------
     # Same registered declaration, only the physical execution parquet's non-selected 10:00
@@ -318,7 +318,7 @@ def main() -> None:
         # The same run again, deliberately: its first pass published `show001-weights`, and a
         # run replaces its own output the way it replaces its own record (design §2).
         canonical_summary = _signature(
-            run(PROJECT, preflight_run(PROJECT, definition), replace_record=True).result()
+            run(PROJECT, freeze(PROJECT, definition), replace_record=True).result()
         )
     finally:
         execution_path.write_bytes(dense_bytes)

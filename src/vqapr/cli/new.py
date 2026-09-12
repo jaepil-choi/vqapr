@@ -14,10 +14,10 @@ Two modes:
 ## Every declaration kind a run needs has a template
 
 `register` understands four sections, and a run needs three of them: a dataset (the venue table a
-run fills against is a dataset with an `execution:` role), an exchange and the run itself. There
-is no agenda artifact to register (record `148`, then `204`): the run declares its own `agenda` --
-a trading-day filter and a within-day rule -- and its one model is called at every instant of it
-and decides for itself; the book is valued at every instant of the market clock, and the declared
+run fills against is a dataset with an `execution:` role), an exchange and the run itself. There is
+no schedule artifact to register (record `148`, then `204`): the run declares its own `schedule` --
+a trading-day filter and a within-day rule -- and its one model is called at every instant of it and
+decides for itself; the book is valued at every instant of the market clock, and the declared
 Compliance rules observe it right after.
 """
 
@@ -30,20 +30,18 @@ from typing import Any
 
 import yaml
 
-from vqapr.account.account import AccountMode
 from vqapr.agent.sample.materialize import RUN_ID as SAMPLE_RUN_ID
 from vqapr.agent.sample.materialize import materialize as materialize_sample
+from vqapr.agent.scaffold import class_name_for, lookback_declaration, render
 from vqapr.cli.envelope import success
-from vqapr.domain.inputs import INCOMPLETE, VALUE_INVALID, InputError, refuse_existing
-from vqapr.extension.component import ComponentKind
-from vqapr.extension.lookback import lookback_declaration
-from vqapr.extension.scaffold import _class_name, render
-from vqapr.project.store import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME, Workspace
+from vqapr.domain.errors import INCOMPLETE, VALUE_INVALID, InputError, refuse_existing
+from vqapr.public import AccountMode, Role
+from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME, Workspace
 
 _KINDS = {
-    "datamodel": ComponentKind.DATA_MODEL,
-    "strategy": ComponentKind.STRATEGY_MODEL,
-    "compliance": ComponentKind.COMPLIANCE,
+    "datamodel": Role.DATA_MODEL,
+    "strategy": Role.STRATEGY_MODEL,
+    "compliance": Role.COMPLIANCE,
 }
 
 _LOOKBACK_DEFAULT = 6
@@ -55,13 +53,13 @@ asked for rows" from "the user left the default alone and asked for calendar day
 """
 
 _DECLARATION_KIND = {
-    ComponentKind.DATA_MODEL: "datamodel",
-    ComponentKind.STRATEGY_MODEL: "strategy",
-    ComponentKind.COMPLIANCE: "compliance",
+    Role.DATA_MODEL: "datamodel",
+    Role.STRATEGY_MODEL: "strategy",
+    Role.COMPLIANCE: "compliance",
 }
 """The declaration spelling for each authored kind.
 
-Keyed by `ComponentKind` and read while emitting the companion `.yaml`, so a kind added to
+Keyed by `Role` and read while emitting the companion `.yaml`, so a kind added to
 `_KINDS` and forgotten here surfaces as a bare `KeyError` -- `stage: "unhandled"` -- which is the
 failure shape this slice exists to remove. The three tables are the same three kinds.
 """
@@ -139,8 +137,8 @@ again: adding or renaming a member updates the template in the same edit.
 _RUN_TEMPLATE = f"""\
 # Run declaration -- register with `vqapr register <this-file.yaml>`, then `vqapr run RUN_ID`
 #
-# A run is configuration (record 139): the universe, the period, the strategy clock it decides
-# on (`agenda`), the venue, the execution dataset, the initial account, and the one strategy it
+# A run is configuration (record 139): the universe, the period, the schedule clock it decides
+# on (`schedule`), the venue, the execution dataset, the initial account, and the one strategy it
 # runs. The clock is expanded over the trading days the execution dataset has rows for -- a
 # denser table adds fill instants, never decision days -- and the strategy is called at every
 # instant of it, deciding for itself whether to act. The book is valued at every instant of the
@@ -156,7 +154,7 @@ runs:
     start: "2024-01-02T00:00:00+09:00"  # timezone-aware ISO-8601 datetime, inclusive
     end: "2024-12-31T15:30:00+09:00"    # include the final callback's later execution target
     timezone: Asia/Seoul             # the zone every wall time below is expressed in
-    agenda:                          # the strategy clock: a day filter and a within-day rule
+    schedule:                          # the schedule clock: a day filter and a within-day rule
       every: 1d                      # 1d | 2d | 1w | 1M select trading days and pair with `at`;
       at: "15:29"                    #   1m | 5m | 1h select instants and pair with `from`/`to`
       # on: last                     # 1w | 1M only: the LAST trading day of each week or month
@@ -194,7 +192,7 @@ runs:
 def _emitted_class_name(source: str) -> str:
     """The class a template emitted, found by parsing rather than by splitting on `"class "`.
 
-    The string split this replaces took the first occurrence of `"class "` anywhere in the file,
+    The string split this replaces took the first event of `"class "` anywhere in the file,
     including inside a docstring: a template whose prose contained "subclass and" yielded an
     `object_name` of half a paragraph, which registered and then failed at import with an
     `AttributeError` naming that paragraph. `register.py` already parses its equivalent with `ast`
@@ -210,7 +208,7 @@ def _emitted_class_name(source: str) -> str:
 
 def _declaration(
     component_id: str,
-    kind: ComponentKind,
+    kind: Role,
     source: Path,
     object_name: str,
     *,
@@ -233,7 +231,7 @@ def _declaration(
             }
         }
     }
-    if kind is ComponentKind.DATA_MODEL and dataset_id:
+    if kind is Role.DATA_MODEL and dataset_id:
         document["runs"] = {
             f"{component_id}-run": {
                 "instruments": ["INSTRUMENT_A", "INSTRUMENT_B"],
@@ -242,7 +240,7 @@ def _declaration(
                 "timezone": "Asia/Seoul",
                 # A datamodel run has no execution table, so it names the dataset whose days
                 # are its trading days (design §3.3).
-                "agenda": {"every": "1d", "at": "16:00", "days_from": dataset_id},
+                "schedule": {"every": "1d", "at": "16:00", "days_from": dataset_id},
                 "writes": f"{component_id}-values",
                 "datamodel": {
                     "component": component_id,
@@ -373,7 +371,7 @@ def _component(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
     # it did: `vqapr new compliance '123-bad!'` emitted an unparseable file and then failed on
     # re-reading it, reporting a SyntaxError about the framework's own output.
     try:
-        _class_name(args.component_id)
+        class_name_for(args.component_id)
     except ValueError as unusable:
         raise InputError(
             VALUE_INVALID,
@@ -385,7 +383,7 @@ def _component(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
     # Compliance rule is about the book and reads nothing -- the shipped `NoShort` returns an
     # empty `requirements()`. Demanding `--dataset` from all three would make an author invent a
     # dataset to scaffold a rule that never opens one.
-    if kind is ComponentKind.COMPLIANCE:
+    if kind is Role.COMPLIANCE:
         source = render(kind, args.component_id, cap=str(getattr(args, "cap", "0.2")))
     else:
         if not args.dataset:
@@ -797,7 +795,7 @@ def _instruments_template(args: argparse.Namespace, project_root: Path) -> dict[
     # appear in the refusal text derived from the enum, and would be silently missing from the
     # emitted declaration -- landing an author in exactly the undeclared-table case this same
     # command's receipt reports after the fact.
-    from vqapr.domain.instruments import InstrumentKind
+    from vqapr.public import InstrumentKind
 
     for member in InstrumentKind:
         kind = str(member)

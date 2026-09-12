@@ -7,12 +7,13 @@ from pathlib import Path
 
 import pytest
 
+from vqapr.component.reference import ComponentRef
 from vqapr.data import scan
-from vqapr.data.datasets import DatasetRegistration
-from vqapr.data.sources import SourceSpec
+from vqapr.data.dataset import DatasetRegistration
+from vqapr.data.source import SourceSpec
 from vqapr.domain.errors import VqaprError
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.project.store import Workspace
+from vqapr.domain.wiring import Role
+from vqapr.workspace.registry import Workspace
 
 # A span these tests supply directly. Persistence requires one, because the span is measured
 # during validation and a stored registration missing it would force the next reader to re-read
@@ -341,7 +342,7 @@ def test_datamodel_component_round_trips_through_workspace(tmp_path: Path) -> No
     workspace = Workspace.create(tmp_path)
     expected = ComponentRef.of(
         "reversal",
-        ComponentKind.DATA_MODEL,
+        Role.DATA_MODEL,
         tmp_path / "reversal.py",
         "ReversalModel",
         config={"window": 20},
@@ -514,7 +515,7 @@ def test_a_registration_without_field_types_is_quarantined_not_a_deadlock(tmp_pa
     every read on it is refused by name until its author declares the types, and registering it
     again with them is the repair -- through the same `register` the refusal advertises.
     """
-    from vqapr.data.datasets import require_declared
+    from vqapr.data.dataset import require_declared
 
     workspace = Workspace.create(tmp_path)
     for name in ("alpha", "gamma"):
@@ -594,16 +595,16 @@ def test_persistence_refuses_a_registration_whose_span_was_never_measured(
 def test_a_workspace_reads_a_datasets_instants_and_hashes_its_file_once_per_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Record `238`: the judgments and the freeze both derive the run's agenda from the execution
+    """Record `238`: the judgments and the freeze both derive the run's schedule from the execution
     table's distinct instants, and both verify the file's digest. The sample project's `vqapr
-    run` scanned that column twice for the agenda and three times for the horizon, and a changed
+    run` scanned that column twice for the schedule and three times for the horizon, and a changed
     file was hashed once by the judgment that refused it and again by preflight
     (`experiments/exp_238`). A workspace object is one command's snapshot, so each fact is read
     once for its life -- including the digest of a file whose compare FAILS."""
     import duckdb
 
-    from vqapr.data.validation import verify_source
-    from vqapr.project import store as store_module
+    from vqapr.data.verification import verify_source
+    from vqapr.workspace import registry as store_module
 
     path = tmp_path / "prices.parquet"
     con = duckdb.connect()

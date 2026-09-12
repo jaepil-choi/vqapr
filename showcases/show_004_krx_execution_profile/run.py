@@ -52,14 +52,14 @@ from vqapr.public import (
     ComponentRef,
     DataModelEntry,
     DatasetRegistration,
-    RunAgenda,
     RunDefinition,
     RunExecution,
     RunFill,
+    RunSchedule,
     SourceSpec,
     StrategyEntry,
     export_roster,
-    preflight_run,
+    freeze,
     register_data_model,
     register_dataset,
     register_exchange,
@@ -74,7 +74,7 @@ ROOT = Path(__file__).resolve().parent
 MODELS = Path(models.__file__).resolve()
 """Resolved through the imported module, not by name.
 
-`MomentumLongOnly` is authored against `vqapr.authoring`, so the loader adapts it and the
+`MomentumLongOnly` is authored against `vqapr.public`, so the loader adapts it and the
 adapter re-imports the authored class by module name. Importing it here is what gives that
 name something to resolve to.
 """
@@ -84,14 +84,14 @@ PROJECT = OUTPUTS / "project"
 VENUE = "Asia/Seoul"
 OFFSET = "+09:00"
 INITIAL_CASH = Decimal("1000000000")
-VERIFIED_AGAINST = "vqapr-0.15.0"
+VERIFIED_AGAINST = "vqapr-0.16.0"
 LAST_VERIFIED_AT = "2026-09-10"
 
 KRX_COMMISSION_RATE = Decimal("0.0003")
-"""Brokerage commission charged on both sides -- matches vqapr.exchange.venues.krx."""
+"""Brokerage commission charged on both sides -- matches vqapr.component.exchange.krx."""
 
 KRX_SALE_TAX_RATE = Decimal("0.002")
-"""Securities transaction tax charged on sells only -- matches vqapr.exchange.venues.krx."""
+"""Securities transaction tax charged on sells only -- matches vqapr.component.exchange.krx."""
 
 SPEC = FixtureSpec(asof="20260331", start="20260401", end="20260529", universe_size=6)
 
@@ -134,7 +134,7 @@ def _definition(
         run_id=exchange.component_id,
         strategy=StrategyEntry(str(strategy_ref.component_id)),
         timezone=VENUE,
-        agenda=RunAgenda(every="1d", at=(time(8, 30),)),
+        schedule=RunSchedule(every="1d", at=(time(8, 30),)),
         exchange=exchange.component_id,
         execution=RunExecution(
             dataset="krx-daily",
@@ -384,12 +384,12 @@ def main() -> None:
         instruments=universe,
         datamodel=DataModelEntry("momentum-model", ("score", "eligible")),
         timezone=VENUE,
-        agenda=RunAgenda(every="1d", at=(time(16, 0),), days_from="price_daily"),
+        schedule=RunSchedule(every="1d", at=(time(16, 0),), days_from="price_daily"),
         start=datetime.fromisoformat(f"{score_days[0].isoformat()}T00:00:00{OFFSET}"),
         end=datetime.fromisoformat(f"{score_days[-1].isoformat()}T23:00:00{OFFSET}"),
         writes="momentum_score",
     )
-    run(PROJECT, preflight_run(PROJECT, score_definition), store_root=PROJECT / ".vqapr")
+    run(PROJECT, freeze(PROJECT, score_definition), store_root=PROJECT / ".vqapr")
 
     # The project declares what each id IS, once, before anything trades. KrxExchange resolves
     # what a fill COSTS from this roster rather than from the venue, which is why the KRX profile
@@ -423,7 +423,7 @@ def main() -> None:
             strategy_ref=strategy_ref,
             callback_days=callback_days,
         )
-        return _profile_outcome(run(PROJECT, preflight_run(PROJECT, definition)).result())
+        return _profile_outcome(run(PROJECT, freeze(PROJECT, definition)).result())
 
     academic = _outcome(academic_ref)
     krx = _outcome(krx_ref)

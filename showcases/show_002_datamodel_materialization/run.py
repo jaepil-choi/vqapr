@@ -15,10 +15,10 @@ from vqapr.domain.errors import VqaprError
 from vqapr.public import (
     DataModelEntry,
     DatasetRegistration,
-    RunAgenda,
     RunDefinition,
+    RunSchedule,
     SourceSpec,
-    preflight_run,
+    freeze,
     register_data_model,
     register_dataset,
     run,
@@ -29,7 +29,7 @@ MODELS = ROOT / "show002_models.py"
 OUTPUTS = ROOT / "outputs"
 PROJECT = OUTPUTS / "project"
 LAST_VERIFIED_AT = "2026-09-10"
-VERIFIED_AGAINST = "vqapr-0.15.0"
+VERIFIED_AGAINST = "vqapr-0.16.0"
 KST = ZoneInfo("Asia/Seoul")
 
 
@@ -241,12 +241,12 @@ def _datamodel_run(
         instruments=INSTRUMENTS,
         datamodel=DataModelEntry(component_id, value_fields),
         timezone="Asia/Seoul",
-        agenda=RunAgenda(every="1d", at=(time(16, 0),), days_from="price_daily"),
+        schedule=RunSchedule(every="1d", at=(time(16, 0),), days_from="price_daily"),
         start=datetime.combine(sessions[0], time(0), tzinfo=KST),
         end=datetime.combine(sessions[-1], time(23), tzinfo=KST),
         writes=dataset_id,
     )
-    frozen = preflight_run(PROJECT, definition)
+    frozen = freeze(PROJECT, definition)
     outcome = run(PROJECT, frozen, store_root=PROJECT / ".vqapr")
     record = {key: _json_value(value) for key, value in outcome.records[component_id].items()}
     return outcome.result(), record

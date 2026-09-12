@@ -13,35 +13,36 @@ from pathlib import Path
 import pytest
 
 from vqapr.cli.main import main
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.extension.fingerprint import fingerprint_component
-from vqapr.project.store import Workspace
+from vqapr.component.fingerprint import fingerprint_component
+from vqapr.component.reference import ComponentRef
+from vqapr.domain.wiring import Role
+from vqapr.workspace.registry import Workspace
 
 STRATEGY = '''
-from vqapr import authoring as va
+from vqapr import public as vq
 
 
-class Wide(va.StrategyModel):
+class Wide(vq.StrategyModel):
     def inputs(self):
         return {
-            "resid": va.DatasetInput(
+            "resid": vq.DatasetInput(
                 dataset_id="ff6-resid-values",
                 fields=("resid", "beta_mkt", "beta_smb"),
-                lookback=va.RowsLookback(rows=30),
+                lookback=vq.RowsLookback(rows=30),
             ),
-            "px": va.DatasetInput(
-                dataset_id="kr-daily", fields=("close",), lookback=va.RowsLookback(rows=2)
+            "px": vq.DatasetInput(
+                dataset_id="kr-daily", fields=("close",), lookback=vq.RowsLookback(rows=2)
             ),
         }
 
     def tables(self):
-        return (va.TableSpec("ou_summary", ("instrument", "z")),)
+        return (vq.TableSpec("ou_summary", ("instrument", "z")),)
 
     def account_history(self):
-        return va.AccountHistoryInput(fields=("nav",), lookback=va.RowsLookback(rows=5))
+        return vq.AccountHistoryInput(fields=("nav",), lookback=vq.RowsLookback(rows=5))
 
     def decide(self, call):
-        return va.Hold(reason="never called here")
+        return vq.Hold(reason="never called here")
 '''
 
 
@@ -50,7 +51,7 @@ def _register(
     component_id: str,
     source: Path,
     *,
-    kind: ComponentKind = ComponentKind.STRATEGY_MODEL,
+    kind: Role = Role.STRATEGY_MODEL,
     object_name: str = "Wide",
 ) -> None:
     space = Workspace.create(root) if not (root / ".vqapr").exists() else Workspace.open(root)
@@ -68,8 +69,8 @@ def _register(
 
 EXCHANGE = """
 from decimal import Decimal
-from vqapr.exchange.venue import AcademicExchange, TradeRule
-from vqapr.exchange.listings import ListingAccess
+from vqapr.public import AcademicExchange, TradeRule
+from vqapr.public import ListingAccess
 
 
 class Venue(AcademicExchange):
@@ -97,7 +98,7 @@ def test_a_registered_component_of_a_kind_this_verb_does_not_describe_is_refused
     _register(tmp_path, "wide", source)
     venue = tmp_path / "venue.py"
     venue.write_text(EXCHANGE, encoding="utf-8")
-    _register(tmp_path, "venue", venue, kind=ComponentKind.EXCHANGE, object_name="Venue")
+    _register(tmp_path, "venue", venue, kind=Role.EXCHANGE, object_name="Venue")
 
     code = main(["--project-root", str(tmp_path), "show", "model", "venue"])
     refused = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
@@ -120,7 +121,7 @@ def test_list_components_filters_by_kind_so_the_wrong_ref_is_never_assembled(
     _register(tmp_path, "wide", source)
     venue = tmp_path / "venue.py"
     venue.write_text(EXCHANGE, encoding="utf-8")
-    _register(tmp_path, "venue", venue, kind=ComponentKind.EXCHANGE, object_name="Venue")
+    _register(tmp_path, "venue", venue, kind=Role.EXCHANGE, object_name="Venue")
 
     def listed(*argv: str) -> dict:
         main(["--project-root", str(tmp_path), "list", *argv])

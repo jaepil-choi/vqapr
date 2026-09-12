@@ -14,7 +14,7 @@ that disagrees with the authoring class that implements it.
 **Parts and tools** (§4.3): the one criterion is whether a role declares its own clock. A part
 does -- one per run: `DataModel`, `StrategyModel`. A tool attaches to somebody else's clock:
 `Exchange`, `Compliance`, `Accrual`. A part is a tool plus a clock, and the types say so
-(`authoring.Part`, `authoring.Tool`).
+(`component.base.Part`, `component.base.Tool`).
 
 Data rather than types (design §10.2, decided at M13, record `213`): a row is read by tests, by
 the loop's docstrings and by a reader of the design; it is compared, listed and counted, which a
@@ -32,6 +32,7 @@ from enum import StrEnum
 from types import MappingProxyType
 
 __all__ = [
+    "EXTENSION_POINTS",
     "MARKET_CLOCK_ORDER",
     "WIRING",
     "Clock",
@@ -46,7 +47,8 @@ __all__ = [
 
 
 class Role(StrEnum):
-    """The five rows of the table. Four are extension points; `ACCRUAL` is a place (§7.3)."""
+    """The five rows of the table. Four are extension points (`EXTENSION_POINTS`); `ACCRUAL` is
+    a place (§7.3)."""
 
     DATA_MODEL = "data_model"
     STRATEGY_MODEL = "strategy_model"
@@ -55,11 +57,24 @@ class Role(StrEnum):
     COMPLIANCE = "compliance"
 
 
-class Clock(StrEnum):
-    """The two clocks of a run (design §3): the strategy's own agenda, and the market's instants
-    -- every instant the execution table has inside the run."""
+EXTENSION_POINTS: tuple[Role, ...] = (
+    Role.DATA_MODEL,
+    Role.STRATEGY_MODEL,
+    Role.EXCHANGE,
+    Role.COMPLIANCE,
+)
+"""The roles a component registers as: every row but `ACCRUAL`, a place and not yet a door
+(§7.3). A registration, a workspace entry and a scaffold name one of these, stored as the role's
+own value (`"data_model"`, ...) -- the value the retired `ComponentKind` stored, so a workspace
+or a fingerprint made before the fold reads unchanged (record `272`)."""
 
-    STRATEGY = "strategy"
+
+class Clock(StrEnum):
+    """The two clocks of a run (design §3): the schedule a run declares -- a strategy decides and a
+    DataModel computes on it -- and the market's instants, every instant the execution table has
+    inside the run."""
+
+    SCHEDULE = "schedule"
     MARKET = "market"
 
 
@@ -110,11 +125,11 @@ class Wiring:
 WIRING: Mapping[Role, Wiring] = MappingProxyType(
     {
         Role.DATA_MODEL: Wiring(
-            Role.DATA_MODEL, Clock.STRATEGY, (View.WINDOW,), Receiver.WAREHOUSE, True
+            Role.DATA_MODEL, Clock.SCHEDULE, (View.WINDOW,), Receiver.WAREHOUSE, True
         ),
         Role.STRATEGY_MODEL: Wiring(
             Role.STRATEGY_MODEL,
-            Clock.STRATEGY,
+            Clock.SCHEDULE,
             (View.WINDOW, View.ACCOUNT, View.HISTORY),
             Receiver.EXCHANGE,
             True,
@@ -150,8 +165,8 @@ WIRING: Mapping[Role, Wiring] = MappingProxyType(
 
 MARKET_CLOCK_ORDER: tuple[Role, ...] = (Role.ACCRUAL, Role.EXCHANGE, Role.COMPLIANCE)
 """The roles a market-clock instant calls, in the order §3.1 fixes: ACCRUE, EXECUTE, then --
-after the framework's own VALUATION -- COMPLIANCE. A decision (DECIDE) is the strategy clock's,
-sorted after the market instant it coincides with. `flow/run/loop.py::MarketClock.at` is the one
+after the framework's own VALUATION -- COMPLIANCE. A decision (DECIDE) is the schedule clock's,
+sorted after the market instant it coincides with. `run/engine/loop.py::MarketClock.at` is the one
 place this order is written as calls, and the wiring test holds the two together."""
 
 

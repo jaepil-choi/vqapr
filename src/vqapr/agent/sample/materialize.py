@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-from vqapr.domain.instruments import export_roster
+from vqapr.domain.instrument import export_roster
 
 VENUE = "Asia/Seoul"
 OFFSET = "+09:00"
@@ -180,9 +180,9 @@ def declaration(
                 "start": _iso(second_session, "00:00:00"),
                 "end": _iso(panel["last_session"], "23:59:59"),
                 "timezone": VENUE,
-                # The strategy clock (design §3.4): decided once a day at CALLBACK, on every
+                # The schedule clock (design §3.4): decided once a day at CALLBACK, on every
                 # day the execution table has rows for.
-                "agenda": {"every": "1d", "at": CALLBACK},
+                "schedule": {"every": "1d", "at": CALLBACK},
                 "exchange": EXCHANGE_ID,
                 "execution": {
                     "dataset": EXECUTION_ID,

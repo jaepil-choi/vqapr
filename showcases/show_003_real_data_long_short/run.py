@@ -36,13 +36,13 @@ from vqapr.public import (
     AccountSnapshot,
     DataModelEntry,
     DatasetRegistration,
-    RunAgenda,
     RunDefinition,
     RunExecution,
     RunFill,
+    RunSchedule,
     SourceSpec,
     StrategyEntry,
-    preflight_run,
+    freeze,
     register_compliance,
     register_data_model,
     register_dataset,
@@ -61,7 +61,7 @@ INPUTS = OUTPUTS / "inputs"
 PROJECT = OUTPUTS / "project"
 VENUE = "Asia/Seoul"
 OFFSET = "+09:00"
-VERIFIED_AGAINST = "vqapr-0.15.0"
+VERIFIED_AGAINST = "vqapr-0.16.0"
 LAST_VERIFIED_AT = "2026-09-10"
 
 SPEC = FixtureSpec(asof="20260331", start="20260401", end="20260529", universe_size=6)
@@ -96,18 +96,18 @@ def _write_components() -> dict[str, Path]:
     model.write_text(
         '''from __future__ import annotations
 
-from vqapr import authoring as va
+from vqapr import public as vq
 
 LOOKBACK = 6
 
 
-class ReversalModel(va.DataModel):
+class ReversalModel(vq.DataModel):
     """Cross-sectionally demeaned 5-session reversal on real closes."""
 
     def inputs(self):
         return {
-            "prices": va.DatasetInput(
-                dataset_id="price_daily", fields=("close",), lookback=va.RowsLookback(rows=LOOKBACK)
+            "prices": vq.DatasetInput(
+                dataset_id="price_daily", fields=("close",), lookback=vq.RowsLookback(rows=LOOKBACK)
             )
         }
 
@@ -188,7 +188,7 @@ class ReversalLongShort(StrategyModel):
 
         history = dict(self.memory or {})
         history["rebalances"] = int(history.get("rebalances", 0)) + 1
-        history["last_occurrence"] = context.occurrence.occurrence_id
+        history["last_event"] = context.event.event_id
         self.memory = history
 
         return Rebalance(
@@ -408,13 +408,13 @@ def main() -> None:
         instruments=tuple(universe),
         datamodel=DataModelEntry("showcase-model", ("score",)),
         timezone=VENUE,
-        agenda=RunAgenda(every="1d", at=(time(16, 0),), days_from="price_daily"),
+        schedule=RunSchedule(every="1d", at=(time(16, 0),), days_from="price_daily"),
         start=datetime.fromisoformat(f"{score_days[0].isoformat()}T00:00:00{OFFSET}"),
         end=datetime.fromisoformat(f"{score_days[-1].isoformat()}T23:00:00{OFFSET}"),
         writes="reversal_score",
     )
     materialization = run(
-        PROJECT, preflight_run(PROJECT, score_definition), store_root=PROJECT / ".vqapr"
+        PROJECT, freeze(PROJECT, score_definition), store_root=PROJECT / ".vqapr"
     ).result()
 
     register_strategy_model(PROJECT, "showcase-strategy", paths["strategy"], "ReversalLongShort")
@@ -430,7 +430,7 @@ def main() -> None:
         strategy=StrategyEntry("showcase-strategy"),
         compliance=("showcase-cap",),
         timezone=VENUE,
-        agenda=RunAgenda(every="1d", at=(time(8, 30),)),
+        schedule=RunSchedule(every="1d", at=(time(8, 30),)),
         exchange="showcase-exchange",
         execution=RunExecution(
             dataset="krx-daily",
@@ -445,7 +445,7 @@ def main() -> None:
         writes="show003-weights",
     )
 
-    frozen = preflight_run(PROJECT, definition)
+    frozen = freeze(PROJECT, definition)
     result = run(PROJECT, frozen).result()
 
     final_state = result.final_state
@@ -519,9 +519,9 @@ def main() -> None:
             "first_session": fixture["first_session"],
             "last_session": fixture["last_session"],
             "materialized_score_rows": materialization.rows,
-            "materialized_evaluations": len(materialization.occurrences),
+            "materialized_evaluations": len(materialization.events),
             "strategy_callbacks": len(callback_days),
-            "occurrences_dispatched": len(result.occurrences),
+            "events_dispatched": len(result.events),
             "dealt_fills": len(dealt),
             "final_nav": None if nav is None else str(nav),
             "final_cash": str(account.snapshot.cash),

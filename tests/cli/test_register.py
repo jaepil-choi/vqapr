@@ -297,7 +297,7 @@ def test_an_unusable_declaration_key_is_refused_in_every_section_that_becomes_an
             "    path: limit.py\n    object_name: Limit\n"
         ),
     }
-    from vqapr.project.registration import _DECLARED_IDS
+    from vqapr.workspace.registration import _DECLARED_IDS
 
     assert set(sections) == set(_DECLARED_IDS), "a section became an id and this table missed it"
     for section, template in sections.items():
@@ -422,7 +422,7 @@ def test_the_shipped_no_short_registers_under_the_id_it_answers_to(
     `no-short` ran clean, with nothing anywhere saying why. `NoShort` takes its id as a constructor
     argument defaulting to `no-short`, so config is a real third repair and the refusal says so.
     """
-    from vqapr.compliance.builtin import shipped_compliance_path
+    from vqapr.component.compliance.shipped import shipped_compliance_path
 
     source = shipped_compliance_path("no_short").as_posix()
 
@@ -501,7 +501,7 @@ def _run_document(**overrides: str) -> str:
         "start": '"2024-03-05T00:00:00+09:00"',
         "end": '"2024-03-06T23:00:00+09:00"',
         "timezone": "Asia/Seoul",
-        "agenda": '{every: 1d, at: "04:00"}',
+        "schedule": '{every: 1d, at: "04:00"}',
         "exchange": "venue",
         "execution": (
             "{dataset: venue-daily, trade_price: close, fill: {}}"
@@ -515,17 +515,17 @@ def _run_document(**overrides: str) -> str:
     return f"runs:\n  r:\n{body}\n"
 
 
-def test_an_agenda_rule_must_be_consistent(
+def test_an_schedule_rule_must_be_consistent(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Both, or neither, is a question the command must not answer by guessing.
 
     Pinned as a *structured* failure, not merely a non-zero exit. When the sessions lived on an
-    agenda this was an unhandled `ValueError`: it reached the envelope with `family: null`, an
+    schedule this was an unhandled `ValueError`: it reached the envelope with `family: null`, an
     empty `failures[]`, and a traceback file, so the only machine-readable thing about it was
     the exit code. The run carries the sessions since record 148, and the same rule holds.
     """
-    document = _write(tmp_path, "w.yaml", _run_document(agenda="{every: 1d}"))
+    document = _write(tmp_path, "w.yaml", _run_document(schedule="{every: 1d}"))
 
     code, payload = _cli(capsys, "--project-root", str(tmp_path), "register", document)
 
@@ -537,7 +537,7 @@ def test_an_agenda_rule_must_be_consistent(
     assert "needs at" in failure["observed"]
     assert failure["source"]["key_path"] == "runs.r"
 
-    neither = _write(tmp_path, "neither.yaml", _run_document(agenda='{every: 5m, at: "04:00"}'))
+    neither = _write(tmp_path, "neither.yaml", _run_document(schedule='{every: 5m, at: "04:00"}'))
     code, payload = _cli(capsys, "--project-root", str(tmp_path), "register", neither)
 
     assert code == 1
@@ -579,12 +579,12 @@ def test_a_component_kind_that_is_not_permitted_names_the_permitted_ones(
     assert set(failure["examples"]) == {"datamodel", "strategy", "compliance", "exchange"}
 
 
-def test_an_agenda_wall_time_that_is_not_a_time_is_refused_with_a_stage(
+def test_an_schedule_wall_time_that_is_not_a_time_is_refused_with_a_stage(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """One date, written without brackets, is the easiest version of this mistake to make."""
     document = _write(
-        tmp_path, "w.yaml", _run_document(agenda="{every: 1d, at: nope}")
+        tmp_path, "w.yaml", _run_document(schedule="{every: 1d, at: nope}")
     )
 
     code, payload = _cli(capsys, "--project-root", str(tmp_path), "register", document)

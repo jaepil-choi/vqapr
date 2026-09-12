@@ -20,8 +20,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from vqapr.data.store import DuckDbObservationStore
-from vqapr.data.windows import ModelWindow
-from vqapr.domain.shapes import normalize_rows
+from vqapr.data.window import ModelWindow
+from vqapr.domain.rows import normalize_rows
 from vqapr.public import (
     DataRequirement,
     DatasetRegistration,

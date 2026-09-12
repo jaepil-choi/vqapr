@@ -16,34 +16,21 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from vqapr.analysis.execution import fill_summary
 from vqapr.cli.envelope import failure, success
 
 # `register` owns the CLI spelling of a component kind and imports nothing from this module, so
 # naming it here adds no cycle. The judgments take it as a callable rather than importing it
 # themselves, which is what keeps `flow/` free of `cli`.
 from vqapr.domain.errors import (
+    VALUE_INVALID,
     Failure,
     FailureSource,
+    InputError,
     Stage,
     Status,
     VqaprError,
     status_of,
 )
-from vqapr.domain.inputs import VALUE_INVALID, InputError
-from vqapr.flow.declaration.verify import verify_run
-from vqapr.flow.engine.run_state import FILL_TABLE
-from vqapr.flow.orchestration import (
-    COMPLETED,
-    FAILED,
-    batch_cubes,
-    batch_reads,
-    in_workers,
-    require_independent_batch,
-    run_registered_datamodel,
-    run_registered_strategy,
-)
-from vqapr.project.store import WORKSPACE_DIRECTORY
 from vqapr.public import RunDefinition, Workspace
 from vqapr.public import run as execute_run
 from vqapr.record import (
@@ -52,6 +39,12 @@ from vqapr.record import (
     RunRecordLive,
     read_typed_table,
 )
+from vqapr.record.schema import FILL_TABLE
+from vqapr.report.metrics import fill_summary
+from vqapr.run.assemble import COMPLETED, FAILED, run_registered_datamodel, run_registered_strategy
+from vqapr.run.batch import batch_cubes, batch_reads, in_workers, require_independent_batch
+from vqapr.run.preflight.verdict import preflight
+from vqapr.workspace.registry import WORKSPACE_DIRECTORY
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
@@ -134,7 +127,7 @@ def preflight_refusal(phase: str, error: Exception, target: str) -> Failure:
     """A bare TypeError or ValueError from a framework invariant, given an envelope.
 
     ONE renderer for both verbs (`docs/issues/archive/076`). `check` caught these per phase and
-    `run` called `preflight_run` outside its own `try`, so the same `ValueError` was a bounded
+    `run` called `freeze` outside its own `try`, so the same `ValueError` was a bounded
     refusal from one verb and `stage: "unhandled"` -- the framework broke -- from the other.
 
     The two codes are written literally rather than selected into a variable so the refusal-code
@@ -194,17 +187,17 @@ def _run_one(target: str, args: argparse.Namespace, *, project_root: Path) -> di
     definition: RunDefinition = workspace.run_definition(target)
     # The ONE workspace this command opened goes to preflight and to the run
     # (`docs/issues/archive/070`): the judgments, the freeze and the roster read all see the same
-    # document. The judgments are asked inside `preflight_run`, in the order `check` asks them, so
+    # document. The judgments are asked inside `freeze`, in the order `check` asks them, so
     # this verb and a Python caller refuse the same run for the same reasons (record `168`); a
     # refusal arrives as the `VqaprError` below deliberately lets through.
     try:
-        frozen, resources = verify_run(workspace, definition).require_ready()
+        frozen, resources = preflight(workspace, definition).require_ready()
     except (TypeError, ValueError) as refused:
         # `check` renders exactly this as a bounded refusal; letting it escape here rendered the
         # SAME judgment as `stage: "unhandled"` (`docs/issues/archive/076`).
         #
         # These two types are the WHOLE escape set, not a guessed subset: every `raise` in
-        # `flow/declaration/preflight.py` is a `TypeError`, a `ValueError`, or a `VqaprError`, and
+        # `run/preflight/{facts,freeze}.py` is a `TypeError`, a `ValueError`, or a `VqaprError`, and
         # user code reached through `load_strategy_model` comes back already bounded as
         # `component.load`.
         # `VqaprError` and `InputError` are therefore deliberately not caught -- both already
@@ -486,7 +479,7 @@ def _datamodel_envelope(record: Any) -> dict[str, Any]:
         "fingerprint": record.get("fingerprint"),
         "dataset_id": record.get("dataset_id"),
         "rows": record.get("rows"),
-        "sessions": period.get("occurrences"),
+        "sessions": period.get("events"),
     }
 
 
@@ -502,7 +495,7 @@ def _strategy_envelope(store_root: Path, run_id: str, record: Any) -> dict[str, 
     return {
         "record": strategy_ref,
         "fingerprint": record.get("fingerprint"),
-        "occurrences": period.get("occurrences"),
+        "events": period.get("events"),
         "account_version": account.get("version"),
         "tables": sorted(record.get("tables") or {}),
         # What the orders did, not only that they were placed. `ok: true` means the simulation

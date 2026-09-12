@@ -24,8 +24,8 @@ from test_commands import _cli, _register_run, _workspace_for_run
 
 from vqapr.cli.check import check
 from vqapr.domain.errors import VqaprError
-from vqapr.flow.declaration.judgments import JUDGMENT_CODES
-from vqapr.public import Workspace, preflight_run
+from vqapr.public import Workspace, freeze
+from vqapr.run.preflight.checks import JUDGMENT_CODES
 
 
 def _run(capsys: pytest.CaptureFixture[str], root: Path, run_id: str) -> tuple[int, dict]:
@@ -43,7 +43,7 @@ def _lookahead_run(
     run names is registered and a wall time is not a reference it can check.
     """
     code, payload = _register_run(
-        root, capsys, run_id, agenda={"every": "1d", "at": "15:30"}, **overrides
+        root, capsys, run_id, schedule={"every": "1d", "at": "15:30"}, **overrides
     )
     assert code == 0, payload
 
@@ -136,7 +136,7 @@ def test_run_refuses_when_a_judgment_could_not_answer(
 
     assert check("r1", tmp_path)["ok"] is True, "fixture must otherwise pass"
 
-    import vqapr.flow.declaration.judgments as judgments_module
+    import vqapr.run.preflight.checks as judgments_module
 
     def _cannot_look(*_args: object, **_kwargs: object) -> None:
         raise KeyError("a judgment read a key nobody wrote")
@@ -226,10 +226,10 @@ def test_the_python_door_refuses_what_check_refuses(
 ) -> None:
     """The CLI and the Python surface are two spellings of one process (record `168`).
 
-    `run` learned to ask the judgments in record `087`; `preflight_run` on the public surface
+    `run` learned to ask the judgments in record `087`; `freeze` on the public surface
     did not, so the same registered run was refused by `vqapr run` and frozen -- and executed --
     from Python. The 0.6.0 call-flow review met exactly that with the shipped sample
-    (record `167`, R7). The judgments now sit inside `preflight_run`, where every door passes.
+    (record `167`, R7). The judgments now sit inside `freeze`, where every door passes.
     """
     _workspace_for_run(tmp_path, capsys)
     _lookahead_run(tmp_path, capsys, "lookahead")
@@ -239,7 +239,7 @@ def test_the_python_door_refuses_what_check_refuses(
 
     workspace = Workspace.open(tmp_path)
     with pytest.raises(VqaprError) as refused:
-        preflight_run(workspace, workspace.run_definition("lookahead"))
+        freeze(workspace, workspace.run_definition("lookahead"))
 
     assert refused.value.stage == "check", "the judgments are `check`'s, whichever door asks"
     assert {failure.code for failure in refused.value.failures} & refused_codes
@@ -254,6 +254,6 @@ def test_the_python_door_freezes_what_check_passes(
     assert check("r1", tmp_path)["ok"] is True
 
     workspace = Workspace.open(tmp_path)
-    frozen = preflight_run(workspace, workspace.run_definition("r1"))
+    frozen = freeze(workspace, workspace.run_definition("r1"))
 
     assert frozen.run_id == "r1"

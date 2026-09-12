@@ -30,39 +30,39 @@ _HOLDS_STOCK = '''"""Orders the one declared name and nothing else."""
 
 from decimal import Decimal
 
-from vqapr import authoring as va
+from vqapr import public as vq
 
 
-class HoldsStock(va.StrategyModel):
+class HoldsStock(vq.StrategyModel):
     def inputs(self):
         return {
-            "prices": va.DatasetInput(
-                dataset_id="prices", fields=("close",), lookback=va.RowsLookback(rows=1)
+            "prices": vq.DatasetInput(
+                dataset_id="prices", fields=("close",), lookback=vq.RowsLookback(rows=1)
             )
         }
 
     def decide(self, call):
-        return va.Rebalance.of(long={"A005930": Decimal(1)}, invested="1.0")
+        return vq.Rebalance.of(long={"A005930": Decimal(1)}, invested="1.0")
 '''
 
 _WANTS_ALL = '''"""Orders every name in the table, two of which the project never declared."""
 
 from decimal import Decimal
 
-from vqapr import authoring as va
+from vqapr import public as vq
 
 
-class WantsAll(va.StrategyModel):
+class WantsAll(vq.StrategyModel):
     def inputs(self):
         return {
-            "prices": va.DatasetInput(
-                dataset_id="prices", fields=("close",), lookback=va.RowsLookback(rows=1)
+            "prices": vq.DatasetInput(
+                dataset_id="prices", fields=("close",), lookback=vq.RowsLookback(rows=1)
             )
         }
 
     def decide(self, call):
         third = Decimal(1) / Decimal(3)
-        return va.Rebalance.of(
+        return vq.Rebalance.of(
             long={"A069500": third, "A005930": third, "A000660": third}, invested="1.0"
         )
 '''
@@ -109,8 +109,8 @@ def _workspace(root: Path, capsys: pytest.CaptureFixture[str]) -> None:
     venue = root / "venue.py"
     venue.write_text(
         "from decimal import Decimal\n"
-        "from vqapr.exchange.venue import AcademicExchange, TradeRule\n"
-        "from vqapr.exchange.listings import ListingAccess\n"
+        "from vqapr.public import AcademicExchange, TradeRule\n"
+        "from vqapr.public import ListingAccess\n"
         "class Venue(AcademicExchange):\n"
         "    def __init__(self):\n"
         "        super().__init__({name: TradeRule(name, Decimal('1'), Decimal('1'), False,\n"
@@ -169,7 +169,7 @@ def _run(root: Path, capsys: pytest.CaptureFixture[str], run_id: str, strategy: 
         "writes": f"{run_id}-weights",
         "strategy": {"component": strategy},
         "timezone": "Asia/Seoul",
-        "agenda": {"every": "1d", "at": "04:00"},
+        "schedule": {"every": "1d", "at": "04:00"},
         "exchange": "venue",
         "execution": {
             "dataset": "venue-daily",

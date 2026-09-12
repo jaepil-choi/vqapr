@@ -47,8 +47,8 @@ import pathlib
 
 PACKAGE_ROOT = pathlib.Path(__file__).parents[2] / "src" / "vqapr"
 
-FLOW_NODES = ("strategy", "datamodel", "declaration", "engine")
-"""`flow/` subpackages that carry their own altitude; everything else under `flow/` is `flow`."""
+RUN_NODES = ("preflight", "engine")
+"""`run/` subpackages that carry their own altitude; everything else under `run/` is `run`."""
 
 LAYERS: dict[str, int] = {
     # 0 -- values and mechanisms every layer shares and none owns. Imports nothing.
@@ -57,28 +57,20 @@ LAYERS: dict[str, int] = {
     # 10 -- one subject each, reached by everything above and depending only on the vocabulary.
     "data": 10,
     "portfolio": 10,
-    "transforms": 10,
-    "account": 10,
+    "signals": 10,
     "record": 10,
-    "analysis": 10,
-    # 20 -- the extension contract: everything a Component sees, and nothing above it.
-    "authoring": 20,
-    # 30 -- the venue. Reads the execution table, executes orders, and subclasses `Component`,
-    # which is why the contract must sit below it.
-    "exchange": 30,
-    # 40 -- what installs a Component, and what evaluates one. Both load user code, so both
-    # sit above every contract that code is written against.
-    "extension": 40,
-    "compliance": 40,
-    # 50 -- what a project accumulates between commands, and how a document enters it.
-    "project": 50,
-    # 60-70 -- running one. The substrate the phases share, the phases, then assembly.
-    "flow.engine": 60,
-    "flow.declaration": 63,
-    "flow.run": 65,
-    "flow": 70,
-    # 80 -- reading a finished record. Computes nothing a run did not store.
-    "report": 80,
+    # 20 -- the extension point: every role's contract, its shipped implementations, and the door a
+    # component enters by (reference, fingerprint, conformance, loading).
+    "component": 20,
+    # 30 -- the workspace: what a project keeps between commands, and how a document enters it.
+    "workspace": 30,
+    # 40-50 -- running one: before it starts (preflight), the loop that reads what preflight froze
+    # (engine), then assembly -- one run, a batch, the record, the roster.
+    "run.preflight": 40,
+    "run.engine": 45,
+    "run": 50,
+    # 60 -- reading a finished record. Computes nothing a run did not store.
+    "report": 60,
     # 90+ -- the surfaces.
     "public": 90,
     "agent": 95,
@@ -88,8 +80,8 @@ LAYERS: dict[str, int] = {
 }
 """Package -> altitude. A module may import only a strictly lower number.
 
-`flow` is split because its root holds two altitudes: the substrate its phases read
-(`engine`) and the assembly that drives them. Every other package is one node.
+`run` is split because it holds three altitudes: preflight, the engine that imports what
+preflight froze, and the assembly that drives both. Every other package is one node.
 """
 
 OPEN: dict[tuple[str, str], str] = {}
@@ -114,8 +106,8 @@ def _node(module: str) -> str | None:
     parts = module.split(".")
     if len(parts) < 2:
         return None
-    if parts[1] == "flow" and len(parts) > 2 and parts[2] in FLOW_NODES:
-        return f"flow.{parts[2]}"
+    if parts[1] == "run" and len(parts) > 2 and parts[2] in RUN_NODES:
+        return f"run.{parts[2]}"
     return parts[1]
 
 

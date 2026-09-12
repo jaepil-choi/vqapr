@@ -25,16 +25,17 @@ import pytest
 import vqapr.cli.run as run_command
 from vqapr.cli.main import main
 from vqapr.data import store as store_module
-from vqapr.flow import orchestration
-from vqapr.flow.orchestration import batch_cubes, in_workers, run_registered_datamodel
-from vqapr.project.store import Workspace
+from vqapr.run import batch as run_batch
+from vqapr.run.assemble import run_registered_datamodel
+from vqapr.run.batch import batch_cubes, in_workers
+from vqapr.workspace.registry import Workspace
 
-_MODELS = """from vqapr import authoring as va
+_MODELS = """from vqapr import public as vq
 
-class ReversalModel(va.DataModel):
+class ReversalModel(vq.DataModel):
     def inputs(self):
-        return {"prices": va.DatasetInput(
-            dataset_id='price_daily', fields=('close',), lookback=va.RowsLookback(rows=2)
+        return {"prices": vq.DatasetInput(
+            dataset_id='price_daily', fields=('close',), lookback=vq.RowsLookback(rows=2)
         )}
 
     def compute(self, context):
@@ -115,7 +116,7 @@ runs:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       reversal:
         dataset_id: reversal_2d
@@ -125,7 +126,7 @@ runs:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       momentum:
         dataset_id: momentum_2d
@@ -295,7 +296,7 @@ def test_a_datamodel_record_is_listed_shown_and_removed_by_its_own_verbs(
     assert row["fingerprint"].startswith(fp8), "the ref's fp8 is the fingerprint's head"
     assert row["dataset_id"] == "reversal_2d"
     assert row["rows"] == 4
-    assert row["period"]["occurrences"] == 2
+    assert row["period"]["events"] == 2
 
     # The filters are the strategy list's: by model id, by fingerprint prefix, by period end.
     code, by_id = _cli(
@@ -410,12 +411,12 @@ def test_a_datamodel_record_is_listed_shown_and_removed_by_its_own_verbs(
     assert again["failures"][0]["code"] == "argument.value_invalid"
 
 
-_ECHO = """from vqapr import authoring as va
+_ECHO = """from vqapr import public as vq
 
-class EchoModel(va.DataModel):
+class EchoModel(vq.DataModel):
     def inputs(self):
-        return {"scores": va.DatasetInput(
-            dataset_id='reversal_2d', fields=('score',), lookback=va.RowsLookback(rows=1)
+        return {"scores": vq.DatasetInput(
+            dataset_id='reversal_2d', fields=('score',), lookback=vq.RowsLookback(rows=1)
         )}
 
     def compute(self, context):
@@ -445,7 +446,7 @@ runs:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       echo:
         dataset_id: echo_2d
@@ -602,7 +603,7 @@ def test_a_jobs_batch_bakes_once_maps_in_every_worker_and_leaves_nothing_behind(
     stale = root / "1-dead"
     stale.mkdir()
     (stale / "batch.lock").write_text("1", encoding="ascii")
-    old = time.time() - orchestration.CUBE_STALE_AFTER - 60
+    old = time.time() - run_batch.CUBE_STALE_AFTER - 60
     os.utime(stale / "batch.lock", (old, old))
     live = root / "2-alive"
     live.mkdir()
@@ -620,7 +621,7 @@ def test_the_batch_driver_asks_each_run_what_it_reads_once(
     """Record `238`: the independence judgment and the bake each loaded every component of the
     batch to ask what it reads (`experiments/exp_238`, `15_run_batch`: `_reads` x4 for two
     runs). The CLI asks once through `batch_reads` and hands the answer to both doors."""
-    from vqapr.flow.orchestration import batch_reads, require_independent_batch
+    from vqapr.run.batch import batch_reads, require_independent_batch
 
     project = ("--project-root", str(tmp_path))
     code, registered = _cli(capsys, *project, "register", str(_declaration(tmp_path)))
@@ -629,13 +630,13 @@ def test_the_batch_driver_asks_each_run_what_it_reads_once(
     targets = ["factors-reversal", "factors-momentum"]
 
     asked: list[str] = []
-    original = orchestration._reads
+    original = run_batch._reads
 
     def counting(space, definition):
         asked.append(definition.run_id)
         return original(space, definition)
 
-    monkeypatch.setattr(orchestration, "_reads", counting)
+    monkeypatch.setattr(run_batch, "_reads", counting)
 
     reads = batch_reads(workspace, targets)
     assert set(reads) == set(targets)

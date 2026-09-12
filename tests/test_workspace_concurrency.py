@@ -11,7 +11,7 @@ a missing reference somewhere unrelated.
 These tests use real processes. Threads would share an interpreter and could pass while the
 cross-process case still lost writes.
 
-The declaration each writer adds is a component: since record `148` an agenda is derived from
+The declaration each writer adds is a component: since record `148` an schedule is derived from
 the run rather than registered, so a component is the smallest declaration a process registers.
 """
 
@@ -24,15 +24,16 @@ from pathlib import Path
 
 import pytest
 
-from vqapr.extension.component import ComponentKind, ComponentRef
+from vqapr.component.reference import ComponentRef
+from vqapr.domain.wiring import Role
 from vqapr.public import Workspace
-from vqapr.project.store import WORKSPACE_LOCK_FILENAME
+from vqapr.workspace.registry import WORKSPACE_LOCK_FILENAME
 
 
 def _component(raw_id: str) -> ComponentRef:
     return ComponentRef.of(
         raw_id,
-        ComponentKind.STRATEGY_MODEL,
+        Role.STRATEGY_MODEL,
         Path(f"{raw_id}.py"),
         "Strategy",
         fingerprint="a" * 64,
@@ -45,12 +46,12 @@ WORKER = textwrap.dedent(
     """
     import sys
     from pathlib import Path
-    from vqapr.public import ComponentKind, ComponentRef, Workspace
+    from vqapr.public import Role, ComponentRef, Workspace
 
     project, index = sys.argv[1], sys.argv[2]
     component = ComponentRef.of(
         f"component-{index}",
-        ComponentKind.STRATEGY_MODEL,
+        Role.STRATEGY_MODEL,
         Path(f"component-{index}.py"),
         "Strategy",
         fingerprint="a" * 64,
@@ -105,7 +106,7 @@ def test_a_stale_lock_does_not_block_forever(tmp_path: Path, monkeypatch) -> Non
 
     The recovery must not be "delete a file we never told you about".
     """
-    import vqapr.project.store as module
+    import vqapr.workspace.registry as module
 
     space = Workspace.create(tmp_path)
     lock = space.path.parent / WORKSPACE_LOCK_FILENAME
@@ -123,7 +124,7 @@ def test_a_stale_lock_does_not_block_forever(tmp_path: Path, monkeypatch) -> Non
 
 def test_a_held_lock_fails_loudly_rather_than_hanging(tmp_path: Path, monkeypatch) -> None:
     """Waiting forever behind a holder that never finishes is not an option a user can debug."""
-    import vqapr.project.store as module
+    import vqapr.workspace.registry as module
     from vqapr.domain.errors import VqaprError
 
     space = Workspace.create(tmp_path)

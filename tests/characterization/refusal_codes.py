@@ -16,7 +16,7 @@ Two independent passes, on purpose:
   miss part of the vocabulary. This pass constant-folds those f-strings and follows parameter
   forwarding across call sites instead of guessing, for `code` and `status` alike -- across the
   whole package, because a refusal helper and its callers need not share a file
-  (`flow/run/compute.py` raises through `flow/run/output.py`'s `refusal`), and an
+  (`run/engine/stages/compute.py` raises through `run/engine/output.py`'s `refusal`), and an
   index that stopped at the file boundary silently dropped a code whenever a module was split.
   A `status` that is a `Status` member (the case at almost every site) buckets the code
   under that member's number; a `status` computed from an exception (`status_of(error)`, a
@@ -138,8 +138,8 @@ class _SourceIndex:
 
     Those two are merged across modules on purpose. A per-file index only ever resolved a code
     forwarded through a helper defined in the same file, so splitting a module dropped codes from
-    the inventory without any refusal changing: `flow/run/compute.py` raises through the
-    `refusal` helper `flow/run/output.py` defines, and `datamodel.compute_failed` vanished
+    the inventory without any refusal changing: `run/engine/stages/compute.py` raises through the
+    `refusal` helper `run/engine/output.py` defines, and `datamodel.compute_failed` vanished
     from the static pass the moment the two stopped sharing a file. A refusal helper is not
     required to live beside its callers, so neither is this index.
 
@@ -792,8 +792,8 @@ def _write_parquet(path: Path, rows_sql: str) -> Path:
 
 
 def _runtime_dataset_schema_and_key(tmp_path: Path) -> list[str]:
-    from vqapr.data.datasets import DatasetRegistration, Grain, require_declared, validate
-    from vqapr.data.sources import SourceSpec
+    from vqapr.data.dataset import DatasetRegistration, Grain, require_declared, validate
+    from vqapr.data.source import SourceSpec
     from vqapr.domain.errors import VqaprError
 
     codes: list[str] = []
@@ -900,13 +900,13 @@ def _runtime_dataset_schema_and_key(tmp_path: Path) -> list[str]:
 
 
 def _runtime_execution_table(tmp_path: Path) -> list[str]:
-    from vqapr.data.sources import SourceSpec
-    from vqapr.exchange.conventions import FillRule
-    from vqapr.exchange.execution_table import (
+    from vqapr.data.execution_table import (
         ExecutionTable,
         ExecutionTableSpec,
         validate_execution_table,
     )
+    from vqapr.data.source import SourceSpec
+    from vqapr.domain.fill import FillRule
 
     codes: list[str] = []
 
@@ -954,11 +954,12 @@ def _runtime_execution_table(tmp_path: Path) -> list[str]:
 
 
 def _runtime_conformance_and_loading(tmp_path: Path) -> list[str]:
+    from vqapr.component.conformance import conformance
+    from vqapr.component.fingerprint import fingerprint_component
+    from vqapr.component.reference import ComponentRef
     from vqapr.domain.errors import VqaprError
-    from vqapr.extension.component import ComponentKind, ComponentRef
-    from vqapr.extension.fingerprint import fingerprint_component
+    from vqapr.domain.wiring import Role
     from vqapr.public import register_compliance
-    from vqapr.extension.conformance import conformance
 
     codes: list[str] = []
 
@@ -1000,11 +1001,11 @@ def _runtime_conformance_and_loading(tmp_path: Path) -> list[str]:
         path.write_text(source, encoding="utf-8")
         return ComponentRef.of(
             component_id or name,
-            ComponentKind.COMPLIANCE,
+            Role.COMPLIANCE,
             path,
             "Limit",
             fingerprint=fingerprint_component(
-                path, kind=ComponentKind.COMPLIANCE, object_name="Limit"
+                path, kind=Role.COMPLIANCE, object_name="Limit"
             ),
         )
 
@@ -1031,8 +1032,8 @@ def _runtime_conformance_and_loading(tmp_path: Path) -> list[str]:
 
 
 def _runtime_declaration_read(tmp_path: Path) -> list[str]:
-    from vqapr.project.registration import apply
     from vqapr.domain.errors import VqaprError
+    from vqapr.workspace.registration import apply
 
     # A run is the declaration that carries the sessions and the wall time since record `148`
     # (`agendas:` is no longer a section), so the two malformed-document scenarios that used to
@@ -1068,10 +1069,10 @@ def _runtime_declaration_read(tmp_path: Path) -> list[str]:
 
 
 def _runtime_workspace(tmp_path: Path) -> list[str]:
-    from vqapr.data.datasets import DatasetRegistration
-    from vqapr.data.sources import SourceSpec
+    from vqapr.data.dataset import DatasetRegistration
+    from vqapr.data.source import SourceSpec
     from vqapr.domain.errors import VqaprError
-    from vqapr.project.store import Workspace
+    from vqapr.workspace.registry import Workspace
 
     codes: list[str] = []
     workspace = Workspace.create(tmp_path)
@@ -1138,9 +1139,10 @@ def _runtime_workspace(tmp_path: Path) -> list[str]:
     # declares its sessions; the workspace refuses an id it cannot resolve at registration).
     from datetime import time
 
-    from vqapr.extension.component import ComponentKind, ComponentRef
-    from vqapr.extension.fingerprint import fingerprint_component
-    from vqapr.project.run import RunAgenda, RunDefinition, StrategyEntry
+    from vqapr.component.fingerprint import fingerprint_component
+    from vqapr.component.reference import ComponentRef
+    from vqapr.domain.wiring import Role
+    from vqapr.workspace.run_definition import RunSchedule, RunDefinition, StrategyEntry
 
     strategy = tmp_path / "strategy.py"
     strategy.write_text(
@@ -1154,11 +1156,11 @@ def _runtime_workspace(tmp_path: Path) -> list[str]:
         t.register_component(
             ComponentRef.of(
                 "strategy",
-                ComponentKind.STRATEGY_MODEL,
+                Role.STRATEGY_MODEL,
                 strategy,
                 "Strategy",
                 fingerprint=fingerprint_component(
-                    strategy, kind=ComponentKind.STRATEGY_MODEL, object_name="Strategy"
+                    strategy, kind=Role.STRATEGY_MODEL, object_name="Strategy"
                 ),
             )
         )
@@ -1170,7 +1172,7 @@ def _runtime_workspace(tmp_path: Path) -> list[str]:
                     strategy=StrategyEntry("strategy"),
                     instruments=("A",),
                     timezone="Asia/Seoul",
-                    agenda=RunAgenda(every="1d", at=(time(15, 30),)),
+                    schedule=RunSchedule(every="1d", at=(time(15, 30),)),
                     writes="unsourced-weights",
                 )
             )
@@ -1183,14 +1185,14 @@ def _runtime_workspace(tmp_path: Path) -> list[str]:
 def _runtime_model_window(tmp_path: Path) -> list[str]:
     from datetime import UTC, datetime
 
-    from vqapr.data.datasets import DatasetRegistration
+    from vqapr.data.dataset import DatasetRegistration
     from vqapr.data.lookback import RowsLookback
-    from vqapr.data.requirements import DataRequirement
-    from vqapr.data.sources import SourceSpec
+    from vqapr.data.requirement import DataRequirement
+    from vqapr.data.source import SourceSpec
     from vqapr.data.store import DuckDbObservationStore
-    from vqapr.data.windows import ModelWindow
+    from vqapr.data.window import ModelWindow
     from vqapr.domain.errors import VqaprError
-    from vqapr.project.store import Workspace
+    from vqapr.workspace.registry import Workspace
 
     workspace = Workspace.create(tmp_path)
     prices = _write_parquet(
@@ -1236,14 +1238,14 @@ def _runtime_datamodel_output(tmp_path: Path) -> list[str]:
     `docs/issues/archive/088`: a value field pyarrow types as decimal is one no dataset can declare, so
     the output refuses it at the first append rather than after every session has run. The
     layer is stood in for by the two attributes the output reads from it -- constructing a
-    `FrozenDataModel` needs a fingerprinted component and a frozen agenda, none of which
+    `FrozenDataModel` needs a fingerprinted component and a frozen schedule, none of which
     bears on the refusal.
     """
     from datetime import UTC, datetime
     from decimal import Decimal
 
     from vqapr.domain.errors import VqaprError
-    from vqapr.flow.run.output import RunOutput
+    from vqapr.run.engine.output import RunOutput
 
     codes: list[str] = []
     output = RunOutput(

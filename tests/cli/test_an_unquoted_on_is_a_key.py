@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from vqapr.cli.main import main
-from vqapr.domain.inputs import read_yaml_mapping
+from vqapr.domain.errors import read_yaml_mapping
 
 _MONTH_END = """\
 runs:
@@ -24,7 +24,7 @@ runs:
     start: '2022-01-04T00:00:00+09:00'
     end: '2022-06-30T23:59:59+09:00'
     timezone: Asia/Seoul
-    agenda:
+    schedule:
       every: 1M
       on: last
       at: '15:29'

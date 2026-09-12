@@ -22,12 +22,12 @@ import pytest
 
 from vqapr.cli.main import main
 
-_MODELS = """from vqapr import authoring as va
+_MODELS = """from vqapr import public as vq
 
-class Reads(va.DataModel):
+class Reads(vq.DataModel):
     def inputs(self):
-        return {"prices": va.DatasetInput(
-            dataset_id='price_daily', fields=('close',), lookback=va.RowsLookback(rows=2)
+        return {"prices": vq.DatasetInput(
+            dataset_id='price_daily', fields=('close',), lookback=vq.RowsLookback(rows=2)
         )}
 
     def compute(self, context):
@@ -35,27 +35,27 @@ class Reads(va.DataModel):
         return [{"instrument": name, "score": 1.0} for name in window.instruments]
 
 
-class ReadsNothingHere(va.DataModel):
+class ReadsNothingHere(vq.DataModel):
     def inputs(self):
-        return {"other": va.DatasetInput(
-            dataset_id='elsewhere', fields=('x',), lookback=va.RowsLookback(rows=1)
+        return {"other": vq.DatasetInput(
+            dataset_id='elsewhere', fields=('x',), lookback=vq.RowsLookback(rows=1)
         )}
 
     def compute(self, context):
         return []
 
 
-class Holds(va.StrategyModel):
+class Holds(vq.StrategyModel):
     def inputs(self):
         return {}
 
     def decide(self, call):
-        return va.Hold(reason='says')
+        return vq.Hold(reason='says')
 
 
 from decimal import Decimal
-from vqapr.exchange.venue import AcademicExchange, TradeRule
-from vqapr.exchange.listings import ListingAccess
+from vqapr.public import AcademicExchange, TradeRule
+from vqapr.public import ListingAccess
 
 
 class Venue(AcademicExchange):
@@ -159,7 +159,7 @@ runs:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "16:00", days_from: price_daily}}
+    schedule: {{every: 1d, at: "16:00", days_from: price_daily}}
     datamodels:
       reads:
         dataset_id: alpha_values
@@ -169,7 +169,7 @@ runs:
     start: "2024-03-06T00:00:00+09:00"
     end: "2024-03-08T00:00:00+09:00"
     timezone: Asia/Seoul
-    agenda: {{every: 1d, at: "09:00"}}
+    schedule: {{every: 1d, at: "09:00"}}
     exchange: venue
     execution:
       dataset: krx-daily

@@ -21,7 +21,7 @@ from typing import Any
 import duckdb
 import pyarrow as pa
 
-from vqapr.data.sources import SourceSpec
+from vqapr.data.source import SourceSpec
 from vqapr.domain.errors import Failure, FailureSource, Stage, Status, VqaprError
 
 _EXAMPLE_LIMIT = 5
@@ -69,7 +69,7 @@ DECLARABLE_FIELD_TYPES = frozenset(
 
 The data plane carries one numeric type per kind: `INTEGER` arrives as `int`, `DOUBLE` as
 `float`. `DECIMAL` is deliberately absent -- exact arithmetic lives on the money side of the
-execution boundary (`exchange/execution_table.py` converts a price once, explicitly), and a field
+execution boundary (`data/execution_table.py` converts a price once, explicitly), and a field
 that reached a model as `Decimal` would put two numeric types into one expression, which is the
 defect `docs/implementations/051` and `088` both describe.
 """
@@ -119,7 +119,7 @@ def _normalize(duck_type: str) -> ColumnType:
 def column_type_of_arrow(arrow_type: pa.DataType) -> ColumnType:
     """The `ColumnType` an arrow type lands as when duckdb reads the parquet it is written to.
 
-    The producer of a materialized dataset (`flow/run/output.py`) states its field types
+    The producer of a materialized dataset (`run/engine/output.py`) states its field types
     from the schema it wrote, through this one mapping, so that what it declares is what
     `DESCRIBE` will measure on the file (`docs/issues/088`). Kept next to `_normalize` because the
     two are one vocabulary read from two directions.
@@ -1115,7 +1115,7 @@ changed the answer for -- and the bounded query carries the aggregate that keeps
 current. On a real warehouse the check is worth it: 210 MB of daily prices went from 165 ms to
 88 ms per query. On a small source it is pure overhead, because duckdb reads the whole thing in
 less time than deciding not to takes; measured on a 200 KB fixture panel, and against the earlier
-form that re-checked on every query, estimating made a 2,940-occurrence run 28% *slower*. So the
+form that re-checked on every query, estimating made a 2,940-event run 28% *slower*. So the
 estimate is gated on the only thing that decides which regime a source is in, and the gate is
 measured once per run.
 """

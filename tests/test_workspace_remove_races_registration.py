@@ -36,11 +36,12 @@ from pathlib import Path
 
 import pytest
 
+from vqapr.component.fingerprint import fingerprint_component
+from vqapr.component.reference import ComponentRef
 from vqapr.domain.errors import VqaprError
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.extension.fingerprint import fingerprint_component
-from vqapr.public import AccountMode, AccountSnapshot, RunAgenda, RunDefinition, StrategyEntry
-from vqapr.project.store import Workspace
+from vqapr.domain.wiring import Role
+from vqapr.public import AccountMode, AccountSnapshot, RunSchedule, RunDefinition, StrategyEntry
+from vqapr.workspace.registry import Workspace
 
 pytestmark = pytest.mark.concurrency
 
@@ -56,12 +57,12 @@ def _seed(tmp_path: Path) -> Workspace:
         t.register_component(
             ComponentRef(
                 component_id="alpha",
-                kind=ComponentKind.STRATEGY_MODEL,
+                kind=Role.STRATEGY_MODEL,
                 path=source,
                 object_name="S",
                 config={},
                 fingerprint=fingerprint_component(
-                    source, kind=ComponentKind.STRATEGY_MODEL, object_name="S", config={}
+                    source, kind=Role.STRATEGY_MODEL, object_name="S", config={}
                 ),
             )
         )
@@ -74,7 +75,7 @@ def _run_naming_alpha() -> RunDefinition:
         strategy=StrategyEntry("alpha"),
         instruments=("A",),
         timezone=ZONE,
-        agenda=RunAgenda(every="1d", at=(time(9, 0),)),
+        schedule=RunSchedule(every="1d", at=(time(9, 0),)),
         initial_account_snapshot=AccountSnapshot(0, Decimal("1000"), {}),
         initial_account_mode=AccountMode.LONG_ONLY,
         writes="cadence-weights",

@@ -7,7 +7,7 @@ Three instants around `evaluation_time`, at one-microsecond resolution:
 
 `derived_available_at` is deliberately probed directly with a hand-built `AccessRecord` rather
 than through a full simulation, so the boundary is tested at exactly the resolution Python's
-`datetime` supports and not diluted by whatever coarser cadence a fixture agenda happens to use.
+`datetime` supports and not diluted by whatever coarser cadence a fixture schedule happens to use.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import pytest
 
 from vqapr.data.lookback import RowsLookback
 from vqapr.data.store import AccessRecord
-from vqapr.flow.run.output import LookAheadDetected, derived_available_at
+from vqapr.run.engine.output import LookAheadDetected, derived_available_at
 
 _EVAL = datetime(2024, 1, 1, 15, 30, tzinfo=UTC)
 

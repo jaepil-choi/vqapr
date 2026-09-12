@@ -22,9 +22,8 @@ from typing import Any, NoReturn
 from vqapr.agent.skillset import upgrade_note
 from vqapr.cli import check, export, list_, new, register, rm, run, show, skill
 from vqapr.cli.envelope import UsageError, emit, failure, note
-from vqapr.domain.errors import Stage
-from vqapr.domain.inputs import VALUE_INVALID, InputError
-from vqapr.project.store import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME
+from vqapr.domain.errors import VALUE_INVALID, InputError, Stage
+from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME
 
 _COMMANDS: dict[str, Any] = {
     "new": new,

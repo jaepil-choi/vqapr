@@ -2,7 +2,7 @@
 
 The skill states the guarantee without qualification -- *every entry carries `code`, `status`,
 `source`, `requirement`, `observed`, `fix` and `cause`* -- and tells the reader to read `fix`
-first, because it is the sentence that fixes this occurrence.
+first, because it is the sentence that fixes this event.
 
 A raise inside `decide()` delivered four of the six fields of the day. `fix`, `explain` and
 `source` were absent entirely, and `requirement` degraded to "the guarded boundary must complete
@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from vqapr.flow.engine.artifacts import SimulationFailure, SimulationStage
+from vqapr.run.engine.failure import SimulationFailure, SimulationStage
 
 _FIELDS = ("code", "status", "source", "requirement", "observed", "fix", "cause")
 

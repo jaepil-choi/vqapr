@@ -8,7 +8,7 @@
       "origin": "framework",
       "traceback": "<traceback>",
       "type": "VqaprError",
-      "where": "vqapr/flow/declaration/preflight.py:<n> (bound_execution_table)"
+      "where": "vqapr/run/preflight/facts.py:<n> (bound_execution_table)"
      },
      "code": "judgment.blocked",
      "example_total": 0,
@@ -37,7 +37,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/preflight.py:<n> (bound_execution_table)"
+      "where": "vqapr/run/preflight/facts.py:<n> (bound_execution_table)"
      },
      "code": "execution.price_not_a_field",
      "example_total": 0,
@@ -80,15 +80,15 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/preflight.py:<n> (unresolved_target_failures)"
+      "where": "vqapr/run/preflight/facts.py:<n> (unresolved_target_failures)"
      },
      "code": "execution.not_after_decision",
      "example_total": 1,
      "examples": [
-      "bad-run.agenda-2022-01-14T1530"
+      "bad-run.schedule-2022-01-14T1530"
      ],
      "fix": "extend the run end past 2022-01-14T23:59:59+09:00 through the instant the decision fills at, move the decision earlier, or loosen the fill's `at`/`after`",
-     "observed": "strategy 'sample-reversal-5d' fills at the first execution instant after the decision, at 15:30:00 Asia/Seoul; 1 occurrence(s) with no such instant before the run end 2022-01-14T23:59:59+09:00, the first deciding at 2022-01-14T15:30:00+09:00",
+     "observed": "strategy 'sample-reversal-5d' fills at the first execution instant after the decision, at 15:30:00 Asia/Seoul; 1 event(s) with no such instant before the run end 2022-01-14T23:59:59+09:00, the first deciding at 2022-01-14T15:30:00+09:00",
      "requirement": "every decision must have an execution instant after it that the fill rule admits",
      "source": {
       "file": null,
@@ -103,7 +103,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/judgments.py:<n> (_judge_weights)"
+      "where": "vqapr/run/preflight/checks.py:<n> (_judge_weights)"
      },
      "code": "weights.venue_conflict",
      "example_total": 3,
@@ -128,7 +128,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/judgments.py:<n> (_judge_outputs)"
+      "where": "vqapr/run/preflight/checks.py:<n> (_judge_outputs)"
      },
      "code": "run.output_registered",
      "example_total": 0,
@@ -149,7 +149,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/preflight.py:<n> (_refuse_taken_output)"
+      "where": "vqapr/run/preflight/freeze.py:<n> (_refuse_taken_output)"
      },
      "code": "run.output_registered",
      "example_total": 0,
@@ -229,7 +229,7 @@
       "origin": "framework",
       "traceback": "<traceback>",
       "type": "VqaprError",
-      "where": "vqapr/data/validation.py:<n> (require_verified)"
+      "where": "vqapr/data/verification.py:<n> (require_verified)"
      },
      "code": "judgment.blocked",
      "example_total": 0,
@@ -258,7 +258,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/data/validation.py:<n> (require_verified)"
+      "where": "vqapr/data/verification.py:<n> (require_verified)"
      },
      "code": "dataset.source_changed",
      "example_total": 0,
@@ -296,7 +296,7 @@
       "origin": "framework",
       "traceback": "<traceback>",
       "type": "VqaprError",
-      "where": "vqapr/flow/declaration/preflight.py:<n> (bound_execution_table)"
+      "where": "vqapr/run/preflight/facts.py:<n> (bound_execution_table)"
      },
      "code": "judgment.blocked",
      "example_total": 0,
@@ -331,15 +331,15 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/preflight.py:<n> (unresolved_target_failures)"
+      "where": "vqapr/run/preflight/facts.py:<n> (unresolved_target_failures)"
      },
      "code": "execution.not_after_decision",
      "example_total": 1,
      "examples": [
-      "bad-run.agenda-2022-01-14T1530"
+      "bad-run.schedule-2022-01-14T1530"
      ],
      "fix": "extend the run end past 2022-01-14T23:59:59+09:00 through the instant the decision fills at, move the decision earlier, or loosen the fill's `at`/`after`",
-     "observed": "strategy 'sample-reversal-5d' fills at the first execution instant after the decision, at 15:30:00 Asia/Seoul; 1 occurrence(s) with no such instant before the run end 2022-01-14T23:59:59+09:00, the first deciding at 2022-01-14T15:30:00+09:00",
+     "observed": "strategy 'sample-reversal-5d' fills at the first execution instant after the decision, at 15:30:00 Asia/Seoul; 1 event(s) with no such instant before the run end 2022-01-14T23:59:59+09:00, the first deciding at 2022-01-14T15:30:00+09:00",
      "requirement": "every decision must have an execution instant after it that the fill rule admits",
      "source": {
       "file": null,
@@ -354,7 +354,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/judgments.py:<n> (_judge_weights)"
+      "where": "vqapr/run/preflight/checks.py:<n> (_judge_weights)"
      },
      "code": "weights.venue_conflict",
      "example_total": 3,
@@ -379,7 +379,7 @@
       "origin": "framework",
       "traceback": null,
       "type": null,
-      "where": "vqapr/flow/declaration/judgments.py:<n> (_judge_outputs)"
+      "where": "vqapr/run/preflight/checks.py:<n> (_judge_outputs)"
      },
      "code": "run.output_registered",
      "example_total": 0,
@@ -414,7 +414,7 @@
       "origin": "framework",
       "traceback": "<traceback>",
       "type": "VqaprError",
-      "where": "vqapr/data/validation.py:<n> (require_verified)"
+      "where": "vqapr/data/verification.py:<n> (require_verified)"
      },
      "code": "judgment.blocked",
      "example_total": 0,

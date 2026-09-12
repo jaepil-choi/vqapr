@@ -24,12 +24,12 @@ from pathlib import Path
 
 import pytest
 
-from vqapr.project import store as workspace_module
-from vqapr.project.registration import apply
-from vqapr.domain.errors import VqaprError
-from vqapr.extension.component import ComponentKind, ComponentRef
-from vqapr.domain.inputs import InputError
-from vqapr.project.store import WORKSPACE_DIRECTORY, Workspace
+from vqapr.component.reference import ComponentRef
+from vqapr.domain.errors import InputError, VqaprError
+from vqapr.domain.wiring import Role
+from vqapr.workspace import registry as workspace_module
+from vqapr.workspace.registration import apply
+from vqapr.workspace.registry import WORKSPACE_DIRECTORY, Workspace
 
 
 def _fingerprint(root: Path) -> dict[str, str]:
@@ -62,7 +62,7 @@ def _run(*, strategy: str = "alpha", at: str = "04:00") -> dict:
         "start": None,
         "end": None,
         "timezone": "Asia/Seoul",
-        "agenda": {"every": "1d", "at": at},
+        "schedule": {"every": "1d", "at": at},
         "exchange": None,
         "execution": None,
         "initial_account": {"cash": "1000", "mode": "long_only", "positions": {}},
@@ -81,7 +81,7 @@ def _register_a_strategy(root: Path, name: str = "alpha") -> None:
         t.register_component(
             ComponentRef.of(
                 name,
-                ComponentKind.STRATEGY_MODEL,
+                Role.STRATEGY_MODEL,
                 root / f"{name}.py",
                 "Strategy",
                 fingerprint="a" * 64,
@@ -139,7 +139,7 @@ def test_a_valid_document_is_one_write(
     assert len(writes) == 1, [str(path) for path in writes]
     reopened = Workspace.open(tmp_path)
     assert {str(item.dataset_id) for item in reopened.datasets} == {"price_a", "price_b"}
-    assert reopened.run_definition("daily").agenda.every == "1d"
+    assert reopened.run_definition("daily").schedule.every == "1d"
 
 
 def test_an_idempotent_document_writes_nothing(

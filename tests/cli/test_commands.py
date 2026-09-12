@@ -2,7 +2,7 @@
 
 `test_envelope.py` covers the envelope's shape and asserts the parser *mentions* every command.
 Mentioning is not running: before this file, no test invoked `new`, `register`, `list` or `run`,
-so the whole `runs: -> register -> RunDefinition -> preflight_run -> run` path was unexecuted.
+so the whole `runs: -> register -> RunDefinition -> freeze -> run` path was unexecuted.
 These tests call `main(argv)` and read the JSON it emits, which is exactly what an agent gets.
 
 Datasets, execution inputs, components and runs are declared through `vqapr register`, which is
@@ -10,8 +10,8 @@ the command that closed that gap. This file previously reached past the CLI into
 all of them, under a docstring admitting the CLI could not register them; the workspace below is
 now reachable by typing `vqapr` commands only, which is the property that matters.
 
-Since the two-clocks campaign a run declares its own strategy clock (`agenda`, `timezone`,
-`at`): there is no agenda to register and no binding to write, so the fixture is one file
+Since the two-clocks campaign a run declares its own schedule clock (`schedule`, `timezone`,
+`at`): there is no schedule to register and no binding to write, so the fixture is one file
 shorter than it was.
 """
 
@@ -33,7 +33,7 @@ OCCURRENCES = 6
 """What the fixture run dispatches: three sessions, so three callbacks, and one execution each.
 
 The book is valued at the instant the venue fills and the declared Compliance rules observe it right
-after each commit (record 148), so neither valuation nor monitoring is an occurrence of its own
+after each commit (record 148), so neither valuation nor monitoring is an event of its own
 any more. Before 148 this was 12: three days times callback, valuation and monitoring, plus the
 three executions.
 """
@@ -79,8 +79,8 @@ def _exchange_component(root: Path) -> Path:
     path = root / "venue.py"
     path.write_text(
         "from decimal import Decimal\n"
-        "from vqapr.exchange.venue import AcademicExchange, TradeRule\n"
-        "from vqapr.exchange.listings import ListingAccess\n"
+        "from vqapr.public import AcademicExchange, TradeRule\n"
+        "from vqapr.public import ListingAccess\n"
         "class Venue(AcademicExchange):\n"
         "    def __init__(self):\n"
         "        super().__init__({'A': TradeRule('A', Decimal('1'), Decimal('1'), False,\n"
@@ -125,7 +125,7 @@ def _register_roster(
     root: Path, capsys: pytest.CaptureFixture[str], universe: dict[str, str]
 ) -> dict:
     """Declare what each id IS, through `vqapr register` -- the way a user does."""
-    from vqapr.domain.instruments import export_roster
+    from vqapr.domain.instrument import export_roster
 
     written = export_roster(universe, root / "roster")
     declaration = root / "roster.yaml"
@@ -207,7 +207,7 @@ def _runs_declaration(root: Path, run_id: str = "r1", **overrides: object) -> Pa
         "strategy": {"component": "my-alpha"},
         **({} if compliance is None else {"compliance": compliance}),
         "timezone": "Asia/Seoul",
-        "agenda": {"every": "1d", "at": "04:00"},
+        "schedule": {"every": "1d", "at": "04:00"},
         "exchange": "venue",
         "execution": {
             "dataset": "venue-daily",
@@ -294,9 +294,9 @@ def test_run_executes_a_registered_run_end_to_end(
     strategy = payload["strategies"]["my-alpha"]
     assert strategy["record"].startswith("my-alpha@")
     # One callback per session (record 148: the run's sessions at its `at`, nothing else is
-    # dispatched) plus the execution occurrences the fills land on. Pinned rather than `> 0`,
+    # dispatched) plus the execution events the fills land on. Pinned rather than `> 0`,
     # which a run that did nothing would also satisfy.
-    assert strategy["occurrences"] == OCCURRENCES
+    assert strategy["events"] == OCCURRENCES
     # The scaffold TRADES. It used to hold throughout -- the old template returned Hold --
     # and this assertion pinned account_version at zero, which meant the end-to-end test proved a
     # run that never bought anything. The authoring-contract scaffold ranks the cross-section and
@@ -742,7 +742,7 @@ def test_list_instruments_answers_without_opening_the_sidecar_by_hand(
     Empty is an answer, not a failure: `list` is the command an agent runs first to orient itself,
     and a project with no roster is an ordinary state.
     """
-    from vqapr.domain.instruments import export_roster
+    from vqapr.domain.instrument import export_roster
 
     # Before a workspace exists at all, and after one exists with no roster. Both are zero.
     code, empty = _cli(capsys, "--project-root", str(tmp_path), "list", "instruments")
@@ -851,7 +851,7 @@ def test_one_run_command_opens_the_workspace_document_once(
     up, again inside preflight, again for the roster at run start, and again for the envelope's
     roster after the run. Four reads of a file other commands write is four chances to judge
     one document and freeze another. One open, and everything else is handed that snapshot."""
-    from vqapr.project.store import Workspace
+    from vqapr.workspace.registry import Workspace
 
     _workspace_for_run(tmp_path, capsys)
     code, registered_run = _register_run(tmp_path, capsys, "once")
@@ -915,9 +915,10 @@ def test_a_rule_that_slipped_past_registration_is_refused_by_check_not_by_a_cras
     using `Workspace` directly does. The point of the test is that the two CLI verbs still refuse,
     and refuse in the structured shape rather than by crashing.
     """
-    from vqapr.extension.component import ComponentKind, ComponentRef
-    from vqapr.extension.fingerprint import fingerprint_component
-    from vqapr.project.store import Workspace
+    from vqapr.component.fingerprint import fingerprint_component
+    from vqapr.component.reference import ComponentRef
+    from vqapr.domain.wiring import Role
+    from vqapr.workspace.registry import Workspace
 
     _workspace_for_run(tmp_path, capsys)
 
@@ -938,11 +939,11 @@ def test_a_rule_that_slipped_past_registration_is_refused_by_check_not_by_a_cras
         t.register_component(
             ComponentRef.of(
                 "limit",
-                ComponentKind.COMPLIANCE,
+                Role.COMPLIANCE,
                 source,
                 "Limit",
                 fingerprint=fingerprint_component(
-                    source, kind=ComponentKind.COMPLIANCE, object_name="Limit"
+                    source, kind=Role.COMPLIANCE, object_name="Limit"
                 ),
             )
         )
@@ -982,7 +983,7 @@ def test_a_rule_registered_under_the_id_it_answers_to_still_runs(
     so this carries the accepted spelling all the way through `check` and `run` and asserts the
     counts are the ones the unconstrained run produces.
     """
-    from vqapr.compliance.builtin import shipped_compliance_path
+    from vqapr.component.compliance.shipped import shipped_compliance_path
 
     _workspace_for_run(tmp_path, capsys)
 
@@ -1024,7 +1025,7 @@ def test_a_rule_registered_under_the_id_it_answers_to_still_runs(
     # short, so no-short binds nothing and must change no number. A different count here would
     # mean the rule altered the book rather than merely observing it.
     strategy = ran["strategies"]["my-alpha"]
-    assert strategy["occurrences"] == OCCURRENCES
+    assert strategy["events"] == OCCURRENCES
     assert strategy["account_version"] == 2
 
 
@@ -1218,7 +1219,7 @@ def test_one_run_records_one_clock(tmp_path: Path, capsys: pytest.CaptureFixture
 
 
 _NEVER_READY = '''
-from vqapr.authoring import DatasetInput, RowsLookback, StrategyModel
+from vqapr.public import DatasetInput, RowsLookback, StrategyModel
 
 
 class {object_name}(StrategyModel):

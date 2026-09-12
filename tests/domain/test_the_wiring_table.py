@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import inspect
 
-from vqapr.authoring import Compliance, Component, DataModel, Part, StrategyModel, Tool
+from vqapr.component.exchange.base import Exchange
 from vqapr.domain.wiring import (
+    EXTENSION_POINTS,
     MARKET_CLOCK_ORDER,
     WIRING,
     Clock,
@@ -23,9 +24,8 @@ from vqapr.domain.wiring import (
     roles_on,
     tools,
 )
-from vqapr.exchange.venue import Exchange
-from vqapr.extension.component import ComponentKind
-from vqapr.flow.run.loop import MarketClock
+from vqapr.public import Compliance, Component, DataModel, Part, StrategyModel, Tool
+from vqapr.run.engine.loop import MarketClock
 
 
 def test_every_role_has_exactly_one_row_and_no_row_is_without_a_role() -> None:
@@ -38,11 +38,11 @@ def test_every_role_has_exactly_one_row_and_no_row_is_without_a_role() -> None:
 
 def test_the_table_is_the_design_paragraph() -> None:
     """Design §4, row by row."""
-    assert WIRING[Role.DATA_MODEL].clock is Clock.STRATEGY
+    assert WIRING[Role.DATA_MODEL].clock is Clock.SCHEDULE
     assert WIRING[Role.DATA_MODEL].receives == (View.WINDOW,)
     assert WIRING[Role.DATA_MODEL].answers_to is Receiver.WAREHOUSE
 
-    assert WIRING[Role.STRATEGY_MODEL].clock is Clock.STRATEGY
+    assert WIRING[Role.STRATEGY_MODEL].clock is Clock.SCHEDULE
     assert WIRING[Role.STRATEGY_MODEL].receives == (View.WINDOW, View.ACCOUNT, View.HISTORY)
     assert WIRING[Role.STRATEGY_MODEL].answers_to is Receiver.EXCHANGE
 
@@ -65,7 +65,7 @@ def test_a_part_declares_its_clock_and_a_tool_borrows_one() -> None:
     """§4.3: the one criterion. A part is a tool plus a clock; the types say so."""
     assert parts() == (Role.DATA_MODEL, Role.STRATEGY_MODEL)
     assert tools() == (Role.ACCRUAL, Role.EXCHANGE, Role.COMPLIANCE)
-    assert roles_on(Clock.STRATEGY) == parts(), "the strategy clock is the parts' own"
+    assert roles_on(Clock.SCHEDULE) == parts(), "the schedule clock is the parts' own"
     assert roles_on(Clock.MARKET) == tools(), "every tool attaches to the market clock today"
 
     assert issubclass(Part, Component) and issubclass(Tool, Component)
@@ -86,10 +86,10 @@ def test_every_authored_class_points_at_the_row_it_implements() -> None:
         assert role_class.wiring() is WIRING[role]
 
 
-def test_every_registrable_kind_is_a_row_and_accrual_is_not_yet_a_kind() -> None:
-    """Four doors, five rows (design §8: 넷 + Accrual 자리)."""
-    assert {kind.role for kind in ComponentKind} == set(Role) - {Role.ACCRUAL}
-    assert ComponentKind.STRATEGY_MODEL.role is Role.STRATEGY_MODEL
+def test_every_extension_point_is_a_row_and_accrual_is_not_yet_one() -> None:
+    """Four doors, five rows (design §8: 넷 + Accrual 자리), named by one enum since record `272`."""
+    assert set(EXTENSION_POINTS) == set(Role) - {Role.ACCRUAL}
+    assert len(EXTENSION_POINTS) == len(set(EXTENSION_POINTS))
 
 
 def test_the_loop_calls_the_market_clock_roles_in_the_tables_order() -> None:

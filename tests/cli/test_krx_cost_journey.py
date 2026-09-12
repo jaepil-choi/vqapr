@@ -92,14 +92,14 @@ _STRATEGY = '''"""Holds whichever name closed highest, so leadership changes for
 
 from decimal import Decimal
 
-from vqapr import authoring as va
+from vqapr import public as vq
 
 
-class Rotate(va.StrategyModel):
+class Rotate(vq.StrategyModel):
     def inputs(self):
         return {
-            "prices": va.DatasetInput(
-                dataset_id="prices", fields=("close",), lookback=va.RowsLookback(rows=1)
+            "prices": vq.DatasetInput(
+                dataset_id="prices", fields=("close",), lookback=vq.RowsLookback(rows=1)
             )
         }
 
@@ -109,9 +109,9 @@ class Rotate(va.StrategyModel):
             for name, value in call.read("prices", "close").latest().items()
         }
         if not latest:
-            return va.Hold(reason="no-observations")
+            return vq.Hold(reason="no-observations")
         winner = max(latest, key=lambda name: latest[name])
-        return va.Rebalance.of(long={winner: Decimal(1)}, invested="1.0")
+        return vq.Rebalance.of(long={winner: Decimal(1)}, invested="1.0")
 '''
 
 
@@ -165,7 +165,7 @@ def test_the_krx_scaffold_charges_a_stock_and_exempts_an_etf(
     assert code == 0, payload
 
     # The roster: what each id IS. The project's statement, not the venue's.
-    from vqapr.domain.instruments import export_roster
+    from vqapr.domain.instrument import export_roster
 
     written = export_roster({STOCK: "stock", ETF: "etf"}, tmp_path / "roster")
     roster = tmp_path / "roster.yaml"
@@ -235,7 +235,7 @@ components:
                         # Decide at 04:00 on every session the prices have a row for; the book
                         # is valued at the 15:30 fill it lands on (record 148).
                         "timezone": "Asia/Seoul",
-                        "agenda": {"every": "1d", "at": "04:00"},
+                        "schedule": {"every": "1d", "at": "04:00"},
                         "exchange": "krx-venue",
                         "execution": {
                             "dataset": "venue-daily",
