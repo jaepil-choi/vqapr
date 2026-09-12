@@ -1,0 +1,112 @@
+{
+  "ok": true,
+  "same_file_set": true,
+  "tables": [
+    {
+      "path": "balanced-factors/strategies/balanced-factors@4b0dfea6/tables/vqapr.account/all.parquet",
+      "rows": 117242,
+      "columns": 12,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "balanced-factors/strategies/balanced-factors@4b0dfea6/tables/vqapr.fill/all.parquet",
+      "rows": 34627,
+      "columns": 16,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "balanced-factors/strategies/balanced-factors@4b0dfea6/tables/vqapr.weight/all.parquet",
+      "rows": 24480,
+      "columns": 7,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "earnings-momentum/strategies/earnings-momentum@20c90f9f/tables/vqapr.account/all.parquet",
+      "rows": 117242,
+      "columns": 12,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "earnings-momentum/strategies/earnings-momentum@20c90f9f/tables/vqapr.fill/all.parquet",
+      "rows": 32491,
+      "columns": 16,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "earnings-momentum/strategies/earnings-momentum@20c90f9f/tables/vqapr.weight/all.parquet",
+      "rows": 24480,
+      "columns": 7,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "low-vol-momentum/strategies/low-vol-momentum@09924453/tables/vqapr.account/all.parquet",
+      "rows": 117242,
+      "columns": 12,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "low-vol-momentum/strategies/low-vol-momentum@09924453/tables/vqapr.fill/all.parquet",
+      "rows": 36581,
+      "columns": 16,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "low-vol-momentum/strategies/low-vol-momentum@09924453/tables/vqapr.weight/all.parquet",
+      "rows": 24480,
+      "columns": 7,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "six-week-momentum/strategies/six-week-momentum@5944e1a7/tables/vqapr.account/all.parquet",
+      "rows": 117242,
+      "columns": 12,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "six-week-momentum/strategies/six-week-momentum@5944e1a7/tables/vqapr.fill/all.parquet",
+      "rows": 39220,
+      "columns": 16,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "six-week-momentum/strategies/six-week-momentum@5944e1a7/tables/vqapr.weight/all.parquet",
+      "rows": 24480,
+      "columns": 7,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "value-quality/strategies/value-quality@1be5d87f/tables/vqapr.account/all.parquet",
+      "rows": 117242,
+      "columns": 12,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "value-quality/strategies/value-quality@1be5d87f/tables/vqapr.fill/all.parquet",
+      "rows": 28216,
+      "columns": 16,
+      "equal": true,
+      "byte_identical": true
+    },
+    {
+      "path": "value-quality/strategies/value-quality@1be5d87f/tables/vqapr.weight/all.parquet",
+      "rows": 24480,
+      "columns": 7,
+      "equal": true,
+      "byte_identical": true
+    }
+  ],
+  "rows_total": 879745
+}

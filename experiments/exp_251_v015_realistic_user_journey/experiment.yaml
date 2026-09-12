@@ -1,0 +1,46 @@
+schema_version: 1
+experiment_id: exp_251
+name: v015-realistic-user-journey
+status: concluded
+hypothesis: >-
+  The v0.15 engine can be measured and improved through the same installed-user CLI journey on a
+  realistic eight-year, multi-table weekly strategy without changing its decisions or records.
+input:
+  source: /Users/jason/qlibx/DW-derived frozen panel
+  rows: 3533400
+  sessions: 1963
+  instruments: 1800
+  strategy: weekly six-week long-short factor ranking
+versions:
+  baseline:
+    commit: 8e0045f3c812bb469d80bdb7d52e0537b7a0128c
+    tag: v0.15.0
+  candidate:
+    branch: codex/v015-performance-harness
+    wheel_sha256: 5a18cb89a2f1b26ac72a7bf07b92783dc79c5db5b45b819bd0d6a144be9c9670
+commands:
+  prepare: uv run python experiments/exp_251_v015_realistic_user_journey/prepare_input.py
+  build_project: uv run python experiments/exp_251_v015_realistic_user_journey/build_project.py
+  measure: uv run --with psutil python experiments/exp_251_v015_realistic_user_journey/measure.py
+evidence:
+  directory: outputs
+  report: outputs/PERFORMANCE-REPORT.md
+decision: >-
+  Adopt lazy panel evidence, reuse an existing panel before deriving its full identity, and read
+  execution rows in larger bounded windows. Keep DuckDB, Arrow, and NumPy in their existing roles;
+  test SQL/dbt marts only against an anonymized production strategy whose repeated joins dominate.
+freshness:
+  branch: codex/v015-performance-harness
+  base_commit: 8e0045f3c812bb469d80bdb7d52e0537b7a0128c
+  started_at: '2026-09-11T00:00:00+09:00'
+relationships:
+  supersedes:
+    - exp_052_installed_user_journey on v0.9.0.dev1
+  related:
+    - exp_221_the_market_clock_cost
+    - exp_236_the_panel_memory
+    - exp_250_ff3_through_vqapr
+approval_gates:
+  - Source DW data is read-only.
+  - No remote push or package publication.
+  - No direct database query is introduced by this harness.
