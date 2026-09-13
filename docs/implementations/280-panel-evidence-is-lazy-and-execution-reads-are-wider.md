@@ -108,3 +108,55 @@ DataModel 419,686행과 다섯 전략의 account/fill/weight 15개 표는 기준
 - 변경 코드는 `develop`의 `v0.16.0` 구조에 병합함
 - 실행 자료 경로 변경을 따라 `src/vqapr/data/execution_table.py`에 적용함
 - Panel 계약 집중 검사와 현재 전체 검사를 다시 실행해 호환성을 확인함
+
+## 0.16.0 develop merge 뒤 재측정 (2026-09-13)
+
+- 조건: exp_251과 같은 모양의 합성 자료. 1,800종목 × 1,963거래일, 13개 숫자 필드(결측은 null),
+  매주 상위·하위 30종목 롱숏 전략 하나임
+- 하네스: exp_251 하네스를 0.16.0 선언(`schedule:`, `vqapr.public`)으로 고쳐 씀. 저장소에는 넣지 않음
+- 방법: 한 workspace에서 merge 전 `develop`(`24f9440c`)과 이 변경을 번갈아 3회씩 `vqapr run --force`
+
+| 구간 (3회 중앙값) | 0.16.0 `develop` | 이 변경 | 변화 |
+|---|---:|---:|---:|
+| 벽시계 | 17.96 s | 13.10 s | -27% |
+| 엔진 total | 13.63 s | 9.21 s | -32% |
+| callback | 8.60 s | 4.82 s | -44% |
+| snapshot | 1.89 s | 1.32 s | -30% |
+
+- 프로파일: `panel_identity`(4,992회, 누적 4.86 s)가 상위에서 사라짐. `execution_window_table`은 18회에서 4회로 줄어듦
+- 두 판 모두 이벤트 2,306개, 체결 42,021건으로 같음. 이 재측정에서는 기록 파일을 바이트 단위로 비교하지 않음.
+  바이트 단위 전수 비교는 위의 exp_251·exp_252가 `v0.15.0`에서 한 것임
+- merge 커밋 트리(`7a7c863b`) 검증:
+  - `ruff check src/` 통과, `pyright` 오류 0
+  - 기본 테스트 1,769 통과, 6 제외, 1 실패
+    - 실패는 `test_workspace_concurrency.py::test_parallel_registrations_all_survive`의 `.workspace.lock` PermissionError임
+    - merge 전 `develop`에서도 10회 중 1회 실패하는 Windows 잠금 경합임
+  - slow 세트 28 통과. show_004는 저장소의 `data/DW`로 따로 통과함
+  - show_003 수동 실행 exit 0
+
+## 남은 후보
+
+같은 하네스로 이 변경 뒤의 프로파일을 떠서 찾은 후보임. cProfile 누적 시간이라 실제 절감은 이보다 작음.
+
+1. 기록 writer가 청크마다 열 타입을 다시 추론함 (약 1.9 s)
+   - `record/schema.py` `_arrow_table`·`_arrow_type`에서 31,896회
+   - 첫 청크에서 정해진 열은 추론을 건너뛸 수 있음
+2. `ExecutionSnapshots.at`이 시각의 1,800종목 전부를 Python 값으로 바꾼 뒤 요청 종목만 거름 (약 1.5 s)
+   - `data/execution_table.py`
+   - 종목에서 행 위치로 가는 색인으로 요청 행만 꺼내면 됨
+3. `ModelWindow`가 판단마다 동결된 전체 종목 id를 다시 검증함 (약 1.0 s)
+   - `data/window.py`, `run/assemble.py` `_window_factory`
+   - `instrument_id` 691,200회. Compliance가 있으면 시장 시각마다 한 번 더 함
+4. 체결 한 번에 `ExchangeRulesView`를 약 다섯 번 새로 만들고, 만들 때마다 listing 1,800개를 다시 검증함 (약 0.7 s)
+   - `component/exchange/academic.py` `rules`
+   - `run/engine/stages/execute.py` `_bound_rules` 두 번
+5. 평가 경로가 보유 종목마다 같은 값을 여러 번 검증함 (약 0.8 s)
+   - `SelectedMark`, `prices_of`, `Mark`
+6. 읽기마다 requirement를 다시 만들고 pydantic 비교로 선형 탐색함 (약 0.4 s)
+   - `requirements_for` 5,017회
+7. 이 조건에서는 작지만 분봉에서 커지는 것:
+   - `run_state.py`의 `lifecycle_trace`가 root마다 tuple을 통째로 복사해 이어 붙임 (제곱 증가)
+   - Compliance가 시각마다 규칙 준비를 반복함
+8. 재지 않은 것:
+   - DataModel 출력이 행마다 dict를 세 번 만듦 (`output.py`, `compute.py`)
+   - rows-grain 읽기의 `actual_rows`는 아직 즉시 만듦 (`data/store.py`)

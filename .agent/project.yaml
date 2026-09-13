@@ -58,6 +58,9 @@ canonical_documents:
   # 표면은 vqapr.public 하나(`from vqapr import public as vq`), 루프는 DES의 말(schedule · ScheduledEvent · event_id
   # · call.at), 계좌가 자기 보유를 곱한다. 0.16.0 (깨지는 변화: run 선언 `agenda:` -> `schedule:`, vqapr.authoring
   # 삭제, 옛 run 기록은 다시 run; docs/releases/0.16.0.md, tag v0.16.0). 현행 캠페인 없음.
+  # 2026-09-13: 팀원(jaeyonge/qlibx codex/v015-performance-harness)의 성능 변경을 develop에 merge(records 280-282):
+  # cache된 panel을 identity 해시 전에 찾음 · panel 증거 lazy · 체결 읽기 1M행 · 행 묶음의 필드명 검사 한 번 · 장기 연구 안내.
+  # 0.16.0 합성 1,800종목×1,963일 한 전략 벽시계 17.96 s -> 13.10 s. 남은 후보는 record 280 끝. 현행 캠페인 없음.
   active_campaign: docs/refactoring/2026-09-12-the-concept-tree-campaign.md
   # 두 시계(시장/전략)와 다섯 역할의 배선표. 확장점·시계·목적지·통장의 계약이 어디서 왔는가.
   # 배선표 자체는 domain/wiring.py, 현행 설명은 architecture §3.2·§10.2.
