@@ -1,0 +1,323 @@
+{
+  "datamodel": {
+    "left_rows": 419686,
+    "right_rows": 419686,
+    "schema_equal": true,
+    "values_equal": true,
+    "left_sha256": "e3847c2c2c3f69f5d5eddb8546d89df587bf1f66659fd912b2a9fc90d7134b34",
+    "right_sha256": "e3847c2c2c3f69f5d5eddb8546d89df587bf1f66659fd912b2a9fc90d7134b34",
+    "file_hash_equal": true
+  },
+  "strategies": {
+    "six-week-momentum": {
+      "vqapr.account": {
+        "left_rows": 128492,
+        "right_rows": 128492,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "5b96bfea07c2c4d82bf49e82e766e0c30cde720f84fc68fd60263e7c1e8ef8b3",
+        "right_sha256": "5b96bfea07c2c4d82bf49e82e766e0c30cde720f84fc68fd60263e7c1e8ef8b3",
+        "file_hash_equal": true
+      },
+      "vqapr.fill": {
+        "left_rows": 37193,
+        "right_rows": 37193,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "691ed7df49f84c36efa6793710e2951830c38dd55bd90e6ec99c90ed28698e16",
+        "right_sha256": "691ed7df49f84c36efa6793710e2951830c38dd55bd90e6ec99c90ed28698e16",
+        "file_hash_equal": true
+      },
+      "vqapr.weight": {
+        "left_rows": 26760,
+        "right_rows": 26760,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "05609557c09be0ca1038b3db2a3b8de77f3595c68ce3b7046600ec57dcc80bdf",
+        "right_sha256": "05609557c09be0ca1038b3db2a3b8de77f3595c68ce3b7046600ec57dcc80bdf",
+        "file_hash_equal": true
+      }
+    },
+    "balanced-factors": {
+      "vqapr.account": {
+        "left_rows": 130464,
+        "right_rows": 130464,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "b93f15f614897e30e04ebe85250a37c8ef2fb2028a0863e91e1772fa9658153a",
+        "right_sha256": "b93f15f614897e30e04ebe85250a37c8ef2fb2028a0863e91e1772fa9658153a",
+        "file_hash_equal": true
+      },
+      "vqapr.fill": {
+        "left_rows": 35405,
+        "right_rows": 35405,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "56fb6c6e4edcc493a38de9df72cf2e5293b078c7bd1a9aa025a361e680554f08",
+        "right_sha256": "56fb6c6e4edcc493a38de9df72cf2e5293b078c7bd1a9aa025a361e680554f08",
+        "file_hash_equal": true
+      },
+      "vqapr.weight": {
+        "left_rows": 26760,
+        "right_rows": 26760,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "0a573aa3c9ddd850a49ba46850b7c6170cec59849e7fc4f6fa7cfb405ecbcec0",
+        "right_sha256": "0a573aa3c9ddd850a49ba46850b7c6170cec59849e7fc4f6fa7cfb405ecbcec0",
+        "file_hash_equal": true
+      }
+    },
+    "value-quality": {
+      "vqapr.account": {
+        "left_rows": 129457,
+        "right_rows": 129457,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "93a5335e59949c7e8e071c35f45343db52ac1d42623d3ce483a43471c3dc125a",
+        "right_sha256": "93a5335e59949c7e8e071c35f45343db52ac1d42623d3ce483a43471c3dc125a",
+        "file_hash_equal": true
+      },
+      "vqapr.fill": {
+        "left_rows": 30205,
+        "right_rows": 30205,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "76c991c70893b56f38311fed4965eaee9906e9b2a99989c376c27a8d5dd9d8d1",
+        "right_sha256": "76c991c70893b56f38311fed4965eaee9906e9b2a99989c376c27a8d5dd9d8d1",
+        "file_hash_equal": true
+      },
+      "vqapr.weight": {
+        "left_rows": 26760,
+        "right_rows": 26760,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "72e27a4b7338f3d26cd871b0a7c1bd7c464ad9acace9f5237570efc6c1e462a6",
+        "right_sha256": "72e27a4b7338f3d26cd871b0a7c1bd7c464ad9acace9f5237570efc6c1e462a6",
+        "file_hash_equal": true
+      }
+    },
+    "low-vol-momentum": {
+      "vqapr.account": {
+        "left_rows": 130295,
+        "right_rows": 130295,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "0695e0b4f6211488a85bdf8e72149fb54a32532a04588b95bdaac28497663b1b",
+        "right_sha256": "0695e0b4f6211488a85bdf8e72149fb54a32532a04588b95bdaac28497663b1b",
+        "file_hash_equal": true
+      },
+      "vqapr.fill": {
+        "left_rows": 36780,
+        "right_rows": 36780,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "a6143cc27cfdec7ff6bf71bde5410ee613e91a6aa50b973dc88eee0d3c7d36cd",
+        "right_sha256": "a6143cc27cfdec7ff6bf71bde5410ee613e91a6aa50b973dc88eee0d3c7d36cd",
+        "file_hash_equal": true
+      },
+      "vqapr.weight": {
+        "left_rows": 26760,
+        "right_rows": 26760,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "b29536772c0a4819b9fa84623ad5d3832c63b45a71e5165fdf21e1dcab2c0efa",
+        "right_sha256": "b29536772c0a4819b9fa84623ad5d3832c63b45a71e5165fdf21e1dcab2c0efa",
+        "file_hash_equal": true
+      }
+    },
+    "earnings-momentum": {
+      "vqapr.account": {
+        "left_rows": 128509,
+        "right_rows": 128509,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "ae34c4b27c029d2c6c7d5b43dbdd6f1af87a45ce7abfa3571773aec1d97ade12",
+        "right_sha256": "ae34c4b27c029d2c6c7d5b43dbdd6f1af87a45ce7abfa3571773aec1d97ade12",
+        "file_hash_equal": true
+      },
+      "vqapr.fill": {
+        "left_rows": 33879,
+        "right_rows": 33879,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "5a888efc3f861a694a152fa9a692f51ed72468785bd398d65ae8c84a60493666",
+        "right_sha256": "5a888efc3f861a694a152fa9a692f51ed72468785bd398d65ae8c84a60493666",
+        "file_hash_equal": true
+      },
+      "vqapr.weight": {
+        "left_rows": 26760,
+        "right_rows": 26760,
+        "schema_equal": true,
+        "values_equal": true,
+        "left_sha256": "5e8174608d72074dcd45a1e8bc6859aad98251d6f4b2fb89f689599210432102",
+        "right_sha256": "5e8174608d72074dcd45a1e8bc6859aad98251d6f4b2fb89f689599210432102",
+        "file_hash_equal": true
+      }
+    }
+  },
+  "direct": {
+    "six-week-momentum": {
+      "vqapr.account": {
+        "left_rows": 128492,
+        "right_rows": 128492,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "5b96bfea07c2c4d82bf49e82e766e0c30cde720f84fc68fd60263e7c1e8ef8b3",
+        "right_sha256": "e721e03fc6f9849a794cfa13628517f70125158949bdbdf713ae545012891c9a",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      },
+      "vqapr.fill": {
+        "left_rows": 37193,
+        "right_rows": 37193,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "691ed7df49f84c36efa6793710e2951830c38dd55bd90e6ec99c90ed28698e16",
+        "right_sha256": "214f7ffa97e57580c12aa1723bbba6d71fc00da0858a8faeac2f937392a7db2f",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      }
+    },
+    "balanced-factors": {
+      "vqapr.account": {
+        "left_rows": 130464,
+        "right_rows": 130464,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "b93f15f614897e30e04ebe85250a37c8ef2fb2028a0863e91e1772fa9658153a",
+        "right_sha256": "f590a99ff34973c24fbe4b3aaecb12f392f113d4f5cd1e3adc41ee256827ed12",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      },
+      "vqapr.fill": {
+        "left_rows": 35405,
+        "right_rows": 35405,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "56fb6c6e4edcc493a38de9df72cf2e5293b078c7bd1a9aa025a361e680554f08",
+        "right_sha256": "dac5557c78b1b2ad630e40e17f851dc5406d31c97104b387eadb8a2ec2529d7c",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      }
+    },
+    "value-quality": {
+      "vqapr.account": {
+        "left_rows": 129457,
+        "right_rows": 129457,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "93a5335e59949c7e8e071c35f45343db52ac1d42623d3ce483a43471c3dc125a",
+        "right_sha256": "d39bd1c179c5c1a5777411b3bddf931260dc326d34d85c8e4b2bf177e51ca792",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      },
+      "vqapr.fill": {
+        "left_rows": 30205,
+        "right_rows": 30205,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "76c991c70893b56f38311fed4965eaee9906e9b2a99989c376c27a8d5dd9d8d1",
+        "right_sha256": "b96e68c89fea2e8bc5290d1b69b02f2eeb308112b72fdf297b1a141d1c23519c",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      }
+    },
+    "low-vol-momentum": {
+      "vqapr.account": {
+        "left_rows": 130295,
+        "right_rows": 130295,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "0695e0b4f6211488a85bdf8e72149fb54a32532a04588b95bdaac28497663b1b",
+        "right_sha256": "f30893b6439066f9fa875b6dacf0acc33288fbc4b4c95c7f7d16ea5b7a0bd40d",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      },
+      "vqapr.fill": {
+        "left_rows": 36780,
+        "right_rows": 36780,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "a6143cc27cfdec7ff6bf71bde5410ee613e91a6aa50b973dc88eee0d3c7d36cd",
+        "right_sha256": "8c75255b88dcb658425d2f509e99f5d8cbac08b1cf3962c99e90888d8441e85b",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      }
+    },
+    "earnings-momentum": {
+      "vqapr.account": {
+        "left_rows": 128509,
+        "right_rows": 128509,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "ae34c4b27c029d2c6c7d5b43dbdd6f1af87a45ce7abfa3571773aec1d97ade12",
+        "right_sha256": "8ca82ea084aa9478b4ae87b9edf09ffd02303e2568a140761c5def658e577619",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      },
+      "vqapr.fill": {
+        "left_rows": 33879,
+        "right_rows": 33879,
+        "schema_equal": true,
+        "values_equal": false,
+        "left_sha256": "5a888efc3f861a694a152fa9a692f51ed72468785bd398d65ae8c84a60493666",
+        "right_sha256": "d4b87dd68c48194d986133d2894482c405473b1aea2852b9a25a8ce60def6604",
+        "file_hash_equal": false,
+        "economic_values_equal": true,
+        "ignored_identity_columns": [
+          "producer_id",
+          "run_id"
+        ]
+      }
+    }
+  },
+  "sql": {
+    "candidate_rows": 419686,
+    "sql_rows": 6806,
+    "schema_equal": false,
+    "values_equal": false
+  },
+  "incremental": {
+    "candidate_tail_rows": 4000,
+    "incremental_rows": 4000,
+    "schema_equal": true,
+    "values_equal": true,
+    "first_instant": "2026-06-22T18:30:00+09:00"
+  }
+}

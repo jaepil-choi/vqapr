@@ -284,10 +284,12 @@ def _partitioned(
     )
 
 
-_WINDOW_ROWS = 200_000
+_WINDOW_ROWS = 1_000_000
 """How many rows one window read aims for: instants per query = this over the instrument count,
-so a 3,000-name minute table reads about a sixth of a day per query and a 300-name one a
-day and a half. Bounded by rows rather than instants because the rows are what sit in memory."""
+so a 3,000-name minute table reads most of a day per query and a 300-name one several days.
+Bounded by rows rather than instants because the rows are what sit in memory. Exp 251 measured
+the former 200,000-row bound on 1,800 names over 1,963 sessions: 18 scans and 2.9 s in snapshot
+reads; this bound made those 4 scans and 1.2 s without raising peak RSS."""
 
 
 class ExecutionSnapshots:
@@ -473,9 +475,3 @@ def _exact_row(row: Mapping[str, object]) -> ExactExecutionRow:
         price=None if row["price"] is None else Decimal(str(row["price"])),
         reference=(None if row.get("reference") is None else Decimal(str(row["reference"]))),
     )
-
-
-
-
-
-

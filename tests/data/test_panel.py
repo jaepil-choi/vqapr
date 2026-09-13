@@ -141,6 +141,53 @@ def test_the_panel_is_built_once_and_every_later_read_is_a_slice(
     assert first.panel.identity == later.panel.identity
 
 
+def test_a_cached_panel_does_not_rehash_the_run_universe(
+    tmp_path: Path, model_price_parquet: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A later slice reuses the panel before deriving its content identity again."""
+    identities = 0
+    original = store_module.panel_identity
+
+    def counting(*args, **kwargs):
+        nonlocal identities
+        identities += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(store_module, "panel_identity", counting)
+    store = DuckDbObservationStore(_workspace(tmp_path, model_price_parquet))
+
+    _context(store, 5).read("prices", "close")
+    _context(store, 6).read("prices", "volume")
+    _context(store, 7).read("prices", "close")
+
+    assert identities == 1
+
+
+def test_panel_access_counts_are_lazy_but_keep_the_mapping_contract(
+    tmp_path: Path, model_price_parquet: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+    original = PanelWindow.counts
+
+    def counting(window):
+        nonlocal calls
+        calls += 1
+        return original(window)
+
+    monkeypatch.setattr(PanelWindow, "counts", counting)
+    store = DuckDbObservationStore(_workspace(tmp_path, model_price_parquet))
+    context = _context(store, 7)
+
+    context.read("prices", "close")
+
+    assert calls == 0, "recording a read does not build one nested dictionary per instrument"
+    assert context.window.accesses[0].actual_rows == {
+        "A": {"close": 2},
+        "B": {"close": 2},
+    }
+    assert calls == 0, "the lazy mapping uses the panel validity block directly"
+
+
 def test_a_window_is_a_view_of_the_panels_block(tmp_path: Path, model_price_parquet: Path) -> None:
     """Record `235`: a numeric field is one block, and the window's matrix is rows of it."""
     import numpy as np

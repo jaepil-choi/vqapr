@@ -26,6 +26,11 @@ this skill is misused.
 DataModel is what you reach for when a StrategyModel needs a reusable intermediate table — one
 several strategies share, or one expensive enough to compute once.
 
+For a long research job, that distinction is also the performance boundary: if several
+strategies need the same joins, rolling statistics, ranks, or predictions, compute them in one
+DataModel run, confirm its output dataset, and let every strategy read that dataset. Repeating the
+same preparation inside every strategy repeats both the work and its memory.
+
 [references/datamodel-or-strategy.md](references/datamodel-or-strategy.md) has the test to apply.
 Apply it before writing code: moving logic across this line later means a new id and a new
 registration.
@@ -95,6 +100,9 @@ No account, no venue, no execution dataset — those keys are **refused** on a d
 
 Where the output lands, how to read it back, and how to retry a run whose output is already
 registered are in [references/running-a-datamodel.md](references/running-a-datamodel.md).
+
+When strategies consume this output, finish this producer run first. A producer and its consumers
+cannot run in the same batch because the consumers must freeze a completed dataset.
 
 ## Why a derived table belongs here rather than in the source
 

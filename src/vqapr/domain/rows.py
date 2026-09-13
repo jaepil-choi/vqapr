@@ -59,13 +59,20 @@ def normalize_rows(value: object) -> Rows:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         raise TypeError("rows must be a sequence of mappings")
     normalized: list[Row] = []
+    validated_keys: set[str] = set()
     for index, item in enumerate(value):
         if not isinstance(item, Mapping):
             raise TypeError(f"row {index} must be a mapping")
         row: Row = {}
         for key, scalar in item.items():
-            if not isinstance(key, str) or not key or any(char.isspace() for char in key):
+            if not isinstance(key, str):
                 raise ValueError(f"row {index} field names must be non-empty without whitespace")
+            if key not in validated_keys:
+                if not key or any(char.isspace() for char in key):
+                    raise ValueError(
+                        f"row {index} field names must be non-empty without whitespace"
+                    )
+                validated_keys.add(key)
             row[key] = normalize_scalar(scalar)
         normalized.append(row)
     return tuple(normalized)

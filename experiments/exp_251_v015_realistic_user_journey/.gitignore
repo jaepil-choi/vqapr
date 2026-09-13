@@ -1,0 +1,6 @@
+outputs/*
+!outputs/PERFORMANCE-REPORT.md
+!outputs/parity-five.json
+work/
+*.prof
+__pycache__/

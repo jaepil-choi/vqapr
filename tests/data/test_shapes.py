@@ -16,6 +16,7 @@ from vqapr import public
 from vqapr.data.dataset import Grain
 from vqapr.data.observation import Observation
 from vqapr.data.panel import CrossSection, Series
+from vqapr.domain.rows import normalize_rows
 
 AT = datetime(2024, 3, 5, 15, 30, tzinfo=UTC)
 
@@ -82,3 +83,23 @@ def test_the_grain_and_the_observation_have_one_home() -> None:
 def test_the_public_door_names_the_shapes_an_author_receives() -> None:
     assert public.CrossSection is CrossSection
     assert public.Series is Series
+
+
+def test_repeated_output_field_names_are_validated_once_per_row_batch() -> None:
+    """A large DataModel batch repeats a tiny schema; its names need one character scan."""
+
+    class CountingKey(str):
+        scans = 0
+
+        def __iter__(self):
+            type(self).scans += 1
+            return super().__iter__()
+
+    field = CountingKey("score")
+
+    assert normalize_rows(({field: 1.0}, {field: 2.0}, {field: 3.0})) == (
+        {"score": 1.0},
+        {"score": 2.0},
+        {"score": 3.0},
+    )
+    assert CountingKey.scans == 1

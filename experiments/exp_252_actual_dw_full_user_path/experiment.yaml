@@ -1,0 +1,50 @@
+schema_version: 1
+experiment_id: exp_252
+name: actual-dw-full-user-path
+status: concluded
+hypothesis: >-
+  On the full actual-DW DataModel-to-strategy journey, profiling can distinguish reusable factor
+  arithmetic from engine overhead, and an optimization selected from that evidence can reduce
+  elapsed time without changing any materialized factor or strategy result.
+input:
+  root: /Users/jason/qlibx/DW
+  start: '2018-01-02T00:00:00+09:00'
+  end: '2026-07-20T23:59:59+09:00'
+  universe: all 309 instruments ever present in the supplied KOSPI 200 history
+  sampling: none
+  lookback_sessions: 31
+  producer_cadence: daily
+  consumer_cadence: weekly
+  strategies: 5
+versions:
+  baseline:
+    commit: 8e0045f3c812bb469d80bdb7d52e0537b7a0128c
+    tag: v0.15.0
+  candidate:
+    branch: codex/v015-performance-harness
+commands:
+  prepare: uv run python experiments/exp_252_actual_dw_full_user_path/prepare_actual.py
+  build_project: uv run python experiments/exp_252_actual_dw_full_user_path/build_project.py
+  measure: uv run --with psutil python experiments/exp_252_actual_dw_full_user_path/measure.py
+evidence:
+  directory: outputs
+  report: outputs/PERFORMANCE-REPORT.md
+decision: >-
+  Accept the lazy panel evidence, shape-first panel reuse, wider execution reads, and per-batch
+  output-key validation cache. Keep daily factor materialization as the default shared path.
+  Reject the non-equivalent SQL rewrite; retain exact final-20-session recomputation as a measured
+  product candidate that still needs an atomic append and invalidation contract.
+freshness:
+  branch: codex/v015-performance-harness
+  base_commit: 8e0045f3c812bb469d80bdb7d52e0537b7a0128c
+  frozen_at: '2026-09-12T00:00:00+09:00'
+relationships:
+  supersedes:
+    - exp_251_v015_realistic_user_journey
+  related:
+    - exp_236_the_panel_memory
+    - exp_250_ff3_through_vqapr
+approval_gates:
+  - Source DW data is read-only.
+  - No remote push or package publication.
+  - SQL is limited to an ephemeral local DuckDB over frozen local files.
