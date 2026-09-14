@@ -1,119 +1,135 @@
-# exp_280 -- the seven scenarios traced on 0.16.0, and the src/ map
+# exp_280 -- the seven scenarios traced on 0.16.0, told as one warehouse
 
-`docs/walkthroughs/2026-09-12-scenario-stepper-0.16.0.html` is built from `sys.setprofile` traces
-of real commands on the sample door (`vqapr new sample`: ten names, 2022-01-03 ~ 2024-12-30),
-never from a reading of the code. The scenarios, the commands and the tools are the 0.14.3 page's
-(`exp_249`, `exp_246`, `exp_230`, `exp_238`); what 0.16.0 changed is where the code lives and what
-it is called (the concept-tree campaign, records `268`-`279`), so every frame now stands in a file
-of the new tree, and the frames where a name or a place changed are marked `[0.16.0]`.
+`docs/walkthroughs/2026-09-14-scenario-stepper-0.16.0.html` is built from `sys.setprofile` traces
+of sixteen real commands on the sample door (`vqapr new sample`: ten names, 2022-01-03 ~
+2024-12-30), never from a reading of the code. The seven scenarios are exp_235's.
 
-The page adds two things the earlier steppers did not have, asked for with it (2026-09-12: explain
-every folder and file under `src/`):
+Why this directory exists: a 0.16.0 stepper was published on 2026-09-12 as an artifact only; its
+scenes, its tracer changes and its declarations were never committed and are gone. The owner asked
+(2026-09-14) for the current version's stepper, re-traced, and written the way the registration
+explanation of 2026-09-13 was: one analogy (a warehouse) carried through every frame, and what each
+step does to the files on disk.
 
-- a card under every frame's code window saying what that file is for;
-- after the closing table, the src/ map: all 199 tracked files of `src/vqapr/` in 34 folders, each
-  with its role, a plain explanation, its main names, who imports it, and the frames of the page
-  that stand in it.
-
-The map's prose is `src_map_0_16_0.json`. It was written by reading each file of the 0.16.0 tree,
-one reader per package, with importers found by grep; it is a description of the code, not
-something a trace measured. Its coverage was checked against `git ls-files src` (199 = 199, no
-duplicates).
+(2026-09-14 merge note: the 2026-09-12 source was in fact committed, on a local `develop` that had
+not been pushed. It now lives in `exp_283_the_scenario_trace_0_16_0_src_map`, including the original
+`src_map_0_16_0.json`.)
 
 | file | what it is |
-|---|---|
-| `declarations/` | `exp_235`'s declarations migrated to 0.16.0: `agenda:` -> `schedule:`, `from vqapr import authoring as va` -> `from vqapr import public as vq`, `vqapr.portfolio.budgets` -> `vqapr.public`, `call.evaluation_time` -> `call.at` |
-| `trace_worker.py` | `exp_238/trace_worker.py` on the new module paths (`run.assemble`, `run.batch`, `workspace.registry`) |
-| `port_scenes.py` | moves a scenes file onto new traces: frame indices, `name(#idx, ms)` in the prose, source anchors |
-| `scenes_0_16_0.py` | the curated frames; ported by `port_scenes.py`, then the prose rewritten by hand |
-| `src_map_0_16_0.json` | the src/ map's prose |
-| `render_0_16_0.py` | `exp_230/render.py`, then the file card and the src/ map; optionally an artifact copy without the document wrapper |
+| --- | --- |
+| `declarations/` | exp_235's declarations moved to the 0.16.0 author surface: `from vqapr import public as vq`, `schedule:` for `agenda:`, `call.at` for `call.evaluation_time`, `vq.Budget` for the retired `vqapr.portfolio.budgets`. Committed byte-for-byte as traced (E501 exempt in `pyproject.toml`) |
+| `trace_worker.py` | exp_238's worker tracer on the 0.16.0 tree (`run/batch.py`, `run/assemble.py`, `workspace/registry.py`) |
+| `probe_panel.py`, `probe_cubes.py` | exp_238's probes on the 0.16.0 tree: the scan bounds, the panel shapes and the cube files the page quotes |
+| `render_0_16_0.py` | exp_230's renderer reused whole, plus the shelf (per scene), the chronicle (all sixteen commands), the file card and the src/ map |
+| `scenes_0_16_0.py` | the curated scenes. Every call in a folded chain is written `c(trace, idx, label)`, which reads its milliseconds from the trace and refuses a label that is not the qualname at that index |
+| `trace_io.py` | the page's tracer since 2026-09-14: exp_230's trace, plus `args` and `ret` (a short description of each value's shape) for the calls the page shows |
+| `wanted.py` | which calls the page shows: executes the scenes against the traces and records every index they read; writes the WANT file `trace_io.py` takes |
+| `probe_data.py`, `data_previews.json` | a few real rows of each file a frame opens (the roster, the prices, the record tables, the cube files), for the table beside the frame |
+| `src_map.json` | the 2026-09-12 page's description of all 199 files under `src/vqapr/`, parsed out of the published page and checked against `26726b1f`: every path exists, 197 line counts match, the two parquet files have none |
+
+## What is new on this page
+
+- **The warehouse.** A table near the top maps each picture to its code: the declaration is the
+  delivery note, `data/verification.py` the inspection bench, the digest the seal number,
+  `Transaction` the intake cart, `.vqapr/workspace.yaml` the ledger, `preflight` the pre-dispatch
+  check, `FrozenRun` the work kit, the record writer's Arrow buffer the workbench, the run record
+  the work log, `.running` the "in progress" sign, `strategy.json` the closing stamp, a published
+  dataset the part the factory puts back on the shelf.
+- **The shelf and the chronicle.** What each command left on disk is computed from the traces'
+  own `files_after` (diffed against the previous command) and from the ledger-write calls the trace
+  recorded. Nothing about files is typed by hand except the two notes for what no trace can list:
+  the rewrite of `execution.parquet` before `03`, and the cube directory `15` bakes and removes.
+- **Seven frames where a file comes into being**: the ledger written by temp-file-and-replace
+  (`01 #967`), `run.json` first (`06 #2119`), the run directory and its `.running` claim
+  (`06 #2167`, `08 #2567`), rows held in memory (`08 #3823`), the tables sealed and then the
+  closing stamp (`08 #24218`, `06 #8026`).
 
 ## The tree the traces were taken on
 
-`develop` at `26726b1f` (0.16.0 stamped), clean, on a local disk with a cold file cache (the
-registration's first duckdb scan, `check_span`, took 1,677 ms; the second table's 11 ms). Compare
-pages by call counts and by which calls exist, never by milliseconds.
+`develop` at `26726b1f` (0.16.0), clean apart from the untracked `.claude/agents/` and this
+directory. Local disk, cold file cache: the registration's first duckdb scan (`check_span`) took
+the most time of the first command; the second table's same stage took a few ms. Compare pages by
+call counts and by which calls exist, never by milliseconds.
 
 ## Regenerating the traces
 
-One command per process, so `#idx` restarts at zero. `PYTHONUTF8=1` throughout. The traces are
-not committed (a run trace is several MB).
+The sixteen commands of `exp_246/README.md`, with this directory's declarations and tracer, one
+command per process, `PYTHONUTF8=1`, the project path passed unresolved:
 
 ```bash
 S=/path/to/scratch; P=$S/sample; T=$S/traces
-uv run vqapr new sample --out "$P"
+uv run vqapr --project-root "$P" new sample --out "$P"
 cp experiments/exp_280_the_scenario_trace_0_16_0/declarations/* "$P"/
 X="uv run python experiments/exp_230_the_spine_trace/trace.py"
 $X "$T/01_register.json"          --project "$P" -- --project-root "$P" register "$P/sample.yaml"
 $X "$T/02_register_bad.json"      --project "$P" -- --project-root "$P" register "$P/bad.yaml"     # exit 1
-# keep execution.parquet aside, rewrite it without its last trade_at (duckdb COPY ... WHERE trade_at < max), then:
+# rewrite execution.parquet without its last day (duckdb COPY ... WHERE trade_at < max), then:
 $X "$T/03_check_changed.json"     --project "$P" -- --project-root "$P" check sample-run           # source_changed
 $X "$T/04_register_again.json"    --project "$P" -- --project-root "$P" register "$P/sample.yaml"
-# restore the original bytes and register once more (untraced), then:
-$X "$T/05_register_features.json" --project "$P" -- --project-root "$P" register "$P/features.yaml"
-$X "$T/06_run_features.json"      --project "$P" -- --project-root "$P" run sample-features-run
-$X "$T/07_register_factor.json"   --project "$P" -- --project-root "$P" register "$P/factor.yaml"
-$X "$T/08_run_factor.json"        --project "$P" -- --project-root "$P" run sample-factor-run
-$X "$T/09_register_stoploss.json" --project "$P" -- --project-root "$P" register "$P/stoploss.yaml"
-$X "$T/10_run_stoploss.json"      --project "$P" -- --project-root "$P" run sample-stoploss-run
-$X "$T/11_register_enhanced.json" --project "$P" -- --project-root "$P" register "$P/enhanced.yaml"
-$X "$T/12_run_enhanced.json"      --project "$P" -- --project-root "$P" run sample-enhanced-run
-$X "$T/13_list_datasets.json"     --project "$P" -- --project-root "$P" list datasets
-$X "$T/14_show_run_enhanced.json" --project "$P" -- --project-root "$P" show run sample-enhanced-run
+# restore the original bytes and register once more (untraced), then 05-14 as in exp_246:
+#   register features.yaml / run sample-features-run / register factor.yaml / run sample-factor-run
+#   register stoploss.yaml / run sample-stoploss-run / register enhanced.yaml / run sample-enhanced-run
+#   list datasets / show run sample-enhanced-run
 $X "$T/15_run_batch.json"         --project "$P" -- --project-root "$P" run sample-factor-run sample-stoploss-run --jobs 2 --force
 uv run python experiments/exp_280_the_scenario_trace_0_16_0/trace_worker.py "$T/16_worker_factor.json" \
     --project "$P" --run sample-factor-run --with sample-stoploss-run
 ```
 
-## Porting the 0.14.3 frames
-
-`port_scenes.py experiments/exp_249_the_scenario_trace_0_14_3/scenes_0_14_3.py "$T" scenes_0_16_0.py`
-re-finds each frame by the function its prose names at that index, renamed where 0.16.0 renamed it
-(`verify_run` -> `preflight`, `preflight_run` -> `freeze`, `RunFacts.agenda` -> `RunFacts.schedule`,
-`derived_agenda` -> `derived_schedule`, `_freeze_agenda` -> `_freeze_schedule`), nearest by index;
-does the same for every `<code>name</code>(#idx, ms)` in the prose; and re-finds every
-`at("src/...", needle)` anchor by searching the needle in `src/vqapr/`.
-
-Nearest-by-index is right for a call that happens once and wrong for one that repeats inside a long
-loop: the stop-loss run has 882 more calls than on 0.14.3, spread unevenly over 37 days, so its last
-two frames landed a day early (on 02-22 and 02-23 instead of 02-23 and 02-24). Every frame on a
-repeated call was therefore checked against the event its `RunLoop.handle` was handling (the
-`event` local: `ScheduledEvent(event_id='...schedule-2022-02-23T0800')`, `MarketEvent(...)`), and
-those two were moved by hand. After that, every frame's qualname was printed beside its title and
-every `name(#idx` in the prose was checked against the trace at that index: 53 frames, 0 mismatches.
-The prose was then rewritten against the new traces.
+The traces are not committed (several MB each). Keep a copy of `.vqapr/runs/` before the probes:
+`probe_panel.py` re-runs each run with `--force`.
 
 ## Rendering the page
 
 ```bash
-uv run python experiments/exp_280_the_scenario_trace_0_16_0/render_0_16_0.py "$T" \
-    docs/walkthroughs/2026-09-12-scenario-stepper-0.16.0.html
+uv run python experiments/exp_280_the_scenario_trace_0_16_0/render_0_16_0.py \
+    experiments/exp_280_the_scenario_trace_0_16_0/scenes_0_16_0.py "$T" \
+    docs/walkthroughs/2026-09-14-scenario-stepper-0.16.0.html
 ```
 
-## What the traces showed (numbers the page quotes)
+The renderer prints every frame's trace / index / qualname / ms beside its title; all 60 agree.
 
-| command | calls | ms | 0.14.3 calls |
+## Inputs and outputs (second pass, 2026-09-14)
+
+The owner asked to see, beside the call stack, what each call receives and returns, and the actual
+rows behind "opens the roster". The page is now rendered from a second pass of the same sixteen
+commands under `trace_io.py` (a fresh project; `wanted.py` picks the qualnames first), and each
+frame draws its chain as a nested call stack with `→ args` and `← return`, plus `probe_data.py`'s
+rows where the frame opens a file.
+
+Between the two passes the call counts are equal except `12` (27,993, one more progress checkpoint:
+timing), and a few order-planning calls change places (`OrderRequest` / `ZeroDeltaDiagnostic`
+construction follows a set's iteration order, which string hashing randomises per process). The
+fills, accounts and records are identical. One scene index moved (`12 #27420` -> `#27422`); the
+renderer's label check found it.
+
+## What the traces showed
+
+| command | calls | ms | 2026-09-12 page |
 | --- | ---: | ---: | ---: |
-| register sample.yaml | 980 | 2,818 | 973 |
-| register bad.yaml | 431 | 69 | 427 |
-| check sample-run (file rewritten) | 49,807 | 2,093 | 48,329 |
-| register sample.yaml again | 1,304 | 1,113 | 1,294 |
-| register features.yaml / run sample-features-run | 653 / 8,171 | 62 / 1,631 | 647 / 8,158 |
-| register factor.yaml / run sample-factor-run | 1,069 / 24,985 | 100 / 1,850 | 1,058 / 24,374 |
-| register stoploss.yaml / run sample-stoploss-run | 1,124 / 62,541 | 104 / 4,506 | 1,112 / 61,659 |
-| register enhanced.yaml / run sample-enhanced-run | 1,329 / 27,993 | 108 / 2,683 | 1,315 / 27,311 |
-| list datasets / show run | 1,093 / 35 | 75 / 19 | 1,081 / 32 |
-| run a b --jobs 2 --force (driver) | 3,512 | 2,917 | 3,492 |
-| worker (sample-factor-run, cubes baked) | 23,963 | 1,247 | 23,353 |
+| register sample.yaml | 980 | 1,516 | 980 |
+| register bad.yaml (exit 1) | 431 | 49 | 431 |
+| check sample-run (file rewritten, exit 1) | 49,807 | 1,914 | 49,807 |
+| register sample.yaml again | 1,304 | 596 | 1,304 |
+| register features.yaml / run sample-features-run | 653 / 8,169 | 54 / 1,086 | 653 / 8,171 |
+| register factor.yaml / run sample-factor-run | 1,069 / 24,985 | 80 / 1,613 | 1,069 / 24,985 |
+| register stoploss.yaml / run sample-stoploss-run | 1,124 / 62,541 | 81 / 3,529 | 1,124 / 62,541 |
+| register enhanced.yaml / run sample-enhanced-run | 1,329 / 27,991 | 91 / 1,674 | 1,329 / 27,993 |
+| list datasets / show run | 1,093 / 35 | 57 / 10 | 1,093 / 35 |
+| run a b --jobs 2 --force (driver) / worker | 3,512 / 23,963 | 1,467 / 1,184 | 3,512 / 23,963 |
 
-What the campaign kept: `_actual_source_refs` x10 / x37, `inputs()` x7, `_local_date` x12 / x18 /
-x38 / x734, `heartbeat` x110 / x404 -- the 0.14.3 counts exactly. The computed numbers were read
-back from the records the traced runs wrote and match the 0.14.3 page: factor 73 orders / 54 fills /
-account v10, first-day +23 +8 +94 / -55 -19 -12, cash 99,463,501.24; stop-loss 111 / 59 / v34,
-K000008 -52 on 02-23, cash 84,184,068.92; enhanced 81 / 41 / v9; features 108 rows; factor weights
-60 rows. Only the component fingerprints changed (`sample-factor@9bba20c4` -> `@0696c8f4`,
-`sample-features@20c2acad` -> `@4327b244`), because the author files' import line changed.
+Outcomes, read back from the records: factor 73 orders / 54 fills / account v10, first day
+K000003 +23, K000008 +8, K000009 +94, K000004 -55, K000005 -19, K000006 -12, cash 99,463,501.24;
+stop-loss 111 / 59 / v34, the last name (K000008, -52 at 1,441,901.11) sold on 2022-02-23, cash
+84,184,068.92; enhanced 81 / 41 / v9. Component fingerprints `sample-factor@0696c8f4`,
+`sample-features@4327b244` and `sample-enhanced@371d7e0c` equal the 2026-09-12 page's;
+`sample-stoploss@6db3d49b` differs because this migration of `stoploss.py` takes `Budget` from
+`vq` rather than importing it on its own line.
 
-Why the call counts rose 1-3% is not answered here: the 0.14.3 traces were not committed, so the
-calls cannot be compared function by function.
+One correction to the 2026-09-12 page: its enhanced-index frame said the 01-13 09:00 decision
+tilted by the factor weights of 01-12 (long K000003/8/9). The alpha window's newest row at 09:00
+is the factor run's 01-13 08:00 decision -- long K000002/3/8, short K000004/5/9 -- and the
+enhanced run's published weights (0.1944 / 0.0278 / 0.1111) confirm it.
+
+Scene 2 still shows `dataset.source_changed` refusing a rewritten file, because that is what
+`26726b1f` does. The page marks it as due to change: the owner ruled on 2026-09-13 that a changed
+file is measured again by the registration's criteria rather than refused; where the re-measured
+facts are kept is held.

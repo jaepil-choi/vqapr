@@ -21,7 +21,8 @@ from dataclasses import replace
 from vqapr.component.reference import ComponentRef
 from vqapr.data.dataset import DatasetRegistration
 from vqapr.data.source import SourceSpec
-from vqapr.domain.errors import Stage, Status
+from vqapr.data.verification import mismatched_source
+from vqapr.domain.errors import Stage, Status, VqaprError
 from vqapr.workspace.refusals import _workspace_error
 from vqapr.workspace.state import _State
 
@@ -29,17 +30,14 @@ from vqapr.workspace.state import _State
 def _merge_dataset(
     state: _State, registration: DatasetRegistration, source: SourceSpec
 ) -> tuple[_State, bool]:
-    if registration.source != source.source_id:
-        raise _workspace_error(
+    mismatch = mismatched_source(registration, source)
+    if mismatch is not None:
+        # The rule `verify_source` asks too (record `281`): one rule, one status.
+        raise VqaprError(
             stage=Stage.REGISTER,
-            code="dataset.source_mismatch",
-            status=Status.CONFLICT,
-            requirement="DatasetRegistration.source must match SourceSpec.source_id",
-            observed=(
-                f"registration source={registration.source!r}, source spec={source.source_id!r}"
-            ),
-            fix="pass a DatasetRegistration and SourceSpec that name the same source_id",
-            retry="bind the dataset and physical source to the same source_id, then retry",
+            failures=[mismatch],
+            mutation=False,
+            retry_precondition="bind the dataset and physical source to the same source_id",
         )
 
     if registration.span is None:

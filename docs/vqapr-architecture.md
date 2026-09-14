@@ -603,9 +603,10 @@ Compliance 규칙은 자기 id(`compliance_id`)를 한 번 선언하고, 싣기�
 ```
 
 - **`available_at`은 규칙이 아니라 컬럼이다.** 패키지는 그 뒤의 가정을 묻지도 평가하지도 기록하지도 않는다.
-  검사하는 것은 시간대가 있고, 비어 있지 않고, 논리 키와 함께 유일하다는 것뿐이다.
+  검사하는 것은 시간대가 있고, 비어 있지 않고, panel grain이면 그 축이 유일하다는 것뿐이다.
 - **grain은 선언이다** — `instrument_instant`(시각 × 종목마다 값 하나, panel을 만들 수 있다), `instant`(시각마다
-  하나, 종목축 없음 — 지수 레벨 · 금리 · 환율), `rows`(벤더의 긴 표, 저자의 `key_fields`로 유일). grain 없는 등록은
+  하나, 종목축 없음 — 지수 레벨 · 금리 · 환율), `rows`(벤더의 긴 표. `key_fields`가 겹쳐도 등록하고, 겹친 수와
+  null인 수를 영수증에 적는다 — 기록 `282`). grain 없는 등록은
   세 값을 말하며 거절된다.
 - `fields`는 프레임워크 이름 → 물리 위치다. **이름 바꾸기는 허용하고 역할 붙이기는 금지한다**(`"당일시가(원)"` →
   `open`은 되고, `→ execution_price`는 안 된다). 필드 값은 식(expression)이고 문장(`FROM` · `GROUP BY` ·
@@ -1423,17 +1424,19 @@ src/vqapr/
 아래 흐름은 0.14.3 stepper(`docs/walkthroughs/2026-09-11-scenario-stepper-0.14.3.html`)가 `sys.setprofile`로
 기록한 실제 호출 순서를, 이 문서의 모듈 이름으로 옮긴 것이다.
 
-### 14.1 데이터 등록 — `vqapr register sample.yaml`
+### 14.1 데이터 등록 — `vqapr register instruments.yaml`, `vqapr register sample.yaml`
 
-YAML 한 장에 명단 · 가격표 · 체결표 · 전략 코드 · run이 적혀 있다. vqapr은 그대로 믿지 않는다. 파일을 실제로
-열어 선언대로인지 재고 지문을 남기고, 코드를 실제로 import해 규격을 본 뒤에야, 장부를 **한 번** 쓴다. 하나라도
-거절되면 아무것도 쓰지 않는다.
+명단(`instruments.yaml`)과 가격표 · 체결표 · 전략 코드 · run(`sample.yaml`)은 따로 적고 따로 등록한다(기록
+`284`): 데이터에 있는 종목이 모두 거래 대상은 아니고, 전략이 주문할 수 있는 것은 명단의 종목뿐이다. vqapr은
+선언을 그대로 믿지 않는다. 파일을 실제로 열어 선언대로인지 재고 지문을 남기고, 코드를 실제로 import해 규격을 본
+뒤에야, 장부를 **한 번** 쓴다. 하나라도 거절되면 아무것도 쓰지 않는다.
 
 ```text
-cli/register → workspace/registration.apply
+cli/register → workspace/registration.read_declaration → apply
   Workspace.transaction                         workspace/registry
-   ├ 명단     verify_roster → build_roster        data/verification → domain/instrument
-   ├ 데이터   verify_source: 컬럼 → 키 → 기간 → 값 → 체결 가격 → 지문   data/verification (여는 것은 data/scan)
+   ├ 명단     verify_roster → build_roster        data/verification → domain/instrument   (instruments.yaml)
+   ├ 데이터   stage_measured → verify_source: 컬럼 → 키 → 기간 → 값 → 체결 가격 → 지문
+              data/verification (여는 것은 data/scan), 잰 카드만 카트에 (기록 281)
    ├ 코드     fingerprint → conformance            component/
    ├ run      RunDefinition                        workspace/run_definition
    └ commit → .vqapr/workspace.yaml 한 번
@@ -1452,7 +1455,7 @@ run/assemble
   → run/engine/loop.datamodel_loop → RunLoop.run
        ScheduledEvent 마다: stages/compute → 창 (data/window · data/panel) → 저자의 compute() → Rows
                            → engine/output.append (available_at 은 프레임워크가 찍는다)
-  → engine/output.register → data/verification.verify_source → Workspace commit
+  → engine/output.register → workspace/registration.stage_measured (등록과 같은 문) → Workspace commit
   → run/recording → record/writer
 ```
 

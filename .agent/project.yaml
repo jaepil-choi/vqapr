@@ -58,9 +58,18 @@ canonical_documents:
   # 표면은 vqapr.public 하나(`from vqapr import public as vq`), 루프는 DES의 말(schedule · ScheduledEvent · event_id
   # · call.at), 계좌가 자기 보유를 곱한다. 0.16.0 (깨지는 변화: run 선언 `agenda:` -> `schedule:`, vqapr.authoring
   # 삭제, 옛 run 기록은 다시 run; docs/releases/0.16.0.md, tag v0.16.0). 현행 캠페인 없음.
-  # 2026-09-13: 팀원(jaeyonge/qlibx codex/v015-performance-harness)의 성능 변경을 develop에 merge(records 280-282):
+  # 2026-09-13: 팀원(jaeyonge/qlibx codex/v015-performance-harness)의 성능 변경을 develop에 merge(records 285-287):
   # cache된 panel을 identity 해시 전에 찾음 · panel 증거 lazy · 체결 읽기 1M행 · 행 묶음의 필드명 검사 한 번 · 장기 연구 안내.
-  # 0.16.0 합성 1,800종목×1,963일 한 전략 벽시계 17.96 s -> 13.10 s. 남은 후보는 record 280 끝. 현행 캠페인 없음.
+  # 0.16.0 합성 1,800종목×1,963일 한 전략 벽시계 17.96 s -> 13.10 s. 남은 후보는 record 285 끝. 현행 캠페인 없음.
+  # 2026-09-14: 등록 정리 캠페인(records 280-284, branch redesign/registration-cleanup; 0.16.0 stepper를 읽은 오너의
+  # 질문에서): 선언 읽기는 workspace/registration, dataset은 문 하나(stage_measured), source 불일치는 규칙 하나(400),
+  # rows grain의 키는 세고 거절하지 않는다, 명단 거절은 있는 길을 가리키고 check는 한 번 말한다, `new --out X.yaml`
+  # 거절, 샘플은 명단(instruments.yaml)을 데이터와 따로 선언한다. 0.16.1 (깨지는 변화 없음; docs/releases/0.16.1.md).
+  # 현행 캠페인 없음.
+  # 2026-09-14: 위 둘을 develop에서 merge. 성능 records는 로컬에만 있던 280-282였고 origin의 등록 정리가 280-284를 먼저
+  # 공개해서 285-287로 옮겼다(파일명 · 제목 · 서로 가리키는 번호만; 그 커밋 메시지는 옛 번호). 0.16.0 stepper도 두 판이
+  # 같은 exp_280에 있었다 -- 09-12 첫 판(src/ 지도 원본)은 exp_283_the_scenario_trace_0_16_0_src_map, exp_280은 다시
+  # 추적한 판(exp_282가 그 위에 선다). 성능 변경은 0.16.1 뒤에 들어와 아직 출시 전. 현행 캠페인 없음.
   active_campaign: docs/refactoring/2026-09-12-the-concept-tree-campaign.md
   # 두 시계(시장/전략)와 다섯 역할의 배선표. 확장점·시계·목적지·통장의 계약이 어디서 왔는가.
   # 배선표 자체는 domain/wiring.py, 현행 설명은 architecture §3.2·§10.2.

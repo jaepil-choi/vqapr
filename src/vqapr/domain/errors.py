@@ -27,7 +27,6 @@ agent fixes its file instead of suspecting the framework.
 
 from __future__ import annotations
 
-import re
 import sys
 import traceback
 import uuid
@@ -37,8 +36,6 @@ from enum import IntEnum, StrEnum
 from pathlib import Path
 from types import FrameType, TracebackType
 from typing import Any
-
-import yaml
 
 __all__ = [
     "EXISTS",
@@ -59,8 +56,6 @@ __all__ = [
     "Status",
     "VqaprError",
     "collector",
-    "read_yaml_mapping",
-    "refuse_existing",
     "status_of",
     "unhandled",
 ]
@@ -688,89 +683,3 @@ class InputError(BoundedRefusal):
         }
 
 
-_BOOLEAN = "tag:yaml.org,2002:bool"
-
-
-class _DeclarationLoader(yaml.SafeLoader):
-    """PyYAML's safe loader with YAML 1.2's booleans: only `true` and `false` are booleans.
-
-    PyYAML resolves YAML 1.1, where `on`, `off`, `yes`, `no`, `y` and `n` are booleans too. So
-    `schedule.on: last` -- the key the `vqapr new run` template, the run-backtest skill and the
-    0.14.4 notes all write unquoted -- arrived as `{True: "last"}` and was refused as "Keys should
-    be strings" (report 2026-09-11, record `262`). No declaration key or value means a YAML 1.1
-    boolean, so the word is read as the word, wherever it appears.
-
-    The pure-Python loader: a declaration is a few dozen lines, so libyaml buys nothing here (the
-    workspace document, which grows with every schedule event, is read through it elsewhere).
-    """
-
-
-_DeclarationLoader.yaml_implicit_resolvers = {
-    first: [(tag, pattern) for tag, pattern in resolvers if tag != _BOOLEAN]
-    for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
-}
-
-
-_DeclarationLoader.add_implicit_resolver(
-    _BOOLEAN, re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF")
-)
-
-
-def read_yaml_mapping(path: Path, *, what: str) -> dict[str, Any]:
-    """Read one user-authored YAML document, or refuse in a way an agent can parse.
-
-    `what`은 어느 문서인지 이름 붙인다. 명령이 파일 여러 개를 받게 되어도 어느 것이 문제인지
-    envelope만 보고 알 수 있어야 한다.
-    """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except FileNotFoundError as error:
-        raise InputError(
-            MISSING,
-            requirement=f"{what} must exist at the given path",
-            observed=f"no file at {path}",
-            source=FailureSource(file=str(path)),
-            retry="create the file, then retry",
-        ) from error
-    except OSError as error:
-        raise InputError(
-            UNREADABLE,
-            requirement=f"{what} must be readable",
-            observed=f"{path}: {error.strerror or error}",
-            source=FailureSource(file=str(path)),
-        ) from error
-
-    try:
-        document = yaml.load(text, Loader=_DeclarationLoader)
-    except yaml.YAMLError as error:
-        # YAML 파서의 문구는 줄/열을 담고 있어 그 자체가 증거다. 새로 쓰지 않는다.
-        raise InputError(
-            NOT_A_MAPPING,
-            requirement=f"{what} must be valid YAML",
-            observed=str(error).replace("\n", " "),
-        ) from error
-
-    if not isinstance(document, dict):
-        raise InputError(
-            NOT_A_MAPPING,
-            requirement=f"{what} must be a YAML mapping",
-            observed=f"{path} parsed as {type(document).__name__}",
-            source=FailureSource(file=str(path)),
-        )
-    return document
-
-
-def refuse_existing(path: Path, *, what: str) -> None:
-    """Refuse to overwrite, naming the file rather than raising a bare `FileExistsError`.
-
-    재실행은 agent가 가장 흔하게 하는 일이다(Spawn Gate가 rung마다 3회를 허용한다). 그 경로가
-    `unhandled`로 나가면 재시도 자체가 framework 고장으로 보고된다.
-    """
-    if path.exists():
-        raise InputError(
-            EXISTS,
-            requirement=f"{what} must not already exist",
-            observed=f"{path} already exists",
-            source=FailureSource(file=str(path)),
-            retry="remove it or pass a different --out, then retry",
-        )

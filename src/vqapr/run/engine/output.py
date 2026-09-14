@@ -27,12 +27,12 @@ from vqapr.data.scan import (
 )
 from vqapr.data.source import SourceSpec
 from vqapr.data.store import AccessRecord
-from vqapr.data.verification import verify_source
 from vqapr.domain.errors import Failure, FailureSource, Stage, Status, VqaprError
 from vqapr.domain.identifiers import instrument_id
 from vqapr.domain.instants import require_tz_aware
 from vqapr.domain.rows import Row, Rows, normalize_rows
 from vqapr.record import COMPACT_FILENAME, SPILL_BYTES
+from vqapr.workspace.registration import stage_measured
 from vqapr.workspace.registry import Workspace
 
 MATERIALIZED_DIRECTORY = "materialized"
@@ -497,10 +497,9 @@ class RunOutput:
         try:
             # The rows land here, once, and only now: a dataset that is registered is complete.
             self._seal()
-            diagnosis, _, registration = verify_source(registration, source)
-            diagnosis.raise_if_failed()
+            # The door every dataset enters by (record `281`): measured, then staged.
             with Workspace.transaction(workspace.project_root) as transaction:
-                transaction.register_dataset(registration, source)
+                registration, _ = stage_measured(transaction, registration, source)
         except Exception:
             self._discard()
             raise

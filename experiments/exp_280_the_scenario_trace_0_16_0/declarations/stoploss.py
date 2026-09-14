@@ -14,13 +14,12 @@ from decimal import Decimal
 import numpy as np
 
 from vqapr import public as vq
-from vqapr.public import Budget, PortfolioDirection
 
 DATASET_ID = "sample-prices"
 FIELD = "close"
 STOP = 0.03  # a 3% fall from the entry close
 INVESTED = "0.9"
-BUDGET = Budget(PortfolioDirection.LONG_ONLY, Decimal(0), Decimal(1), Decimal(0), Decimal(1))
+BUDGET = vq.Budget(vq.PortfolioDirection.LONG_ONLY, Decimal(0), Decimal(1), Decimal(0), Decimal(1))
 
 
 class SampleStopLoss(vq.StrategyModel):

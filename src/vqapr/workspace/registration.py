@@ -17,13 +17,16 @@ each verb decided for itself.
 from __future__ import annotations
 
 import ast
-from collections.abc import Mapping, Sequence
+import re
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from contextvars import ContextVar
 from difflib import get_close_matches
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import BaseModel, ValidationError
 
 from vqapr.component.conformance import prepare_component
@@ -37,6 +40,9 @@ from vqapr.domain import identifiers
 from vqapr.domain.account import AccountMode
 from vqapr.domain.errors import (
     INCOMPLETE,
+    MISSING,
+    NOT_A_MAPPING,
+    UNREADABLE,
     VALUE_INVALID,
     Diagnosis,
     Failure,
@@ -98,6 +104,79 @@ has to be written out. Everything reachable by spelling stays out of this table.
 """
 
 
+_BOOLEAN = "tag:yaml.org,2002:bool"
+
+
+class _DeclarationLoader(yaml.SafeLoader):
+    """PyYAML's safe loader with YAML 1.2's booleans: only `true` and `false` are booleans.
+
+    PyYAML resolves YAML 1.1, where `on`, `off`, `yes`, `no`, `y` and `n` are booleans too. So
+    `schedule.on: last` -- the key the `vqapr new run` template, the run-backtest skill and the
+    0.14.4 notes all write unquoted -- arrived as `{True: "last"}` and was refused as "Keys should
+    be strings" (report 2026-09-11, record `262`). No declaration key or value means a YAML 1.1
+    boolean, so the word is read as the word, wherever it appears.
+
+    The pure-Python loader: a declaration is a few dozen lines, so libyaml buys nothing here (the
+    workspace document, which grows with every schedule event, is read through it elsewhere).
+    """
+
+
+_DeclarationLoader.yaml_implicit_resolvers = {
+    first: [(tag, pattern) for tag, pattern in resolvers if tag != _BOOLEAN]
+    for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+
+
+_DeclarationLoader.add_implicit_resolver(
+    _BOOLEAN, re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF")
+)
+
+
+def read_declaration(path: Path) -> dict[str, Any]:
+    """Read one declaration file as a YAML mapping, or refuse in a way an agent can parse.
+
+    Moved here from `domain/errors.py` by record `280`. Reading a file is not a domain rule, and
+    the one reader of a declaration is `vqapr register`, which hands the mapping to `apply` below.
+    """
+    what = "a declaration"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError as error:
+        raise InputError(
+            MISSING,
+            requirement=f"{what} must exist at the given path",
+            observed=f"no file at {path}",
+            source=FailureSource(file=str(path)),
+            retry="create the file, then retry",
+        ) from error
+    except OSError as error:
+        raise InputError(
+            UNREADABLE,
+            requirement=f"{what} must be readable",
+            observed=f"{path}: {error.strerror or error}",
+            source=FailureSource(file=str(path)),
+        ) from error
+
+    try:
+        document = yaml.load(text, Loader=_DeclarationLoader)
+    except yaml.YAMLError as error:
+        # YAML 파서의 문구는 줄/열을 담고 있어 그 자체가 증거다. 새로 쓰지 않는다.
+        raise InputError(
+            NOT_A_MAPPING,
+            requirement=f"{what} must be valid YAML",
+            observed=str(error).replace("\n", " "),
+        ) from error
+
+    if not isinstance(document, dict):
+        raise InputError(
+            NOT_A_MAPPING,
+            requirement=f"{what} must be a YAML mapping",
+            observed=f"{path} parsed as {type(document).__name__}",
+            source=FailureSource(file=str(path)),
+        )
+    return document
+
+
 # Moved here from `vqapr.public` by record `112`, and re-exported there. Unlike the other
 # `register_*` helpers these are not one-line delegations -- each validates before it writes --
 # so this module cannot inline them without duplicating a rule. Importing them from the facade
@@ -113,13 +192,26 @@ def register_dataset(
     새 등록이면 ``True``, 디스크에 이미 같은 선언이 있으면 ``False``다. 검증이나 persistence가
     실패하면 ``VqaprError``를 발생시키며, 검증 실패는 workspace를 만들거나 바꾸지 않는다.
     """
+    with Workspace.transaction(project_root) as transaction:
+        _, changed = stage_measured(transaction, registration, source)
+    return changed
+
+
+def stage_measured(
+    transaction: Transaction, registration: DatasetRegistration, source: SourceSpec
+) -> tuple[DatasetRegistration, bool]:
+    """Measure a dataset at the one door and stage what was measured: how every dataset enters.
+
+    Record `281`. `register_dataset`, a declaration's `datasets:` section and a run's published
+    output (`run/engine/output.py::RunOutput.register`) each wrote these three lines. The staged
+    copy is the MEASURED one -- span, digest and execution prices filled in by the scan that just
+    ran -- because the caller's copy lacks the facts only a full read can establish, and the next
+    reader would have to read the file again to get them. Returns it, and whether the workspace
+    changed.
+    """
     diagnosis, _, measured = verify_source(registration, source)
     diagnosis.raise_if_failed()
-    # `measured` is the registration with its span filled in from the scan validation just ran.
-    # Registering the caller's copy instead would persist a declaration missing the one fact only
-    # a full read can establish, and the next reader would have to read the file again to get it.
-    with Workspace.transaction(project_root) as transaction:
-        return transaction.register_dataset(measured, source)
+    return measured, transaction.register_dataset(measured, source)
 
 
 def register_instruments(
@@ -430,6 +522,16 @@ or concurrent `apply` cannot see another's document.
 """
 
 
+@contextmanager
+def _reading(declaration: Path | None) -> Iterator[None]:
+    """Name the declaration every refusal inside the block reports as `source.file`."""
+    token = _declaration_path.set(declaration)
+    try:
+        yield
+    finally:
+        _declaration_path.reset(token)
+
+
 def _instruments(bodies: dict[str, Any], transaction: Transaction, *, base: Path) -> dict[str, Any]:
     """Register the project's instrument roster from its kind-keyed tables.
 
@@ -712,7 +814,7 @@ def _require_grain_key(body: dict[str, Any], *, name: str) -> None:
             fix=(
                 f"add `grain: <{GRAIN_NAMES}>` under {name}. instrument_instant: one value per "
                 "(available_at, instrument), a panel can be built; instant: one value per "
-                "available_at, no instrument axis; rows: the vendor's grain, unique on key_fields. "
+                "available_at, no instrument axis; rows: the vendor's grain, keys may repeat. "
                 f"Note: {ROWS_LOOKBACK_MEANING}"
             ),
         )
@@ -834,121 +936,114 @@ def apply(
     `source.file`. It is optional because a caller may hold a parsed document with no file behind
     it; when it is absent the refusals say so rather than naming a path that does not exist.
     """
-    token = _declaration_path.set(declaration)
-    try:
-        return _apply(document, project_root, base=base)
-    finally:
-        _declaration_path.reset(token)
-
-
-def _apply(document: dict[str, Any], project_root: Path, *, base: Path) -> Registered:
-    unknown = sorted(set(document) - set(SECTIONS))
-    if unknown:
-        # One refusal per unknown section, each pointing at its own key and each saying what to
-        # write instead -- the same shape `refusals_from` gives an unknown key one level down. It
-        # was one lumped refusal with no `source` and a `fix` that only repeated the names back,
-        # so `dataset:` -- the typo this package's own test names -- was reported without ever
-        # saying `datasets`.
-        found = collector(Stage.REGISTER)
-        for section_name in unknown:
-            note, remedy = _SECTION_NOTES.get(section_name, ("", ""))
-            found.add(
-                Failure.bounded(
-                    "declaration.unknown_section",
-                    status=Status.INVALID,
-                    requirement=f"a declaration may contain: {', '.join(SECTIONS)}",
-                    observed=f"unknown section: {section_name}{note}",
-                    examples=[section_name],
-                    source=_at(section_name),
-                    fix=remedy
-                    or _nearest_hint(section_name, SECTIONS, section_name, removable=True).replace(
-                        "set ", "rename ", 1
-                    ),
-                )
-            )
-        found.done().raise_if_failed()
-    transaction = Workspace.transaction(project_root)
-    registered = Registered()
-
-    def section(key: str) -> dict[str, Any]:
-        return _mapping(document.get(key) or {}, name=key)
-
-    _require_declared_ids(section)
-
-    instrument_bodies = section("instruments")
-    if instrument_bodies:
-        receipt = _instruments(instrument_bodies, transaction, base=base)
-        registered.setdefault("instruments", []).append(receipt)
-
-    for dataset_id, body in section("datasets").items():
-        registration, source = _dataset(str(dataset_id), body, base=base)
-        diagnosis, _, measured = verify_source(registration, source)
-        diagnosis.raise_if_failed()
-        transaction.register_dataset(measured, source)
-        registered.setdefault("datasets", []).append(str(dataset_id))
-        registered.spoken.extend(measured.spoken())
-
-    for component_id, body in section("components").items():
-        registered.setdefault("components", []).append(
-            _component(str(component_id), body, project_root, transaction, base=base)
-        )
-
-    definitions: list[tuple[str, RunDefinition]] = []
-    for run_id, body in section("runs").items():
-        # Shape by the codec, so a run reads the same way from a declaration and from the
-        # document; every id it names is checked against the staged workspace by the merge.
-        name = f"runs.{run_id}"
-        declared_run = _mapping(body, name=name)
-        account = declared_run.get("initial_account")
-        if isinstance(account, dict) and "mode" in account:
-            # A closed set is the one case where a refusal can always be complete: the mode is
-            # judged here so the refusal names every member and the nearest spelling
-            # (`docs/issues/archive/017`), rather than surfacing from the model as one line of many.
-            _enum(AccountMode, account["mode"], name=f"{name}.initial_account.mode")
-        try:
-            definition = RunDefinition.model_validate({"run_id": str(run_id), **declared_run})
-        except (ValidationError, TypeError, ValueError) as invalid:
-            observed = (
-                "; ".join(
-                    ".".join(str(part) for part in line["loc"])
-                    + ": "
-                    + str(line["msg"]).removeprefix("Value error, ")
-                    for line in invalid.errors(include_url=False)
-                )
-                if isinstance(invalid, ValidationError)
-                else str(invalid)
-            )
+    with _reading(declaration):
+        unknown = sorted(set(document) - set(SECTIONS))
+        if unknown:
+            # One refusal per unknown section, each pointing at its own key and each saying what
+            # to write instead -- the same shape `refusals_from` gives an unknown key one level
+            # down. It was one lumped refusal with no `source` and a `fix` that only repeated the
+            # names back, so `dataset:` -- the typo this package's own test names -- was reported
+            # without ever saying `datasets`.
             found = collector(Stage.REGISTER)
-            found.add(
-                Failure.bounded(
-                    "declaration.run_invalid",
-                    status=Status.INVALID,
-                    cause=invalid,
-                    requirement=(
-                        "a run declares writes, and one strategy (with exchange, execution "
-                        "{dataset, trade_price, fill?} and initial_account) or one datamodel "
-                        "(with schedule.days_from), plus "
-                        "instruments, start, end, timezone and schedule (every, at or from/to), "
-                        "each in the shape `vqapr new run` emits"
-                    ),
-                    observed=observed,
-                    examples=["2024-01-02T00:00:00+09:00"],
-                    source=_at(name),
-                    fix=f"correct `{name}` in the declaration, then register again",
+            for section_name in unknown:
+                note, remedy = _SECTION_NOTES.get(section_name, ("", ""))
+                found.add(
+                    Failure.bounded(
+                        "declaration.unknown_section",
+                        status=Status.INVALID,
+                        requirement=f"a declaration may contain: {', '.join(SECTIONS)}",
+                        observed=f"unknown section: {section_name}{note}",
+                        examples=[section_name],
+                        source=_at(section_name),
+                        fix=remedy
+                        or _nearest_hint(
+                            section_name, SECTIONS, section_name, removable=True
+                        ).replace("set ", "rename ", 1),
+                    )
                 )
-            )
             found.done().raise_if_failed()
-            raise  # unreachable
-        definitions.append((str(run_id), definition))
+        transaction = Workspace.transaction(project_root)
+        registered = Registered()
 
-    _refuse_a_run_fed_by_a_sibling(definitions)
-    for run_id, definition in definitions:
-        transaction.register_run(definition)
-        registered.setdefault("runs", []).append(run_id)
-        registered.spoken.extend(definition.spoken())
+        def section(key: str) -> dict[str, Any]:
+            return _mapping(document.get(key) or {}, name=key)
 
-    transaction.commit()
-    return registered
+        _require_declared_ids(section)
+
+        instrument_bodies = section("instruments")
+        if instrument_bodies:
+            receipt = _instruments(instrument_bodies, transaction, base=base)
+            registered.setdefault("instruments", []).append(receipt)
+
+        for dataset_id, body in section("datasets").items():
+            registration, source = _dataset(str(dataset_id), body, base=base)
+            measured, _ = stage_measured(transaction, registration, source)
+            registered.setdefault("datasets", []).append(str(dataset_id))
+            registered.spoken.extend(measured.spoken())
+
+        for component_id, body in section("components").items():
+            registered.setdefault("components", []).append(
+                _component(str(component_id), body, project_root, transaction, base=base)
+            )
+
+        definitions: list[tuple[str, RunDefinition]] = []
+        for run_id, body in section("runs").items():
+            # Shape by the codec, so a run reads the same way from a declaration and from the
+            # document; every id it names is checked against the staged workspace by the merge.
+            name = f"runs.{run_id}"
+            declared_run = _mapping(body, name=name)
+            account = declared_run.get("initial_account")
+            if isinstance(account, dict) and "mode" in account:
+                # A closed set is the one case where a refusal can always be complete: the mode
+                # is judged here so the refusal names every member and the nearest spelling
+                # (`docs/issues/archive/017`), rather than surfacing from the model as one line
+                # of many.
+                _enum(AccountMode, account["mode"], name=f"{name}.initial_account.mode")
+            try:
+                definition = RunDefinition.model_validate({"run_id": str(run_id), **declared_run})
+            except (ValidationError, TypeError, ValueError) as invalid:
+                observed = (
+                    "; ".join(
+                        ".".join(str(part) for part in line["loc"])
+                        + ": "
+                        + str(line["msg"]).removeprefix("Value error, ")
+                        for line in invalid.errors(include_url=False)
+                    )
+                    if isinstance(invalid, ValidationError)
+                    else str(invalid)
+                )
+                found = collector(Stage.REGISTER)
+                found.add(
+                    Failure.bounded(
+                        "declaration.run_invalid",
+                        status=Status.INVALID,
+                        cause=invalid,
+                        requirement=(
+                            "a run declares writes, and one strategy (with exchange, execution "
+                            "{dataset, trade_price, fill?} and initial_account) or one datamodel "
+                            "(with schedule.days_from), plus "
+                            "instruments, start, end, timezone and schedule "
+                            "(every, at or from/to), "
+                            "each in the shape `vqapr new run` emits"
+                        ),
+                        observed=observed,
+                        examples=["2024-01-02T00:00:00+09:00"],
+                        source=_at(name),
+                        fix=f"correct `{name}` in the declaration, then register again",
+                    )
+                )
+                found.done().raise_if_failed()
+                raise  # unreachable
+            definitions.append((str(run_id), definition))
+
+        _refuse_a_run_fed_by_a_sibling(definitions)
+        for run_id, definition in definitions:
+            transaction.register_run(definition)
+            registered.setdefault("runs", []).append(run_id)
+            registered.spoken.extend(definition.spoken())
+
+        transaction.commit()
+        return registered
 
 
 def _refuse_a_run_fed_by_a_sibling(definitions: Sequence[tuple[str, RunDefinition]]) -> None:

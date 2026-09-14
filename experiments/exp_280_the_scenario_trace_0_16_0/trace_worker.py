@@ -1,13 +1,18 @@
-"""Trace one `--jobs` worker in this process: `exp_238/trace_worker.py` on the 0.16.0 module paths.
+"""Trace one `--jobs` worker in this process: the strategy worker, given a directory of baked cubes.
 
-The concept-tree campaign moved the worker's pieces (`vqapr.flow.orchestration` ->
-`vqapr.run.batch` / `vqapr.run.assemble`, `vqapr.project.store` -> `vqapr.workspace.registry`);
-what the script does is unchanged. It bakes the batch's cubes the way `batch_cubes` does
-(untraced, into a scratch directory removed afterwards), then runs the function the pool would run
--- `run_registered_strategy` -- under `exp_230`'s profiler:
+`exp_238/trace_worker.py` on the 0.16.0 tree: `flow/orchestration.py` is `run/batch.py` (the bake)
+and `run/assemble.py` (the worker function), `project/store.py` is `workspace/registry.py`
+(records 273-274). What it does is unchanged. `exp_230/trace.py` traces a CLI command, and under
+`--jobs` the driver spawns its workers, so the driver's trace ends at `in_workers` and never sees a
+worker map a cube. This bakes the batch's cubes the way `batch_cubes` does (untraced, into a scratch
+directory removed afterwards), then runs the function the pool would run --
+`run_registered_strategy` -- under the same profiler:
 
     uv run python experiments/exp_280_the_scenario_trace_0_16_0/trace_worker.py OUT.json \
         --project DIR --run sample-factor-run --with sample-stoploss-run
+
+`--with` names the other runs of the batch, so the bake covers what the batch would have read.
+The record is replaced (`--force` semantics), as a batch run over a standing record would be.
 """
 
 from __future__ import annotations
@@ -29,6 +34,8 @@ def trace_worker(out: Path, project: Path, run_id: str, others: list[str]) -> No
     from vqapr.run.batch import _bake_for_batch, batch_reads
     from vqapr.workspace.registry import Workspace
 
+    # The store root is passed as the CLI passes it (unresolved); the profiler matches the
+    # author's files by the resolved path the interpreter records.
     resolved = project.resolve()
     cubes = Path(tempfile.mkdtemp(prefix="cubes-", dir=project / ".vqapr"))
     workspace = Workspace.open(project)

@@ -46,7 +46,7 @@ def refused(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> list[dict]:
     assert code == 0
     (project / "after-close.yaml").write_text(_RUN, encoding="utf-8")
     root = ("--project-root", str(project))
-    for declaration in ("sample.yaml", "after-close.yaml"):
+    for declaration in ("instruments.yaml", "sample.yaml", "after-close.yaml"):
         code, body = _cli(capsys, *root, "register", str(project / declaration))
         assert code == 0, body
     code, body = _cli(capsys, *root, "check", "after-close")

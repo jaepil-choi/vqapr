@@ -80,17 +80,37 @@ def test_a_missing_column_names_the_role_that_declared_it(hive_parquet: Path) ->
     assert "instrument_field" in diagnosis.failures[0].requirement
 
 
+def _panel(**overrides) -> DatasetRegistration:
+    """The same table declared as a panel grain, where the key axis is proved rather than counted."""
+    return _registration(
+        grain="instrument_instant", key_fields=("available_at", "instrument"), **overrides
+    )
+
+
 def test_key_problems_arrive_together(dup_parquet: Path) -> None:
     spec = SourceSpec.of("s", dup_parquet)
-    diagnosis, timing, _measured = verify_source(_registration(), spec)
+    diagnosis, timing, _measured = verify_source(_panel(), spec)
     codes = sorted(f.code for f in diagnosis.failures)
     assert codes == ["dataset.key_duplicate", "dataset.key_null"]
     assert timing.key_was_skipped is False
 
 
+def test_a_rows_key_is_counted_not_refused(dup_parquet: Path) -> None:
+    """Record `282`: the vendor's long table may repeat its key; registration counts and says so."""
+    from dataclasses import replace
+
+    spec = SourceSpec.of("s", dup_parquet)
+    diagnosis, _, measured = verify_source(_registration(), spec)
+    assert diagnosis.ok, diagnosis.failures
+    assert measured.key_repeats is not None and measured.key_repeats > 0
+    assert measured.key_nulls == 1
+    assert any("more than one row" in line for line in measured.spoken())
+    assert measured == replace(measured, key_repeats=None, key_nulls=None), "outside equality"
+
+
 def test_key_failures_keep_the_total_beside_the_sample(dup_parquet: Path) -> None:
     spec = SourceSpec.of("s", dup_parquet)
-    diagnosis, _, _measured = verify_source(_registration(key_fields=("instrument",)), spec)
+    diagnosis, _, _measured = verify_source(_panel(), spec)
     failure = next(f for f in diagnosis.failures if f.code.endswith("duplicate"))
     assert len(failure.examples) <= MAX_EXAMPLES
     assert failure.example_total >= len(failure.examples)
@@ -98,7 +118,7 @@ def test_key_failures_keep_the_total_beside_the_sample(dup_parquet: Path) -> Non
 
 def test_failures_carry_a_retry_precondition(dup_parquet: Path) -> None:
     spec = SourceSpec.of("s", dup_parquet)
-    diagnosis, _, _measured = verify_source(_registration(), spec)
+    diagnosis, _, _measured = verify_source(_panel(), spec)
     with pytest.raises(VqaprError) as caught:
         diagnosis.raise_if_failed()
     assert caught.value.retry_precondition
@@ -255,9 +275,11 @@ def test_dev_dataset_registration_is_valid(dev_dataset: Path) -> None:
 
 
 @pytest.mark.real_data
-def test_dev_dataset_rejects_a_weak_key(dev_dataset: Path) -> None:
+def test_dev_dataset_counts_a_weak_rows_key(dev_dataset: Path) -> None:
+    """Record `282`: a key of the name alone repeats on every day; a `rows` grain registers the
+    table and says how many groups repeat, rather than refusing it."""
     spec = SourceSpec.of("fng_prices", dev_dataset, hive_partitioned=True)
-    diagnosis, _, _measured = verify_source(
+    diagnosis, _, measured = verify_source(
         DatasetRegistration.of(
             "price_daily",
             "fng_prices",
@@ -270,9 +292,8 @@ def test_dev_dataset_rejects_a_weak_key(dev_dataset: Path) -> None:
         ),
         spec,
     )
-    failure = next(f for f in diagnosis.failures if f.code.endswith("duplicate"))
-    assert failure.example_total > 5000
-    assert len(failure.examples) == MAX_EXAMPLES
+    assert diagnosis.ok, diagnosis.failures
+    assert measured.key_repeats is not None and measured.key_repeats > 5000
 
 
 def test_validation_measures_the_span_from_the_scan_it_already_ran(hive_parquet: Path) -> None:

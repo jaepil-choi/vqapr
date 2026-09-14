@@ -352,8 +352,10 @@ def test_schema_failure_does_not_create_a_workspace(tmp_path: Path, hive_parquet
 def test_key_failure_does_not_create_a_workspace(tmp_path: Path, dup_parquet: Path) -> None:
     source = SourceSpec.of("prices", dup_parquet)
 
+    # A panel grain proves its key axis; a `rows` key is only counted (record `282`).
+    panel = _registration(grain="instrument_instant", key_fields=("available_at", "instrument"))
     with pytest.raises(VqaprError) as caught:
-        register_dataset(tmp_path, _registration(), source)
+        register_dataset(tmp_path, panel, source)
 
     payload = caught.value.as_dict()
     assert payload["mutation"] is False

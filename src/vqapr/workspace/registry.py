@@ -863,7 +863,7 @@ def _roster_payload(tables: Mapping[str, Path | str], *, digest: str) -> dict[st
 class Transaction:
     """Several registrations, staged now and written once.
 
-    `view` is a `Workspace` holding the snapshot plus everything staged so far, so `_apply` can
+    `view` is a `Workspace` holding the snapshot plus everything staged so far, so `apply` can
     resolve a config's component or an schedule's dataset declared earlier in the same document
     exactly as it would resolve one already on disk. Each `register_*` runs the same merge the
     single-item `Workspace.register_*` runs, against that staged state, so a conflict or a missing

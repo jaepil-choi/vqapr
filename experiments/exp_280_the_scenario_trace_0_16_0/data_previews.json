@@ -1,0 +1,608 @@
+{
+ "roster": {
+  "title": "sample/instruments_stock.parquet — 종목 명단",
+  "columns": [
+   "instrument_id",
+   "kind"
+  ],
+  "types": {
+   "instrument_id": "string",
+   "kind": "string"
+  },
+  "rows": [
+   [
+    "K000001",
+    "stock"
+   ],
+   [
+    "K000002",
+    "stock"
+   ],
+   [
+    "K000003",
+    "stock"
+   ],
+   [
+    "K000004",
+    "stock"
+   ],
+   [
+    "K000005",
+    "stock"
+   ]
+  ],
+  "note": "10행 중 5행"
+ },
+ "prices": {
+  "title": "sample/observations.parquet — 일봉 가격",
+  "columns": [
+   "available_at",
+   "instrument",
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "types": {
+   "available_at": "timestamp[us, tz=UTC]",
+   "instrument": "string",
+   "open": "double",
+   "high": "double",
+   "low": "double",
+   "close": "double",
+   "volume": "int64"
+  },
+  "rows": [
+   [
+    "2022-01-03 15:30",
+    "K000001",
+    "147,479.3722",
+    "148,222.3413",
+    "145,250.4648",
+    "145,993.4339",
+    "7753447"
+   ],
+   [
+    "2022-01-04 15:30",
+    "K000001",
+    "146,249.8936",
+    "146,992.2789",
+    "145,321.9121",
+    "146,064.2973",
+    "7136314"
+   ],
+   [
+    "2022-01-05 15:30",
+    "K000001",
+    "145,827.728",
+    "146,197.8491",
+    "141,386.2743",
+    "143,236.88",
+    "14626249"
+   ]
+  ],
+  "note": "6900행 중 3행"
+ },
+ "execution": {
+  "title": "sample/execution.parquet — 체결표",
+  "columns": [
+   "trade_at",
+   "instrument",
+   "is_tradable",
+   "close"
+  ],
+  "types": {
+   "trade_at": "timestamp[us, tz=UTC]",
+   "instrument": "string",
+   "is_tradable": "bool",
+   "close": "double"
+  },
+  "rows": [
+   [
+    "2022-01-03 15:30",
+    "K000001",
+    "True",
+    "145,993.4339"
+   ],
+   [
+    "2022-01-04 15:30",
+    "K000001",
+    "True",
+    "146,064.2973"
+   ],
+   [
+    "2022-01-05 15:30",
+    "K000001",
+    "True",
+    "143,236.88"
+   ]
+  ],
+  "note": "6903행 중 3행"
+ },
+ "ledger_prices": {
+  "title": ".vqapr/workspace.yaml — datasets.sample-prices",
+  "text": "  sample-prices:\n    source: sample-prices-source\n    instrument_field: instrument\n    available_at: available_at\n    key_fields:\n    - available_at\n    - instrument\n    fields:\n      open: open\n      high: high\n      low: low\n      close: close\n      volume: volume\n    grain: instrument_instant\n    field_types:\n      open: DOUBLE\n      high: DOUBLE\n      low: DOUBLE\n      close: DOUBLE\n      volume: INTEGER\n    aggregated: false\n    span:\n    - '2022-01-03T15:30:00+09:00'\n    - '2024-12-30T15:30:00+09:00'\n    source_digest: 18bb70177dc69273559d9076783c377c7421019c5c34be8aac3e98de3884ad80"
+ },
+ "ledger_execution": {
+  "title": ".vqapr/workspace.yaml — datasets.sample-execution",
+  "text": "  sample-execution:\n    source: sample-execution-source\n    instrument_field: instrument\n    available_at: trade_at\n    key_fields:\n    - trade_at\n    - instrument\n    fields:\n      close: close\n      is_tradable: is_tradable\n    grain: instrument_instant\n    field_types:\n      close: DOUBLE\n      is_tradable: BOOLEAN\n    aggregated: false\n    span:\n    - '2022-01-03T15:30:00+09:00'\n    - '2024-12-30T15:30:00+09:00'\n    execution:\n      is_tradable: is_tradable\n    source_digest: 49e4b4abef4fdeea0cbe8eb721d38a8dd8ff520436440529e161b225b60ecc61\n    execution_prices:\n    - close"
+ },
+ "features": {
+  "title": ".vqapr/materialized/sample-features/all.parquet — DataModel 출력",
+  "columns": [
+   "available_at",
+   "instrument",
+   "momentum_5d"
+  ],
+  "types": {
+   "available_at": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "momentum_5d": "double"
+  },
+  "rows": [
+   [
+    "2022-01-10 16:00",
+    "K000001",
+    "-0.009"
+   ],
+   [
+    "2022-01-10 16:00",
+    "K000002",
+    "-0.0334"
+   ],
+   [
+    "2022-01-10 16:00",
+    "K000003",
+    "0.0855"
+   ],
+   [
+    "2022-01-10 16:00",
+    "K000004",
+    "-0.0925"
+   ]
+  ],
+  "note": "108행 중 4행"
+ },
+ "run_json": {
+  "title": "runs/sample-factor-run/run.json — 표지",
+  "text": "{\n \"run_id\": \"sample-factor-run\",\n \"period\": {\n  \"end\": \"2022-01-25T23:59:59+09:00\",\n  \"start\": \"2022-01-12T00:00:00+09:00\"\n },\n \"datasets\": [\n  {\n   \"dataset_id\": \"sample-features\",\n   \"grain\": \"instrument_instant\",\n   \"source_digest\": \"54f8fd04f33fd85cc75d8b7695439439f3852ce3a7eeadb7980f79f185b597e5\",\n   \"source_id\": \"materialized-sample-features\"\n  }\n ],\n \"writes\": \"sample-factor-weights\"\n}"
+ },
+ "factor_weight": {
+  "title": "vqapr.weight — 01-12 08:00 결정",
+  "columns": [
+   "event_time",
+   "instrument",
+   "weight"
+  ],
+  "types": {
+   "event_time": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "weight": "string"
+  },
+  "rows": [
+   [
+    "2022-01-12 08:00",
+    "K000003",
+    "0.166666666667"
+   ],
+   [
+    "2022-01-12 08:00",
+    "K000004",
+    "-0.166666666667"
+   ],
+   [
+    "2022-01-12 08:00",
+    "K000005",
+    "-0.166666666667"
+   ],
+   [
+    "2022-01-12 08:00",
+    "K000006",
+    "-0.166666666666"
+   ],
+   [
+    "2022-01-12 08:00",
+    "K000008",
+    "0.166666666667"
+   ],
+   [
+    "2022-01-12 08:00",
+    "K000009",
+    "0.166666666666"
+   ]
+  ],
+  "note": "6행 중 6행 (전체 60행)"
+ },
+ "factor_fill": {
+  "title": "vqapr.fill — 01-12 15:30 체결",
+  "columns": [
+   "event_time",
+   "instrument",
+   "requested_quantity",
+   "dealt_quantity",
+   "price"
+  ],
+  "types": {
+   "dealt_quantity": "string",
+   "event_time": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "price": "string",
+   "requested_quantity": "string"
+  },
+  "rows": [
+   [
+    "2022-01-12 15:30",
+    "K000003",
+    "23",
+    "23",
+    "719502.7152"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000004",
+    "-55",
+    "-55",
+    "297774.184"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000005",
+    "-19",
+    "-19",
+    "836027.9114"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000006",
+    "-12",
+    "-12",
+    "1292606.5653"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000008",
+    "8",
+    "8",
+    "1897986.0751"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000009",
+    "94",
+    "94",
+    "176355.712"
+   ]
+  ],
+  "note": "6행 중 6행 (전체 73행)"
+ },
+ "factor_account": {
+  "title": "vqapr.account — 01-12 15:30 평가",
+  "columns": [
+   "event_time",
+   "instrument",
+   "quantity",
+   "price",
+   "cash",
+   "nav"
+  ],
+  "types": {
+   "cash": "string",
+   "event_time": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "nav": "string",
+   "price": "string",
+   "quantity": "string"
+  },
+  "rows": [
+   [
+    "2022-01-12 15:30",
+    "_ACCOUNT",
+    "None",
+    "None",
+    "99463501.2418",
+    "100000000.0000"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000003",
+    "23",
+    "719502.7152",
+    "None",
+    "None"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000004",
+    "-55",
+    "297774.184",
+    "None",
+    "None"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000005",
+    "-19",
+    "836027.9114",
+    "None",
+    "None"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000006",
+    "-12",
+    "1292606.5653",
+    "None",
+    "None"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000008",
+    "8",
+    "1897986.0751",
+    "None",
+    "None"
+   ],
+   [
+    "2022-01-12 15:30",
+    "K000009",
+    "94",
+    "176355.712",
+    "None",
+    "None"
+   ]
+  ],
+  "note": "7행 중 7행 (전체 70행)"
+ },
+ "stop_last": {
+  "title": "vqapr.fill — 02-23 마지막 매도",
+  "columns": [
+   "event_time",
+   "instrument",
+   "requested_quantity",
+   "dealt_quantity",
+   "price"
+  ],
+  "types": {
+   "dealt_quantity": "string",
+   "event_time": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "price": "string",
+   "requested_quantity": "string"
+  },
+  "rows": [
+   [
+    "2022-02-23 15:30",
+    "K000008",
+    "-52",
+    "-52",
+    "1441901.1101"
+   ]
+  ],
+  "note": "1행 중 1행 (전체 111행)"
+ },
+ "stop_weight": {
+  "title": "vqapr.weight — 01-05 08:00 (K000005 빠짐)",
+  "columns": [
+   "event_time",
+   "instrument",
+   "weight"
+  ],
+  "types": {
+   "event_time": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "weight": "string"
+  },
+  "rows": [
+   [
+    "2022-01-05 08:00",
+    "K000001",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000002",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000003",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000004",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000006",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000007",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000008",
+    "0.112500000000"
+   ],
+   [
+    "2022-01-05 08:00",
+    "K000009",
+    "0.112500000000"
+   ]
+  ],
+  "note": "8행 중 8행 (전체 102행)"
+ },
+ "enhanced_weight": {
+  "title": "sample-enhanced-weights — 01-13 09:00",
+  "columns": [
+   "available_at",
+   "instrument",
+   "weight"
+  ],
+  "types": {
+   "available_at": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "weight": "double"
+  },
+  "rows": [
+   [
+    "2022-01-13 09:00",
+    "K000001",
+    "0.1111"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000002",
+    "0.1944"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000003",
+    "0.1944"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000004",
+    "0.0278"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000005",
+    "0.0278"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000006",
+    "0.1111"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000007",
+    "0.1111"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000008",
+    "0.1944"
+   ],
+   [
+    "2022-01-13 09:00",
+    "K000009",
+    "0.0278"
+   ]
+  ],
+  "note": "9행 중 9행 (전체 81행)"
+ },
+ "factor_alpha": {
+  "title": "sample-factor-weights — 01-13 08:00 (alpha)",
+  "columns": [
+   "available_at",
+   "instrument",
+   "weight"
+  ],
+  "types": {
+   "available_at": "timestamp[us, tz=Asia/Seoul]",
+   "instrument": "string",
+   "weight": "double"
+  },
+  "rows": [
+   [
+    "2022-01-13 08:00",
+    "K000002",
+    "0.1667"
+   ],
+   [
+    "2022-01-13 08:00",
+    "K000003",
+    "0.1667"
+   ],
+   [
+    "2022-01-13 08:00",
+    "K000004",
+    "-0.1667"
+   ],
+   [
+    "2022-01-13 08:00",
+    "K000005",
+    "-0.1667"
+   ],
+   [
+    "2022-01-13 08:00",
+    "K000008",
+    "0.1667"
+   ],
+   [
+    "2022-01-13 08:00",
+    "K000009",
+    "-0.1667"
+   ]
+  ],
+  "note": "6행 중 6행 (전체 60행)"
+ },
+ "cube": {
+  "title": ".vqapr/cubes/<batch>/ — 구운 파일 (probe로 다시 구움)",
+  "columns": [
+   "file",
+   "size",
+   "shape"
+  ],
+  "rows": [
+   [
+    "sample-features/cube.json",
+    "177 B",
+    ""
+   ],
+   [
+    "sample-features/instants.npy",
+    "224 B",
+    "(12,)"
+   ],
+   [
+    "sample-features/instruments.json",
+    "99 B",
+    ""
+   ],
+   [
+    "sample-features/momentum_5d.npy",
+    "992 B",
+    "(12, 9)"
+   ],
+   [
+    "sample-features/present.npy",
+    "236 B",
+    "(12, 9)"
+   ],
+   [
+    "sample-prices/close.npy",
+    "58,928 B",
+    "(735, 10)"
+   ],
+   [
+    "sample-prices/cube.json",
+    "169 B",
+    ""
+   ],
+   [
+    "sample-prices/instants.npy",
+    "6,008 B",
+    "(735,)"
+   ],
+   [
+    "sample-prices/instruments.json",
+    "110 B",
+    ""
+   ],
+   [
+    "sample-prices/present.npy",
+    "7,478 B",
+    "(735, 10)"
+   ]
+  ],
+  "note": "10개"
+ }
+}

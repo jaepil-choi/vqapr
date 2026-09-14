@@ -42,8 +42,7 @@ from pathlib import Path
 from typing import Any
 
 from vqapr.cli.envelope import success
-from vqapr.domain.errors import read_yaml_mapping
-from vqapr.workspace.registration import AUTHORED_KINDS, apply, register_authored
+from vqapr.workspace.registration import AUTHORED_KINDS, apply, read_declaration, register_authored
 from vqapr.workspace.registration import (
     cli_kind as cli_kind,  # re-export: cli/check.py, run.py, list_.py
 )
@@ -81,7 +80,7 @@ def run(args: argparse.Namespace, *, project_root: Path) -> dict[str, Any]:
             kind, getattr(args, "component_id", None), getattr(args, "source", None), project_root
         ))
     declaration = Path(args.declaration)
-    document = read_yaml_mapping(declaration, what="a declaration")
+    document = read_declaration(declaration)
     registered = apply(document, project_root, base=declaration.parent, declaration=declaration)
     # What was just declared, said once in words (`docs/issues/archive/027`): one sentence per
     # point-in-time concept, or nothing for a declaration that carries none.

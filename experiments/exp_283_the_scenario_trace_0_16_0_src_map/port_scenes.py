@@ -1,7 +1,7 @@
 # ruff: noqa: E501, RUF001, RUF003 -- the usage line is one command; the scenes write counts with ×
 """Port a scenes file onto new traces and a moved tree: frame indices, every `name(#idx, ms)`.
 
-    uv run python experiments/exp_280_the_scenario_trace_0_16_0/port_scenes.py OLD_SCENES.py TRACES_DIR OUT.py
+    uv run python experiments/exp_283_the_scenario_trace_0_16_0_src_map/port_scenes.py OLD_SCENES.py TRACES_DIR OUT.py
 
 The 0.16.0 concept tree moved files and renamed the door, so the 0.14.3 scenes point at call
 indices, names and source anchors that no longer exist. What this does, mechanically:
@@ -38,7 +38,7 @@ PREFERRED = {
     "def require_verified": ["src/vqapr/data/verification.py"],
 }
 OLD_DECL ="experiments/exp_235_the_scenario_trace/declarations/"
-NEW_DECL = "experiments/exp_280_the_scenario_trace_0_16_0/declarations/"
+NEW_DECL = "experiments/exp_283_the_scenario_trace_0_16_0_src_map/declarations/"
 
 frame_re = re.compile(r'F\("(\w+)", (\d+), ')
 mention_re = re.compile(

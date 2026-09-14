@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
@@ -69,7 +69,8 @@ class Grain(StrEnum):
     """
 
     ROWS = "rows"
-    """The vendor's grain: long / EAV. Unique on the declared `key_fields`. No panel."""
+    """The vendor's grain: long / EAV. `key_fields` may repeat -- counted, not refused (record
+    `282`). No panel."""
 
 
 _BARE_COLUMN = re.compile(r"[^\W\d]\w*", re.UNICODE)
@@ -221,6 +222,16 @@ class DatasetRegistration:
     `trade_price` must be one of them (`execution.price_not_positive`, at preflight). `None` for a
     dataset with no execution role; `()` for a table none of whose prices qualify."""
 
+    key_repeats: int | None = field(default=None, compare=False)
+    """For grain `rows`: how many `key_fields` groups hold more than one row -- **measured** by the
+    key scan registration already runs, and said once in the receipt (`spoken`, record `282`). Not
+    stored and outside equality: nothing downstream depends on it -- a read orders repeated rows by
+    every field -- and a count that moved with the file must not make an unchanged declaration look
+    changed. `None` on a panel grain, which refuses a repeat instead."""
+
+    key_nulls: int | None = field(default=None, compare=False)
+    """For grain `rows`: how many `key_fields` groups hold a null (record `282`), as above."""
+
     @classmethod
     def of(
         cls,
@@ -316,7 +327,10 @@ class DatasetRegistration:
         return replace(declared, grain=grain, field_types=field_types)
 
     def key_axis(self) -> tuple[str, ...]:
-        """The columns registration proves unique, decided by the grain (design §2.2)."""
+        """The columns registration scans, decided by the grain (design §2.2).
+
+        Proved unique on a panel grain; on `rows`, counted and reported (record `282`).
+        """
         if self.grain is Grain.INSTRUMENT_INSTANT:
             return (self.available_at, self.instrument_field)  # type: ignore[return-value]
         if self.grain is Grain.INSTANT:
@@ -352,11 +366,19 @@ class DatasetRegistration:
         declaration is registered, so an author who wrote the column name has heard what it
         commits them to.
         """
-        return [
+        lines = [
             f"dataset {self.dataset_id!r}: a row is knowable at its {self.available_at!r} value "
             "and never earlier; a model reading it at instant t sees rows with "
             f"{self.available_at} <= t"
         ]
+        if self.grain is Grain.ROWS and self.key_repeats is not None:
+            key = ", ".join(self.key_fields)
+            lines.append(
+                f"dataset {self.dataset_id!r}: grain rows keeps every row -- {self.key_repeats} "
+                f"({key}) group(s) hold more than one row and {self.key_nulls or 0} hold a null; "
+                f"a read orders them by {self.available_at}, the key, then every field"
+            )
+        return lines
 
     def with_verification(
         self, source_digest: str, execution_prices: tuple[str, ...] | None
@@ -373,6 +395,12 @@ class DatasetRegistration:
             source_digest=source_digest,
             execution_prices=None if execution_prices is None else tuple(execution_prices),
         )
+
+    def with_key_counts(self, repeats: int, nulls: int) -> DatasetRegistration:
+        """The `rows` key counts attached: what `verify_source` measured (record `282`)."""
+        if self.grain is not Grain.ROWS:
+            raise ValueError("only a rows grain carries key counts; a panel grain refuses a repeat")
+        return replace(self, key_repeats=int(repeats), key_nulls=int(nulls))
 
     @property
     def verified(self) -> bool:

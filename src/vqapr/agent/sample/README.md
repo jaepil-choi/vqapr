@@ -6,6 +6,7 @@ package is that sample, and the door is one command:
 
 ```bash
 vqapr new sample --out ./first-run
+vqapr register ./first-run/instruments.yaml
 vqapr register ./first-run/sample.yaml
 vqapr check sample-run
 vqapr run sample-run
@@ -17,7 +18,7 @@ vqapr run sample-run
 |---|---|
 | `reversal_5d.py` | the strategy a user's copy is registered from: a five-day reversal, long-only |
 | `exchange.py` | a zero-friction academic venue listing the ten sample names |
-| `materialize.py` | `materialize(out_dir)`: copies the two sources and the panel, writes `sample.yaml` and a README |
+| `materialize.py` | `materialize(out_dir)`: copies the two sources and the panel, writes the roster declaration `instruments.yaml`, `sample.yaml` and a README |
 | `data/` | the **synthetic** panel (`observations.parquet`, `execution.parquet`, `instruments.csv`, `panel.json`) and its provenance note |
 
 The data is not market data: it was cut once from a private KRX warehouse by

@@ -34,9 +34,53 @@ from vqapr.agent.sample.materialize import RUN_ID as SAMPLE_RUN_ID
 from vqapr.agent.sample.materialize import materialize as materialize_sample
 from vqapr.agent.scaffold import class_name_for, lookback_declaration, render
 from vqapr.cli.envelope import success
-from vqapr.domain.errors import INCOMPLETE, VALUE_INVALID, InputError, refuse_existing
+from vqapr.domain.errors import EXISTS, INCOMPLETE, VALUE_INVALID, FailureSource, InputError
 from vqapr.public import AccountMode, Role
 from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME, Workspace
+
+
+def refuse_existing(path: Path, *, what: str) -> None:
+    """Refuse to overwrite, naming the file rather than raising a bare `FileExistsError`.
+
+    Moved here from `domain/errors.py` by record `280`: `vqapr new` is its only caller, and asking
+    the filesystem whether a path exists is not a domain rule.
+
+    재실행은 agent가 가장 흔하게 하는 일이다(Spawn Gate가 rung마다 3회를 허용한다). 그 경로가
+    `unhandled`로 나가면 재시도 자체가 framework 고장으로 보고된다.
+    """
+    if path.exists():
+        raise InputError(
+            EXISTS,
+            requirement=f"{what} must not already exist",
+            observed=f"{path} already exists",
+            source=FailureSource(file=str(path)),
+            retry="remove it or pass a different --out, then retry",
+        )
+
+
+def _script_target(out: Path | None, default: Path) -> Path:
+    """Where a kind that writes a .py and its declaration writes the .py (record `283`).
+
+    `--out` names the script; the declaration is written beside it as `<name>.yaml`. An `--out`
+    ending in `.yaml` made the two one path, and the declaration overwrote the script it points
+    at -- `vqapr new instruments --out instruments.yaml` left no script, so no tables. A YAML
+    name is refused (`.yml` too: whoever typed it meant the declaration); any other name is the
+    script's.
+    """
+    target = out or default
+    if target.suffix.lower() in {".yaml", ".yml"}:
+        raise InputError(
+            VALUE_INVALID,
+            requirement=(
+                "--out names the script this kind writes, not its declaration; the declaration "
+                "is written beside it as <name>.yaml"
+            ),
+            observed=f"--out {target}",
+            source=FailureSource(file=str(target)),
+            retry=f"pass --out {target.with_suffix('.py').name}, then retry",
+        )
+    return target
+
 
 _KINDS = {
     "datamodel": Role.DATA_MODEL,
@@ -99,11 +143,11 @@ datasets:
     #   instrument_instant  one value per (available_at, instrument) -- a date x ticker table.
     #                       A panel can be built from it, and this is the shape to prefer.
     #   instant             one value per available_at, no instrument axis (index level, rate).
-    #   rows                the vendor's grain (long / EAV); unique on key_fields; no panel.
+    #   rows                the vendor's grain (long / EAV); key_fields may repeat; no panel.
     #   On a panel grain, RowsLookback(n) is the last n rows of the pivoted table -- the same
     #   instants for every name. Per-name counting is InstantsLookback on grain: rows.
     grain: instrument_instant
-    key_fields:                       # columns that together uniquely identify each row
+    key_fields:                       # the columns that identify a row (rows may repeat them)
       - timestamp
       - instrument
     fields:                           # every column the dataset exposes, mapping name -> column
@@ -412,7 +456,7 @@ def _component(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
             lookback=lookback,
             lookback_kind=lookback_kind,
         )
-    target = args.out or project_root / f"{args.component_id.replace('-', '_')}.py"
+    target = _script_target(args.out, project_root / f"{args.component_id.replace('-', '_')}.py")
     if target.suffix != ".py":
         # A component is imported by `register`, so it must be a loadable module. Writing an
         # extensionless file here reports success and then fails one command later, where the
@@ -635,7 +679,7 @@ def _exchange_template(args: argparse.Namespace, project_root: Path) -> dict[str
     quantity step: expressing it in YAML would mean inventing a second spelling for something the
     package already has one spelling for.
     """
-    target = args.out or project_root / "exchange.py"
+    target = _script_target(args.out, project_root / "exchange.py")
     refuse_existing(target, what="exchange scaffold")
     target.parent.mkdir(parents=True, exist_ok=True)
     instruments = getattr(args, "instruments", None) or ["A005930", "A000660"]
@@ -769,7 +813,7 @@ def _instruments_template(args: argparse.Namespace, project_root: Path) -> dict[
     a refusal, which is exactly the stall `new exchange` was built to remove -- an author guessed
     six times at a type no template, help text or skill section ever named.
     """
-    target = args.out or project_root / "instruments.py"
+    target = _script_target(args.out, project_root / "instruments.py")
     refuse_existing(target, what="instrument roster script")
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -826,13 +870,17 @@ def _sample(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
         refuse_existing(target, what="sample directory")
     materialized = materialize_sample(target)
     declaration = materialized.declaration
+    # The roster is its own declaration (record `284`), registered first: the run's `check`
+    # refuses `roster.absent` without it.
     return success(
         "template.new",
         kind="sample",
         path=str(target),
         declaration=str(declaration),
+        instruments=str(materialized.roster),
         run_id=SAMPLE_RUN_ID,
         next=[
+            f"vqapr register {materialized.roster}",
             f"vqapr register {declaration}",
             f"vqapr check {SAMPLE_RUN_ID}",
             f"vqapr run {SAMPLE_RUN_ID}",

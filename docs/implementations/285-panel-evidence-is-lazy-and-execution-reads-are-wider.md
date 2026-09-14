@@ -1,4 +1,4 @@
-# 280 — Panel evidence is lazy and execution reads are wider
+# 285 — Panel evidence is lazy and execution reads are wider
 
 | | |
 |---|---|
@@ -96,7 +96,7 @@ equality와 파일 SHA-256이 모두 같았다.
 
 `exp_252`에서 `/Users/jason/qlibx/DW`의 실제 자료, 최대 공통 2018-01-02~2026-07-20,
 KOSPI200 이력 전체 309종목으로 다시 확인했다. 기준판의 DataModel 반복 실행 중앙값
-15.936초·1.929GB가 이 변경 뒤 12.028초·516MB가 되었다. 이어 record 281의 출력 스키마
+15.936초·1.929GB가 이 변경 뒤 12.028초·516MB가 되었다. 이어 record 286의 출력 스키마
 검증 캐시까지 적용한 최종 후보는 9.722초·507MB였다. 동일한 프로젝트 위치에서 다시 만든
 DataModel 419,686행과 다섯 전략의 account/fill/weight 15개 표는 기준판과 파일 SHA-256까지
 같았다. 최종 실제 자료 보고서는
