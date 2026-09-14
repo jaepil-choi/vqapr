@@ -814,7 +814,7 @@ def _require_grain_key(body: dict[str, Any], *, name: str) -> None:
             fix=(
                 f"add `grain: <{GRAIN_NAMES}>` under {name}. instrument_instant: one value per "
                 "(available_at, instrument), a panel can be built; instant: one value per "
-                "available_at, no instrument axis; rows: the vendor's grain, unique on key_fields. "
+                "available_at, no instrument axis; rows: the vendor's grain, keys may repeat. "
                 f"Note: {ROWS_LOOKBACK_MEANING}"
             ),
         )

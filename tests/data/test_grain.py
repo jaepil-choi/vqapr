@@ -115,7 +115,7 @@ def test_a_grouped_projection_on_a_panel_grain_is_unique_by_construction(
     spec = SourceSpec.of("s", hive_parquet, hive_partitioned=True)
     grouped = _registration().with_aggregation(True)
 
-    assert check_key(grouped, spec).ok
+    assert check_key(grouped, spec)[0].ok
 
 
 # --------------------------------------------------------------------------------------

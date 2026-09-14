@@ -1492,7 +1492,11 @@ def _observation_query(
         source = f"{_relation(spec)} WHERE {where}"
         selected = {name: f"({value})" for name, value in fields.items()}
         ordering_fields = tuple(dict.fromkeys((available_at_field, *key_fields)))
-        ascending = ", ".join(_quote(field) for field in ordering_fields)
+        # Every exposed field after the key (record `282`): a `rows` key may repeat, and two rows
+        # sharing one would otherwise come back in either order from one run to the next.
+        ascending = ", ".join(
+            [*(_quote(field) for field in ordering_fields), *selected.values()]
+        )
         carried_projections = list(identity)
         partition = f"PARTITION BY {instrument}, " if keyed_by_instrument else "PARTITION BY "
         available_desc = available

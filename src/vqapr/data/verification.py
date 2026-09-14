@@ -348,23 +348,31 @@ def check_schema(
     return found.done(retry=_RETRY), (projection if typed_ok else None)
 
 
-def check_key(registration: DatasetRegistration, spec: SourceSpec) -> Diagnosis:
-    """2단계 — 선언한 grain의 축이 null 없이 유일한가. 전체 스캔이다.
+def check_key(
+    registration: DatasetRegistration, spec: SourceSpec
+) -> tuple[Diagnosis, scan.KeyCheck | None]:
+    """Stage 2 -- the grain's key axis, scanned over the whole file: proved on a panel grain,
+    counted on `rows`. Returns the diagnosis and the count (`None` when nothing was scanned).
 
-    The axis is the grain's (`key_axis`), not the author's `key_fields` alone: `instrument_instant`
-    proves `(available_at, instrument)`, `instant` proves `available_at`, and `rows` proves the
-    declared `key_fields` exactly as before (architecture §17.1.2). A grouped projection on a panel
-    grain has nothing to prove -- `GROUP BY` yields one row per pair by construction -- so the scan
-    is skipped rather than run against source rows the projection collapses.
+    The axis is the grain's (`key_axis`): `instrument_instant` proves `(available_at, instrument)`
+    and `instant` proves `available_at` -- a repeat or a null there would put two values in one
+    panel cell, so it is refused. `rows` COUNTS its declared `key_fields` instead (record `282`):
+    the grain already says no panel is built from the vendor's long table, several rows per key is
+    what such a table is, and the counts are a fact for the receipt (`spoken`), not a defect. A
+    read orders those rows the same way every time (`scan._observation_query`). A grouped
+    projection on a panel grain has nothing to prove -- `GROUP BY` yields one row per pair by
+    construction -- so the scan is skipped rather than run against rows the projection collapses.
 
     For an execution table this is the key the venue reads by (`trade_at, instrument`), proved
     here once (record `234`); nothing at preflight proves it again.
     """
     found = collector(Stage.REGISTER)
     if registration.grain is not Grain.ROWS and registration.aggregated:
-        return found.done(retry=_RETRY)
+        return found.done(retry=_RETRY), None
     axis = registration.key_axis()
     result = scan.key_check(spec, axis)
+    if registration.grain is Grain.ROWS:
+        return found.done(retry=_RETRY), result
     declared = ", ".join(axis)
     if result.null_groups:
         found.add(
@@ -398,7 +406,7 @@ def check_key(registration: DatasetRegistration, spec: SourceSpec) -> Diagnosis:
                 ),
             )
         )
-    return found.done(retry=_RETRY)
+    return found.done(retry=_RETRY), result
 
 
 def check_values(registration: DatasetRegistration, spec: SourceSpec) -> Diagnosis:
@@ -608,7 +616,7 @@ def verify_source(
         1단계  스키마   지목한 컬럼이 존재하나 · projection이 bind되나 · 그 타입이
                          model에 건넬 수 있는가 (field 타입과 grouping 판정이 여기서 나온다)
                          집행 역할이면: tradable은 BOOLEAN, instrument는 VARCHAR, 가격 후보가 있나
-        2단계  key      null 없이 유일한가                          ← 전체 스캔
+        2단계  key      panel grain이면 null 없이 유일한가, rows면 센다  ← 전체 스캔
         3단계  span     실제로 덮는 구간은 어디인가                 ← 전체 스캔
         4단계  값       노출되는 numeric에 NaN·inf가 있는가         ← 전체 스캔
         5단계  가격     집행 역할이면, 후보 가격마다 tradable 행에서 양수·유한한가  ← 전체 스캔
@@ -645,7 +653,7 @@ def verify_source(
     key_started = time.perf_counter()
     # The DESCRIBED registration: whether the projection is grouped is what decides if the
     # panel grain's uniqueness is proved by scan or by construction.
-    key = check_key(described, spec)
+    key, counted = check_key(described, spec)
     if not key.ok:
         key_timing = ValidationTiming(schema_seconds, time.perf_counter() - key_started)
         return key, key_timing, registration
@@ -663,6 +671,8 @@ def verify_source(
         return values, timing, registration
     prices = check_execution_prices(described, spec)
     verified = described.with_span(*measured).with_verification(physical_digest(spec.path), prices)
+    if described.grain is Grain.ROWS and counted is not None:
+        verified = verified.with_key_counts(counted.duplicate_groups, counted.null_groups)
     return values, timing, verified
 
 

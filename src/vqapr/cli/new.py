@@ -118,11 +118,11 @@ datasets:
     #   instrument_instant  one value per (available_at, instrument) -- a date x ticker table.
     #                       A panel can be built from it, and this is the shape to prefer.
     #   instant             one value per available_at, no instrument axis (index level, rate).
-    #   rows                the vendor's grain (long / EAV); unique on key_fields; no panel.
+    #   rows                the vendor's grain (long / EAV); key_fields may repeat; no panel.
     #   On a panel grain, RowsLookback(n) is the last n rows of the pivoted table -- the same
     #   instants for every name. Per-name counting is InstantsLookback on grain: rows.
     grain: instrument_instant
-    key_fields:                       # columns that together uniquely identify each row
+    key_fields:                       # the columns that identify a row (rows may repeat them)
       - timestamp
       - instrument
     fields:                           # every column the dataset exposes, mapping name -> column
