@@ -573,6 +573,31 @@ def check_execution_prices(
     return tuple(passing)
 
 
+def mismatched_source(registration: DatasetRegistration, spec: SourceSpec) -> Failure | None:
+    """The one rule for a registration handed a source it does not name (record `281`).
+
+    Asked by `verify_source` before it opens anything, and by the workspace merge, which a caller
+    can reach without it (`Transaction.register_dataset`). One rule and one status: the pair handed
+    in disagrees with itself, which is the submission's fault (400) -- not a conflict with what the
+    workspace already holds (409), which is what the merge said until record `281`.
+    """
+    if registration.source == spec.source_id:
+        return None
+    return Failure.bounded(
+        code="dataset.source_mismatch",
+        status=Status.INVALID,
+        requirement="DatasetRegistration.source must match SourceSpec.source_id",
+        observed=f"registration source={registration.source!r}, source spec={spec.source_id!r}",
+        source=FailureSource(
+            key_path=f"datasets.{registration.dataset_id}.source", file=str(spec.path)
+        ),
+        fix=(
+            f"declare source_id {str(spec.source_id)!r} on the dataset, or pass the "
+            f"SourceSpec whose id is {str(registration.source)!r}"
+        ),
+    )
+
+
 def verify_source(
     registration: DatasetRegistration, spec: SourceSpec
 ) -> tuple[Diagnosis, ValidationTiming, DatasetRegistration]:
@@ -597,27 +622,10 @@ def verify_source(
     실패했다면 붙일 것이 없으므로 받은 것을 그대로 돌려준다.
     """
     started = time.perf_counter()
-    if registration.source != spec.source_id:
-        found = collector(Stage.REGISTER)
-        found.add(
-            Failure.bounded(
-                code="dataset.source_mismatch",
-                status=Status.INVALID,
-                requirement="DatasetRegistration.source must match SourceSpec.source_id",
-                observed=(
-                    f"registration source={registration.source!r}, source spec={spec.source_id!r}"
-                ),
-                source=FailureSource(
-                    key_path=f"datasets.{registration.dataset_id}.source", file=str(spec.path)
-                ),
-                fix=(
-                    f"declare source_id {str(spec.source_id)!r} on the dataset, or pass the "
-                    f"SourceSpec whose id is {str(registration.source)!r}"
-                ),
-            )
-        )
+    mismatch = mismatched_source(registration, spec)
+    if mismatch is not None:
         return (
-            found.done(retry=_RETRY),
+            Diagnosis(stage=Stage.REGISTER, failures=(mismatch,), retry_precondition=_RETRY),
             ValidationTiming(time.perf_counter() - started, None),
             registration,
         )
@@ -848,6 +856,7 @@ __all__ = [
     "check_span",
     "check_values",
     "execution_role_failures",
+    "mismatched_source",
     "require_verified",
     "verify_roster",
     "verify_source",

@@ -192,13 +192,26 @@ def register_dataset(
     새 등록이면 ``True``, 디스크에 이미 같은 선언이 있으면 ``False``다. 검증이나 persistence가
     실패하면 ``VqaprError``를 발생시키며, 검증 실패는 workspace를 만들거나 바꾸지 않는다.
     """
+    with Workspace.transaction(project_root) as transaction:
+        _, changed = stage_measured(transaction, registration, source)
+    return changed
+
+
+def stage_measured(
+    transaction: Transaction, registration: DatasetRegistration, source: SourceSpec
+) -> tuple[DatasetRegistration, bool]:
+    """Measure a dataset at the one door and stage what was measured: how every dataset enters.
+
+    Record `281`. `register_dataset`, a declaration's `datasets:` section and a run's published
+    output (`run/engine/output.py::RunOutput.register`) each wrote these three lines. The staged
+    copy is the MEASURED one -- span, digest and execution prices filled in by the scan that just
+    ran -- because the caller's copy lacks the facts only a full read can establish, and the next
+    reader would have to read the file again to get them. Returns it, and whether the workspace
+    changed.
+    """
     diagnosis, _, measured = verify_source(registration, source)
     diagnosis.raise_if_failed()
-    # `measured` is the registration with its span filled in from the scan validation just ran.
-    # Registering the caller's copy instead would persist a declaration missing the one fact only
-    # a full read can establish, and the next reader would have to read the file again to get it.
-    with Workspace.transaction(project_root) as transaction:
-        return transaction.register_dataset(measured, source)
+    return measured, transaction.register_dataset(measured, source)
 
 
 def register_instruments(
@@ -964,9 +977,7 @@ def apply(
 
         for dataset_id, body in section("datasets").items():
             registration, source = _dataset(str(dataset_id), body, base=base)
-            diagnosis, _, measured = verify_source(registration, source)
-            diagnosis.raise_if_failed()
-            transaction.register_dataset(measured, source)
+            measured, _ = stage_measured(transaction, registration, source)
             registered.setdefault("datasets", []).append(str(dataset_id))
             registered.spoken.extend(measured.spoken())
 
