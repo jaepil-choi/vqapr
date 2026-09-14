@@ -1,22 +1,22 @@
 {
-  "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/absolute-run/datamodels/absolute-scores@b52fa43e/datamodel.json": {
-    "digest": "fe0d7196911dff6a",
+  "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/absolute-run/datamodels/absolute-scores@105ea771/datamodel.json": {
+    "digest": "d8babf886b3df1ba",
     "kind": "facts"
   },
   "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/absolute-run/run.json": {
-    "digest": "d38ed2b08c3453e1",
+    "digest": "da22736a28467502",
     "kind": "facts"
   },
   "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/forging-run/run.json": {
-    "digest": "1131522cc9def185",
+    "digest": "077bac16511d1a89",
     "kind": "facts"
   },
-  "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/reversal-run/datamodels/reversal-features@0bf02c5f/datamodel.json": {
-    "digest": "1ca3d887ced5b966",
+  "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/reversal-run/datamodels/reversal-features@4a5f20d3/datamodel.json": {
+    "digest": "e66fcc33d8cf77cb",
     "kind": "facts"
   },
   "showcases/show_002_datamodel_materialization/outputs/project/.vqapr/runs/reversal-run/run.json": {
-    "digest": "619569f161035e7e",
+    "digest": "f133f2c82c29bdec",
     "kind": "facts"
   },
   "showcases/show_003_real_data_long_short/outputs/project/.vqapr/runs/showcase-score/datamodels/showcase-model@ba796be0/datamodel.json": {
@@ -27,12 +27,12 @@
     "digest": "146972da3396a656",
     "kind": "facts"
   },
-  "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/datamodels/momentum-model@78e6d510/datamodel.json": {
-    "digest": "6f7b4af712514680",
+  "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/datamodels/momentum-model@6d0dfb87/datamodel.json": {
+    "digest": "a68dd208601960db",
     "kind": "facts"
   },
   "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/run.json": {
-    "digest": "9eaef767d8b5a2d5",
+    "digest": "e79d47bfb4bebe1c",
     "kind": "facts"
   },
   "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/run.json": {
