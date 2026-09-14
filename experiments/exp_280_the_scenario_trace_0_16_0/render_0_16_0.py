@@ -313,6 +313,124 @@ def analogy_html(rows: list[tuple[str, str, str]]) -> str:
     )
 
 
+# ---------------------------------------------------------------- the call stack with its data
+
+
+PREVIEWS = HERE / "data_previews.json"
+
+IO_CSS = """
+/* the call stack with what went in and what came out, the data beside it */
+.stack-io{margin:12px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px 10px}
+.stack-io .sh,.data .dh{font-size:.72rem;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 6px}
+.stack-io ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.stack-io li{padding:4px 8px 4px calc(8px + var(--d) * 18px);border-left:2px solid var(--line-2);font-size:12.5px;line-height:1.45}
+.stack-io li.me{background:var(--accent-bg);border-left-color:var(--accent)}
+.stack-io .nm{display:flex;gap:8px;align-items:baseline}
+.stack-io .nm code{font-weight:600;color:var(--ink);background:none;padding:0}
+.stack-io .ix{color:var(--muted);font-size:11px;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.stack-io .io{display:grid;grid-template-columns:14px 1fr;gap:4px;font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--ink-2);word-break:break-word}
+.stack-io .io b{font-weight:700}
+.stack-io .in b{color:var(--accent)}
+.stack-io .out b{color:var(--warn)}
+.data{margin:12px 0}
+.data .tablewrap{margin:0}
+.data table{min-width:0;font-size:12px}
+.data th,.data td{padding:4px 10px;font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+.data th{text-transform:none;letter-spacing:0;font-size:11px}
+.data .note{font-size:11.5px;color:var(--muted);margin-top:4px}
+.data pre.code{font-size:11.5px;max-height:260px;overflow:auto}
+details.cw{margin:10px 0}
+details.cw>summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+"""
+
+
+def _short_name(qualname: str) -> str:
+    parts = [p for p in qualname.split(".") if p != "<locals>"]
+    return ".".join(parts[-2:])
+
+
+def stack_html(spec: dict, traces: dict[str, dict]) -> str:
+    """The frame's call and the calls its chain names, nested by depth, each with its data."""
+    steps = [(t, i, label) for t, i, label in spec.get("stack", [])]
+    if not any(t == spec["trace"] and i == spec["idx"] for t, i, _ in steps):
+        steps.append((spec["trace"], spec["idx"], None))
+    steps = sorted({(t, i): (t, i, label) for t, i, label in steps}.values(), key=lambda s: (s[0], s[1]))
+    calls = [traces[t]["calls"][i] for t, i, _ in steps]
+    low = min(call["depth"] for call in calls)
+    rows = []
+    for (trace, idx, label), call in zip(steps, calls, strict=True):
+        name = html_module.escape(label or _short_name(call["qualname"]))
+        args = call.get("args") or {}
+        shown = ", ".join(f"{k}={v}" for k, v in args.items() if k not in ("self", "cls"))
+        shown = shown if len(shown) <= 240 else shown[:239] + "…"
+        parts = [f'<div class="nm"><code>{name}</code><span class="ix">#{idx}</span></div>']
+        if "args" in call:
+            parts.append(f'<div class="io in"><b>→</b><span>{html_module.escape(shown) or "(인자 없음)"}</span></div>')
+            parts.append(f'<div class="io out"><b>←</b><span>{html_module.escape(str(call.get("ret")))}</span></div>')
+        me = " me" if trace == spec["trace"] and idx == spec["idx"] else ""
+        depth = min(call["depth"] - low, 6)
+        rows.append(f'<li class="st{me}" style="--d:{depth}">{"".join(parts)}</li>')
+    return f'<div class="stack-io"><div class="sh">호출 스택 — 받은 것 → · 돌려준 것 ←</div><ol>{"".join(rows)}</ol></div>'
+
+
+def data_html(preview: dict) -> str:
+    title = html_module.escape(preview["title"])
+    if "text" in preview:
+        return f'<div class="data"><div class="dh">실제 파일 · {title}</div><pre class="code">{html_module.escape(preview["text"])}</pre></div>'
+    types = preview.get("types", {})
+    head = "".join(f'<th title="{html_module.escape(types.get(c, ""))}">{html_module.escape(c)}</th>' for c in preview["columns"])
+    body = "".join("<tr>" + "".join(f"<td>{html_module.escape(v)}</td>" for v in row) + "</tr>" for row in preview["rows"])
+    return (
+        f'<div class="data"><div class="dh">실제 데이터 · {title}</div><div class="tablewrap"><table><tr>{head}</tr>{body}</table></div>'
+        f'<div class="note">{html_module.escape(preview.get("note", ""))}</div></div>'
+    )
+
+
+_SCHEDULED = re.compile(r"schedule-(\d{4}-\d{2}-\d{2})T(\d{2})(\d{2})")
+_MARKET = re.compile(r"MarketInstant\(at=datetime\.datetime\((\d+), (\d+), (\d+), (\d+), (\d+)|MarketEvent\(at=datetime\.datetime\((\d+), (\d+), (\d+), (\d+), (\d+)")
+
+
+def clock_at(calls: list[dict], idx: int) -> str | None:
+    """The loop's time at a call: the nearest event or instant a call before it carried (UTC -> KST)."""
+    for call in reversed(calls[: idx + 1]):
+        local = call.get("locals") or {}
+        text = " ".join(str(local.get(k, "")) for k in ("event", "instant"))
+        if not text.strip():
+            continue
+        found = _SCHEDULED.search(text)
+        if found:
+            return f"{found.group(1)} {found.group(2)}:{found.group(3)} · 결정 (ScheduledEvent)"
+        found = _MARKET.search(text)
+        if found:
+            y, mo, d, h, mi = (int(g) for g in found.groups() if g is not None)
+            return f"{y}-{mo:02d}-{d:02d} {h + 9:02d}:{mi:02d} · 체결 (MarketEvent)"
+    return None
+
+
+def scene_payload(scene: dict, traces: dict[str, dict], previews: dict) -> str:
+    frames = []
+    for spec in scene["frames"]:
+        frame = base.resolve_frame(spec, traces)
+        calls = traces[spec["trace"]]["calls"]
+        call = calls[spec["idx"]]
+        frame["stack"] = stack_html(spec, traces)
+        keys = spec.get("data")
+        keys = [keys] if isinstance(keys, str) else (keys or [])
+        frame["data"] = "".join(data_html(previews[key]) for key in keys)
+        ret = call.get("ret")
+        if ret not in (None, "None"):
+            frame["mem"] = {**frame.get("mem", {}), f"{_short_name(call['qualname'])} ←": ret}
+        clock = clock_at(calls, spec["idx"])
+        if clock:
+            frame["clock"] = {**frame.get("clock", {}), "지금": clock}
+        frames.append(frame)
+    payload = {
+        "id": scene["id"], "key": scene["key"], "title": scene["title"], "sub": scene["sub"],
+        "story": scene.get("story", ""), "frames": frames, "remember": scene.get("remember", []),
+    }
+    return "S.push(" + json.dumps(payload, ensure_ascii=False) + ");\n"
+
+
 def _replace_once(text: str, old: str, new: str) -> str:
     if text.count(old) < 1:
         raise ValueError(f"template anchor not found: {old[:60]!r}")
@@ -328,7 +446,7 @@ def render(scenes_path: Path, traces_dir: Path, out: Path) -> None:
 
     head = template[: template.index("<main>")]
     head = _replace_once(head, "<title>vqapr 0.6.0 척추 디버거</title>", f"<title>{spec['HEADER']['title']}</title>")
-    head = _replace_once(head, "</style>", base.EXTRA_CSS + CARD_CSS + SHELF_CSS + "</style>")
+    head = _replace_once(head, "</style>", base.EXTRA_CSS + CARD_CSS + SHELF_CSS + IO_CSS + "</style>")
 
     middle = template[template.index("<h2>척추 지도") : template.index("<h2>트레이스가 확인한 것")]
     middle = _replace_once(middle, "<h2>척추 지도 — 클릭하면 그 단계로</h2>", "<h2>장면 지도 — 클릭하면 그 장면으로</h2>")
@@ -340,8 +458,14 @@ def render(scenes_path: Path, traces_dir: Path, out: Path) -> None:
 
     script = template[template.index("<script>") :]
     script = _replace_once(script, "$('remember').innerHTML=", "$('intro').innerHTML=sc.story||''; $('remember').innerHTML=")
-    script = _replace_once(script, '<div class="what">${fr.what}</div>${code}', '<div class="what">${fr.what}</div>${code}${fileCard(fr.loc)}')
-    script = _replace_once(script, "grp('메모리','mem')+grp('디스크','disk')", "grp('작업대 — 메모리','mem')+grp('창고 — 디스크의 파일','disk')")
+    script = _replace_once(script, '<div class="what">${fr.what}</div>${code}', "<div class=\"what\">${fr.what}</div>${fr.stack||''}${fr.data||''}${code}${fileCard(fr.loc)}")
+    script = _replace_once(script, '`<pre class="code">', '`<details class="cw"><summary>코드 보기</summary><pre class="code">')
+    script = _replace_once(script, "</pre>` : '';", "</pre></details>` : '';")
+    script = _replace_once(
+        script,
+        "grp('시계','clock')+grp('메모리','mem')+grp('디스크','disk')",
+        "(Object.keys(acc.clock).length?grp('시계 — 루프의 현재 시각','clock'):'')+grp('작업대 — 메모리 (돌려받은 값이 쌓인다)','mem')+grp('창고 — 디스크','disk')",
+    )
     script = _replace_once(script, "buildMap(); buildTabs();", "buildMap(); buildTabs(); buildFrameIndex(); buildMapSearch();")
     data_start = script.index("const S = [];\n") + len("const S = [];\n")
     data_end = script.index("const $ = id =>")
@@ -357,7 +481,8 @@ def render(scenes_path: Path, traces_dir: Path, out: Path) -> None:
         if scene.get("shelf"):
             scene["story"] = scene.get("story", "") + shelf_html(scene["shelf"], traces, changes, scene.get("shelf_note", ""))
         scenes.append(scene)
-    scene_js = "".join(base.scene_js(scene, traces) for scene in scenes)
+    previews = json.loads(PREVIEWS.read_text(encoding="utf-8"))
+    scene_js = "".join(scene_payload(scene, traces, previews) for scene in scenes)
     files_js = "const FILES = " + json.dumps(files_const(src_map), ensure_ascii=False) + ";\n"
 
     page = (

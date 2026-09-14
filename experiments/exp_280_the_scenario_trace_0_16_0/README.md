@@ -17,6 +17,9 @@ step does to the files on disk.
 | `probe_panel.py`, `probe_cubes.py` | exp_238's probes on the 0.16.0 tree: the scan bounds, the panel shapes and the cube files the page quotes |
 | `render_0_16_0.py` | exp_230's renderer reused whole, plus the shelf (per scene), the chronicle (all sixteen commands), the file card and the src/ map |
 | `scenes_0_16_0.py` | the curated scenes. Every call in a folded chain is written `c(trace, idx, label)`, which reads its milliseconds from the trace and refuses a label that is not the qualname at that index |
+| `trace_io.py` | the page's tracer since 2026-09-14: exp_230's trace, plus `args` and `ret` (a short description of each value's shape) for the calls the page shows |
+| `wanted.py` | which calls the page shows: executes the scenes against the traces and records every index they read; writes the WANT file `trace_io.py` takes |
+| `probe_data.py`, `data_previews.json` | a few real rows of each file a frame opens (the roster, the prices, the record tables, the cube files), for the table beside the frame |
 | `src_map.json` | the 2026-09-12 page's description of all 199 files under `src/vqapr/`, parsed out of the published page and checked against `26726b1f`: every path exists, 197 line counts match, the two parquet files have none |
 
 ## What is new on this page
@@ -79,6 +82,20 @@ uv run python experiments/exp_280_the_scenario_trace_0_16_0/render_0_16_0.py \
 ```
 
 The renderer prints every frame's trace / index / qualname / ms beside its title; all 60 agree.
+
+## Inputs and outputs (second pass, 2026-09-14)
+
+The owner asked to see, beside the call stack, what each call receives and returns, and the actual
+rows behind "opens the roster". The page is now rendered from a second pass of the same sixteen
+commands under `trace_io.py` (a fresh project; `wanted.py` picks the qualnames first), and each
+frame draws its chain as a nested call stack with `→ args` and `← return`, plus `probe_data.py`'s
+rows where the frame opens a file.
+
+Between the two passes the call counts are equal except `12` (27,993, one more progress checkpoint:
+timing), and a few order-planning calls change places (`OrderRequest` / `ZeroDeltaDiagnostic`
+construction follows a set's iteration order, which string hashing randomises per process). The
+fills, accounts and records are identical. One scene index moved (`12 #27420` -> `#27422`); the
+renderer's label check found it.
 
 ## What the traces showed
 

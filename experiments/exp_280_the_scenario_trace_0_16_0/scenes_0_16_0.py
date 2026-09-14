@@ -51,9 +51,21 @@ def c(trace: str, idx: int, label: str | None = None, note: str = "") -> str:
     return f"<code>{label or qualname}</code>(#{idx}{took}{note})"
 
 
-def chain(trace: str, *steps) -> str:
-    """A folded call chain: each step `(idx, label)` or `(idx, label, note)`."""
-    return " → ".join(c(trace, *step) for step in steps)
+class Chain:
+    """A folded call chain -- each step `(idx, label)` or `(idx, label, note)` -- that also hands
+    its steps to the renderer, which draws them as a call stack with what went in and came out."""
+
+    def __init__(self, trace: str, steps: tuple) -> None:
+        self.trace = trace
+        self.steps = steps
+        self.html = " → ".join(c(trace, *step) for step in steps)
+
+    def __str__(self) -> str:
+        return self.html
+
+
+def chain(trace: str, *steps) -> Chain:
+    return Chain(trace, steps)
 
 
 def count(trace: str, name: str) -> int:
@@ -70,8 +82,10 @@ def el(trace: str) -> str:
     return f"{TRACES[trace]['elapsed_ms']:,.0f}"
 
 
-def F(trace: str, idx: int, title: str, story: str, calls: str | None = None, **extra) -> dict:
+def F(trace: str, idx: int, title: str, story: str, calls: Chain | str | None = None, **extra) -> dict:
     what = f'<p class="story">{story}</p>'
+    if isinstance(calls, Chain):
+        extra.setdefault("stack", [(calls.trace, step[0], step[1] if len(step) > 1 else None) for step in calls.steps])
     if calls:
         what += f'<details class="tr"><summary>함수 이름과 호출 번호</summary><p>{calls}</p></details>'
     return {"trace": trace, "idx": idx, "title": title, "what": what, **extra}
@@ -159,16 +173,16 @@ SCENES = [
             F(R, 15, "입고 카트를 연다", "검사한 것을 카트에 모았다가 끝에 한 번 씁니다. 하나라도 거절되면 장부는 그대로입니다.",
               chain(R, (16, "Workspace.transaction"), (44, "_instruments"), (137, "verify_source"), (469, "_component"), (909, "Transaction.commit")),
               fn="_apply()", code=at("src/vqapr/workspace/registration.py", 'for dataset_id, body in section("datasets")', 7)),
-            F(R, 47, "종목 명단부터", f"종목 명단 10개를 엽니다. {ms(R, 47)} ms는 pyarrow를 처음 올리는 비용입니다.",
+            F(R, 47, "종목 명단부터", f"종목 명단 파일(<code>instruments_stock.parquet</code>: 종목 코드 · 종류, 10행)을 엽니다. {ms(R, 47)} ms는 pyarrow를 처음 올리는 비용입니다.",
               chain(R, (47, "verify_roster"), (51, "build_roster")),
-              fn="verify_roster()", code=("def", 8)),
+              fn="verify_roster()", code=("def", 8), data="roster"),
             F(R, 137, "검수대 — 여섯 가지", "컬럼 → 키 중복 → 기간 → NaN → 체결 가격 → 지문. 파일 내용을 보는 곳은 여기뿐입니다.",
               chain(R, (138, "describe"), (150, "check_schema"), (193, "check_key"), (214, "check_span"), (225, "check_values"), (279, "physical_digest")),
-              fn="verify_source()", code=at("src/vqapr/data/verification.py", "def verify_source", 8),
+              fn="verify_source()", code=at("src/vqapr/data/verification.py", "def verify_source", 8), data="prices",
               mem={"sample-prices": "기간 2022-01-03 ~ 2024-12-30 · 지문 18bb7017…"}),
             F(R, 437, "체결표는 하나 더", "거래 가능한 행마다 가격이 양수인지 재서 <code>['close']</code>를 적어 둡니다.",
               chain(R, (329, "verify_source"), (437, "check_execution_prices")),
-              fn="check_execution_prices()", code=("def", 8),
+              fn="check_execution_prices()", code=("def", 8), data="execution",
               mem={"sample-execution": "체결 가격 ['close'] · 지문 49e4b4ab…"}),
             F(R, 554, "부품 시운전", "전략 · 거래소 코드를 import해 필요한 메서드가 있는지 봅니다.",
               chain(R, (473, "fingerprint_component"), (554, "conformance"), (726, "conformance")),
@@ -178,7 +192,7 @@ SCENES = [
               fn="Transaction.commit()", code=("def", 10)),
             F(R, 967, "임시 파일에 쓰고 바꿔 끼운다", "그래서 반쯤 쓴 장부는 보이지 않습니다. 여기서 처음 파일이 생깁니다.",
               chain(R, (967, "write_atomically"), (968, "_swap"), (970, "Workspace._write_roster")),
-              fn="write_atomically()", code=at("src/vqapr/_internal/atomic.py", "staged = Path(staged_name)", 10),
+              fn="write_atomically()", code=at("src/vqapr/_internal/atomic.py", "staged = Path(staged_name)", 10), data="ledger_prices",
               disk={".vqapr/workspace.yaml": "생김", ".vqapr/instruments.json": "생김"}),
         ],
         "remember": ["파일 내용은 등록 때 한 번만 잰다.", "장부는 카트에 모아 한 번에, 원자적으로 쓴다."],
@@ -191,7 +205,7 @@ SCENES = [
         "frames": [
             F(B, 400, "없는 컬럼 — 첫 단계에서 멈춘다", "<code>adj_close</code>가 파일에 없어 뒤 단계는 돌지 않습니다.",
               chain(B, (387, "verify_source"), (400, "check_schema")),
-              fn="check_schema()", code=("def", 8)),
+              fn="check_schema()", code=("def", 8), data="prices"),
             F(B, 421, "거절 봉투", "code · 이유 · 고치는 법 · 위치가 담깁니다. 쓰기 호출 0, 장부 그대로.",
               chain(B, (416, "raise_if_failed"), (421, "failure")),
               fn="envelope.failure()", code=("def", 8),
@@ -264,7 +278,7 @@ SCENES = [
               mem={"메모리": "9행 … 16일째 108행"}),
             F(DM, 7771, "dataset으로 등록", "<code>all.parquet</code> 108행을 쓰고 ①과 같은 검수를 거쳐 장부에 올립니다.",
               chain(DM, (7800, "RunOutput._seal"), (7802, "verify_source"), (7947, "Workspace._write")),
-              fn="RunOutput.register()", code=at("src/vqapr/run/engine/output.py", "# The rows land here, once, and only now", 6),
+              fn="RunOutput.register()", code=at("src/vqapr/run/engine/output.py", "# The rows land here, once, and only now", 6), data="features",
               disk={".vqapr/materialized/sample-features/all.parquet": "생김 · 108행", ".vqapr/workspace.yaml": "+ sample-features"}),
             F(DM, 8026, "마감 도장", "<code>datamodel.json</code>을 쓰고 팻말을 치웁니다. 도장이 있으면 본문이 있습니다.",
               chain(DM, (8026, "RunRecordWriter.finish"), (8146, "write_atomically"), (8148, "RunRecordWriter._unlock")),
@@ -294,23 +308,23 @@ SCENES = [
             F(FA, 2567, "표지 · 팻말 · 진행 메모", "run이 도는 동안 디스크엔 이 셋뿐입니다.",
               chain(FA, (2490, "freeze_run_record"), (2567, "RunRecordWriter.open"), (3118, "write_atomically", ": progress.json")),
               fn="RunRecordWriter.open()", code=at("src/vqapr/record/writer.py", "def _claim(self)", 10),
-              disk={".vqapr/runs/sample-factor-run/run.json": "생김", FACTOR_DIR + ".running": "생김", FACTOR_DIR + "progress.json": "생김"}),
+              data="run_json", disk={".vqapr/runs/sample-factor-run/run.json": "생김", FACTOR_DIR + ".running": "생김", FACTOR_DIR + "progress.json": "생김"}),
             F(FA, 3270, "읽을 범위 — 11 × 10", "run 기간만큼 행렬을 만듭니다.",
               chain(FA, (3270, "_scan_bounds"), (3295, "observation_table"), (3332, "Panel.from_table")),
               fn="_scan_bounds()", code=at("src/vqapr/data/store.py", "for lookback in lookbacks:", 8, before=2)),
             F(FA, 3228, "[0.16.0] 여섯 종목을 고른다", "하위 3에 −1/6, 상위 3에 +1/6. 사건은 <code>ScheduledEvent</code>, 시각은 <code>call.at</code>.",
               chain(FA, (3120, "RunLoop.handle"), (3228, "SampleFactor.decide"), (3563, "_stamp_intent")),
-              fn="SampleFactor.decide()", code=at(DECL + "factor.py", "def decide(self, call):", 10), author=True),
+              fn="SampleFactor.decide()", code=at(DECL + "factor.py", "def decide(self, call):", 10), author=True, data="factor_weight"),
             F(FA, 3823, "행은 메모리에", f"weight 행을 Arrow 버퍼에 쌓을 뿐 파일은 쓰지 않습니다(이 run {count(FA, 'RunRecordWriter.append_chunk')}번).",
               chain(FA, (3821, "RunStateRepository.publish"), (3823, "RunRecordWriter.append_chunk")),
               fn="append_chunk()", code=at("src/vqapr/record/writer.py", "def append_chunk(self, chunk: RecordChunk)", 8)),
             F(FA, 3858, "15:30 체결", "+23 · +8 · +94 / −55 · −19 · −12주. 현금 99,463,501.24.",
               chain(FA, (3850, "RunLoop.handle"), (3858, "ExecutionHandler.fill"), (4332, "AcademicExchange.execute")),
-              fn="ExecutionHandler.fill()", code=("def", 8),
+              fn="ExecutionHandler.fill()", code=("def", 8), data="factor_fill",
               mem={"계좌 v1": "롱 3 · 숏 3 · NAV 1억"}),
             F(FA, 4892, "[0.16.0] 계좌가 스스로 평가", "<code>Account.mark</code>가 보유 × 가격을 계산합니다.",
               chain(FA, (4892, "ValuationHandler.mark"), (4941, "Account.mark")),
-              fn="ValuationHandler.mark()", code=("def", 8)),
+              fn="ValuationHandler.mark()", code=("def", 8), data="factor_account"),
             F(FA, 24218, "마감 — 본문, 그다음 도장", "<code>all.parquet</code> 셋(70 · 73 · 60행) → <code>strategy.json</code> → 팻말 치움.",
               chain(FA, (24221, "_write_compact"), (24267, "write_atomically"), (24269, "RunRecordWriter._unlock")),
               fn="RunRecordWriter._seal()", code=at("src/vqapr/record/writer.py", "def _seal(self)", 8),
@@ -342,10 +356,10 @@ SCENES = [
               fn="_candidate_callback_state()", code=("def", 8)),
             F(SL, 9956, "둘째 날 첫 손절", "K000005가 −3%를 넘어 팝니다. 보유: 9 → 8 → 7 → 5 → 4 → 3 → 2 → 1.",
               chain(SL, (9873, "_restore_callback_state"), (9956, "SampleStopLoss.decide")),
-              fn="SampleStopLoss.decide()", code=at(DECL + "stoploss.py", "for name, price in list(entry.items()):", 5), author=True),
+              fn="SampleStopLoss.decide()", code=at(DECL + "stoploss.py", "for name, price in list(entry.items()):", 5), author=True, data="stop_weight"),
             F(SL, 58156, "전부 팔 땐 빈 Rebalance", "Hold면 포지션이 남습니다. K000008 −52주, 현금 84,184,068.92.",
               chain(SL, (58156, "SampleStopLoss.decide"), (58596, "fill")),
-              fn="SampleStopLoss.decide()", code=at(DECL + "stoploss.py", "held = {name: 1 for name in sorted(entry)}", 7), author=True),
+              fn="SampleStopLoss.decide()", code=at(DECL + "stoploss.py", "held = {name: 1 for name in sorted(entry)}", 7), author=True, data="stop_last"),
             F(SL, 59285, "그 뒤는 Hold", "주문이 없으니 오후엔 평가만 합니다.",
               chain(SL, (59285, "SampleStopLoss.decide"), (59668, "ValuationHandler.mark")),
               fn="SampleStopLoss.decide()", code=at(DECL + "stoploss.py", "if any(quantity != 0 for quantity in call.account.positions.values()):", 4), author=True),
@@ -363,9 +377,9 @@ SCENES = [
               fn="_validate_requirement()", code=("def", 8)),
             F(EN, 3610, "1/9에 alpha의 절반", "01-13 08:00의 비중을 읽어 0.1944 · 0.0278 · 0.1111로 나눕니다.",
               chain(EN, (3610, "SampleEnhancedIndex.decide"), (4431, "Panel.from_table"), (4543, "Panel.from_table")),
-              fn="SampleEnhancedIndex.decide()", code=at(DECL + "enhanced.py", "tilted = {", 5), author=True),
+              fn="SampleEnhancedIndex.decide()", code=at(DECL + "enhanced.py", "tilted = {", 5), author=True, data=["factor_alpha", "enhanced_weight"]),
             F(EN, 5223, "롱온리 체결", "9종목을 삽니다. 9일 뒤 계좌 v9.",
-              chain(EN, (5223, "ExecutionHandler.fill"), (27420, "RunOutput.register")),
+              chain(EN, (5223, "ExecutionHandler.fill"), (27422, "RunOutput.register")),
               fn="ExecutionHandler.fill()", code=("def", 8)),
             F(LD, 13, "list datasets — 6개", "그중 4개가 run이 만든 것입니다. 파일은 생기지 않습니다.",
               chain(LD, (13, "Workspace.open"), (1087, "success")),
@@ -391,7 +405,7 @@ SCENES = [
               disk={".vqapr/cubes/<batch>/": "생김"}),
             F(BA, 1375, "굽기", "close를 735 × 10 행렬 파일로 한 번 저장합니다.",
               chain(BA, (1273, "bake"), (1375, "bake")),
-              fn="bake()", code=("def", 8),
+              fn="bake()", code=("def", 8), data="cube",
               disk={".vqapr/cubes/<batch>/sample-prices/close.npy": "(735, 10) 58,928 B"}),
             F(BA, 2918, "작업자 호출", "여기부터는 다른 프로세스라 트레이스를 따로 떴습니다.",
               chain(BA, (2918, "in_workers")),
