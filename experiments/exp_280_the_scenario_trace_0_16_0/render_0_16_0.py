@@ -325,11 +325,15 @@ IO_CSS = """
 .stack-io ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
 .stack-io li{padding:4px 8px 4px calc(8px + var(--d) * 18px);border-left:2px solid var(--line-2);font-size:12.5px;line-height:1.45}
 .stack-io li.me{background:var(--accent-bg);border-left-color:var(--accent)}
-.stack-io .nm{display:flex;gap:8px;align-items:baseline}
+.stack-io .nm{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:2px}
+.stack-io .nm .no{color:var(--muted);font-variant-numeric:tabular-nums}
 .stack-io .nm code{font-weight:600;color:var(--ink);background:none;padding:0}
-.stack-io .ix{color:var(--muted);font-size:11px;font-family:"IBM Plex Mono",ui-monospace,monospace}
-.stack-io .io{display:grid;grid-template-columns:14px 1fr;gap:4px;font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--ink-2);word-break:break-word}
-.stack-io .io b{font-weight:700}
+.stack-io .ix,.stack-io .wh{color:var(--muted);font-size:11px;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.stack-io .wh{margin-left:auto}
+.stack-io .io{display:grid;grid-template-columns:14px 1fr;gap:4px;margin-top:3px}
+.stack-io .io b{font-weight:700;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+.stack-io .why{display:block;font-size:12.5px;color:var(--ink);line-height:1.5}
+.stack-io .val{display:block;margin-top:1px;background:none;padding:0;font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted);word-break:break-word}
 .stack-io .in b{color:var(--accent)}
 .stack-io .out b{color:var(--warn)}
 .data{margin:12px 0}
@@ -358,19 +362,41 @@ def stack_html(spec: dict, traces: dict[str, dict]) -> str:
     calls = [traces[t]["calls"][i] for t, i, _ in steps]
     low = min(call["depth"] for call in calls)
     rows = []
-    for (trace, idx, label), call in zip(steps, calls, strict=True):
+    for number, ((trace, idx, label), call) in enumerate(zip(steps, calls, strict=True), 1):
         name = html_module.escape(label or _short_name(call["qualname"]))
+        where = call["file"] if not call.get("author") else "sample/" + Path(call["file"]).name
+        where = html_module.escape(where.removeprefix("src/vqapr/"))
+        asks, gives = explain(call)
         args = call.get("args") or {}
         shown = ", ".join(f"{k}={v}" for k, v in args.items() if k not in ("self", "cls"))
         shown = shown if len(shown) <= 240 else shown[:239] + "…"
-        parts = [f'<div class="nm"><code>{name}</code><span class="ix">#{idx}</span></div>']
-        if "args" in call:
-            parts.append(f'<div class="io in"><b>→</b><span>{html_module.escape(shown) or "(인자 없음)"}</span></div>')
-            parts.append(f'<div class="io out"><b>←</b><span>{html_module.escape(str(call.get("ret")))}</span></div>')
+        parts = [f'<div class="nm"><span class="no">{number}.</span><code>{name}</code><span class="ix">#{idx}</span><span class="wh">{where}</span></div>']
+        value_in = f'<code class="val">{html_module.escape(shown)}</code>' if shown else ""
+        value_out = f'<code class="val">{html_module.escape(str(call.get("ret")))}</code>' if "args" in call else ""
+        parts.append(f'<div class="io in"><b>→</b><div><span class="why">{html_module.escape(asks)}</span>{value_in}</div></div>')
+        parts.append(f'<div class="io out"><b>←</b><div><span class="why">{html_module.escape(gives)}</span>{value_out}</div></div>')
         me = " me" if trace == spec["trace"] and idx == spec["idx"] else ""
         depth = min(call["depth"] - low, 6)
         rows.append(f'<li class="st{me}" style="--d:{depth}">{"".join(parts)}</li>')
-    return f'<div class="stack-io"><div class="sh">호출 스택 — 받은 것 → · 돌려준 것 ←</div><ol>{"".join(rows)}</ol></div>'
+    return f'<div class="stack-io"><div class="sh">호출 스택 — 무엇을 요청하고(→) 무엇을 돌려받나(←)</div><ol>{"".join(rows)}</ol></div>'
+
+
+_EXPLAIN: dict = {}
+MISSING: set[str] = set()
+
+
+def explain(call: dict) -> tuple[str, str]:
+    """The plain-words line for → and ← of one call, from `explain_0_16_0.py`."""
+    if not _EXPLAIN:
+        namespace: dict = {}
+        exec((HERE / "explain_0_16_0.py").read_text(encoding="utf-8"), namespace)
+        _EXPLAIN.update(namespace["EXPLAIN"])
+    qualname = call["qualname"]
+    for key in (f"{Path(call['file']).stem}.{qualname}", qualname):
+        if key in _EXPLAIN:
+            return _EXPLAIN[key]
+    MISSING.add(f"{call['file']}:{qualname}")
+    return ("", "")
 
 
 def data_html(preview: dict) -> str:
@@ -512,6 +538,8 @@ def render(scenes_path: Path, traces_dir: Path, out: Path) -> None:
             frames += 1
             print(f"{scene['key']} {frame['trace']:>22} #{frame['idx']:<6} {call['qualname']:<48} {call['ms']!s:>10} ms | {strip(frame['title'])[:60]}")
     print(f"wrote {out} ({len(page):,} bytes): {len(spec['SCENES'])} scenes, {frames} frames")
+    if MISSING:
+        print("no explanation for:", ", ".join(sorted(MISSING)))
 
 
 if __name__ == "__main__":
