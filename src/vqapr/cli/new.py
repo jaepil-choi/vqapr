@@ -34,9 +34,28 @@ from vqapr.agent.sample.materialize import RUN_ID as SAMPLE_RUN_ID
 from vqapr.agent.sample.materialize import materialize as materialize_sample
 from vqapr.agent.scaffold import class_name_for, lookback_declaration, render
 from vqapr.cli.envelope import success
-from vqapr.domain.errors import INCOMPLETE, VALUE_INVALID, InputError, refuse_existing
+from vqapr.domain.errors import EXISTS, INCOMPLETE, VALUE_INVALID, FailureSource, InputError
 from vqapr.public import AccountMode, Role
 from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME, Workspace
+
+
+def refuse_existing(path: Path, *, what: str) -> None:
+    """Refuse to overwrite, naming the file rather than raising a bare `FileExistsError`.
+
+    Moved here from `domain/errors.py` by record `280`: `vqapr new` is its only caller, and asking
+    the filesystem whether a path exists is not a domain rule.
+
+    재실행은 agent가 가장 흔하게 하는 일이다(Spawn Gate가 rung마다 3회를 허용한다). 그 경로가
+    `unhandled`로 나가면 재시도 자체가 framework 고장으로 보고된다.
+    """
+    if path.exists():
+        raise InputError(
+            EXISTS,
+            requirement=f"{what} must not already exist",
+            observed=f"{path} already exists",
+            source=FailureSource(file=str(path)),
+            retry="remove it or pass a different --out, then retry",
+        )
 
 _KINDS = {
     "datamodel": Role.DATA_MODEL,

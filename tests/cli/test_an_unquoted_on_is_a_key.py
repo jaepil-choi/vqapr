@@ -4,7 +4,7 @@ Report 2026-09-11 (`docs/issues/report-2026-09-11-the-run-template-shows-on-last
 uncommenting-it-makes-yaml-read-the-key-as-true.md`): uncommenting the template's `# on: last`
 made PyYAML (YAML 1.1) read the key as the boolean `True`, and registration refused with
 "Keys should be strings". Declarations now read YAML 1.2's booleans: `true`/`false` only
-(record `262`).
+(record `262`). The reader lives in `workspace/registration.py` since record `280`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from vqapr.cli.main import main
-from vqapr.domain.errors import read_yaml_mapping
+from vqapr.workspace.registration import read_declaration
 
 _MONTH_END = """\
 runs:
@@ -45,7 +45,7 @@ def test_the_yaml_1_1_words_are_words_and_true_is_still_true(tmp_path: Path) -> 
     path = tmp_path / "words.yaml"
     path.write_text("on: last\noff: 1\nyes: no\nflag: true\nother: False\n", encoding="utf-8")
 
-    assert read_yaml_mapping(path, what="a declaration") == {
+    assert read_declaration(path) == {
         "on": "last",
         "off": 1,
         "yes": "no",
