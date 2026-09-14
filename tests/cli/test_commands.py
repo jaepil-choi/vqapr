@@ -815,8 +815,8 @@ def test_a_run_says_whether_it_knew_what_its_instruments_were(
     code, judged = _cli(capsys, "--project-root", str(tmp_path), "check", "categorised")
     assert code == 1, judged
     codes = [failure["code"] for failure in judged["failures"]]
-    # Once by the judge, once by the freeze (record `171`): one fact, two doors.
-    assert codes.count("roster.absent") == 2, codes
+    # Asked once, by the judge: every door judges before it freezes (records `240`, `283`).
+    assert codes.count("roster.absent") == 1, codes
     assert all(failure["status"] == 412 for failure in judged["failures"]), judged["failures"]
     assert "vqapr register" in judged["failures"][0]["fix"]
 

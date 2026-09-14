@@ -65,9 +65,9 @@ from vqapr import public as vq
 vq.register_instruments(".", {"005930": "stock", "069500": "etf"})  # writes the tables, registers them
 ```
 
-or write one parquet per kind (exactly `instrument_id` and `kind`), point
-`vqapr new instruments --out instruments.yaml` at them, and `vqapr register instruments.yaml`. A
-datamodel run orders nothing and needs no roster. See
+or run `vqapr new instruments --instruments <ids...>`: it writes `instruments.py` (set each id's
+kind, then run it — it exports one parquet per kind) and `instruments.yaml` beside it, then
+`vqapr register instruments.yaml`. A datamodel run orders nothing and needs no roster. See
 [references/run-declaration.md](references/run-declaration.md).
 
 ### 1–2. Declare it

@@ -30,7 +30,7 @@ from vqapr.domain.instrument import (
 )
 from vqapr.public import register_instruments
 from vqapr.run.preflight import checks as judgments
-from vqapr.run.preflight.checks import ROSTER_ABSENT, require_declared_roster
+from vqapr.run.preflight.checks import ROSTER_ABSENT, absent_roster_failure
 from vqapr.workspace.registry import Workspace
 from vqapr.workspace.run_definition import (
     DataModelEntry,
@@ -112,21 +112,15 @@ def _datamodel_run() -> RunDefinition:
     )
 
 
-def test_a_strategy_run_over_no_roster_is_refused_before_it_freezes(tmp_path: Path) -> None:
-    """The preflight half. Only the pointer is read: a roster that exists has an instrument."""
-    workspace = Workspace.create(tmp_path)
-    with pytest.raises(VqaprError) as refused:
-        require_declared_roster(workspace, run_id="alpha")
-    error = refused.value
-    assert error.stage is Stage.FREEZE
-    (failure,) = error.failures
+def test_the_roster_refusal_names_a_route_that_exists() -> None:
+    """Record `283`: the fix said `vqapr new instruments <ids...>` writes the tables. It writes a
+    script that exports them, `--instruments` names the ids, and one Python call does both."""
+    failure = absent_roster_failure("alpha")
     assert failure.code == ROSTER_ABSENT
     assert failure.status is Status.PRECONDITION
     assert "'alpha'" in str(failure.observed)
-    assert "vqapr new instruments" in str(failure.fix)
-
-    register_instruments(tmp_path, {"A005930": "stock"})
-    require_declared_roster(Workspace.open(tmp_path), run_id="alpha")
+    assert "vqapr new instruments --instruments" in str(failure.fix)
+    assert "register_instruments" in str(failure.fix)
 
 
 def test_the_judge_asks_a_strategy_run_and_not_a_datamodel_run(tmp_path: Path) -> None:

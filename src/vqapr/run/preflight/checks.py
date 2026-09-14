@@ -26,10 +26,9 @@ and once as preflight's own refusal, and that is deliberate: they are two differ
 saying the question could not be asked and the other saying what is wrong (owner decision,
 2026-09-04).
 
-The roster refusal lives here too (`require_declared_roster`, `absent_roster_failure`): a run that
-declares a roster the workspace does not hold is one more judgment, raised by the freeze and
-collected by the check. The code `roster.absent` was defined in both modules; one definition
-survives.
+The roster refusal lives here too (`absent_roster_failure`): a strategy run over a project that has
+declared no instrument is one more judgment. The freeze asked it as well until record `283`, and
+`check` listed it twice; every door judges before it freezes (record `240`), so it is asked once.
 """
 
 from __future__ import annotations
@@ -53,7 +52,6 @@ __all__ = [
     "JUDGMENT_STAGE",
     "absent_roster_failure",
     "judgments",
-    "require_declared_roster",
 ]
 
 
@@ -709,27 +707,12 @@ def absent_roster_failure(run_id: str, *, source: FailureSource | None = None) -
         status=Status.PRECONDITION,
         observed=f"run {run_id!r} is a strategy run and this project has registered no roster",
         fix=(
-            "declare the instruments the run may order -- `vqapr new instruments <ids...>` writes "
-            "the tables and the declaration; `vqapr register instruments.yaml` registers them"
+            "declare the instruments the run may order: `vqapr new instruments --instruments "
+            "<ids...>` writes instruments.py (run it; it exports the tables) and instruments.yaml "
+            "beside it, then `vqapr register instruments.yaml` -- or, from Python, "
+            "`vqapr.public.register_instruments(project_root, {id: kind})` does both"
         ),
         source=source,
     )
 
 
-def require_declared_roster(workspace: Workspace, *, run_id: str) -> None:
-    """Refuse a strategy run before it freezes when the project has declared no instrument.
-
-    Only the POINTER is read here, not the tables: registration refuses an empty table, so a
-    pointer that exists is a roster with at least one instrument, and the tables themselves are
-    read once, fresh, at run start (`run/roster.py`). A pointer that exists but is damaged
-    raises `roster.unreadable` from `registered_instruments` and is not caught: absent and broken
-    stay different states.
-    """
-    if workspace.registered_instruments() is not None:
-        return
-    raise VqaprError(
-        stage=Stage.FREEZE,
-        failures=[absent_roster_failure(run_id)],
-        mutation=False,
-        retry_precondition="register an instrument roster, then retry",
-    )

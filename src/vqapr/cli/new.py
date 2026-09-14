@@ -57,6 +57,31 @@ def refuse_existing(path: Path, *, what: str) -> None:
             retry="remove it or pass a different --out, then retry",
         )
 
+
+def _script_target(out: Path | None, default: Path) -> Path:
+    """Where a kind that writes a .py and its declaration writes the .py (record `283`).
+
+    `--out` names the script; the declaration is written beside it as `<name>.yaml`. An `--out`
+    ending in `.yaml` made the two one path, and the declaration overwrote the script it points
+    at -- `vqapr new instruments --out instruments.yaml` left no script, so no tables. A YAML
+    name is refused (`.yml` too: whoever typed it meant the declaration); any other name is the
+    script's.
+    """
+    target = out or default
+    if target.suffix.lower() in {".yaml", ".yml"}:
+        raise InputError(
+            VALUE_INVALID,
+            requirement=(
+                "--out names the script this kind writes, not its declaration; the declaration "
+                "is written beside it as <name>.yaml"
+            ),
+            observed=f"--out {target}",
+            source=FailureSource(file=str(target)),
+            retry=f"pass --out {target.with_suffix('.py').name}, then retry",
+        )
+    return target
+
+
 _KINDS = {
     "datamodel": Role.DATA_MODEL,
     "strategy": Role.STRATEGY_MODEL,
@@ -431,7 +456,7 @@ def _component(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
             lookback=lookback,
             lookback_kind=lookback_kind,
         )
-    target = args.out or project_root / f"{args.component_id.replace('-', '_')}.py"
+    target = _script_target(args.out, project_root / f"{args.component_id.replace('-', '_')}.py")
     if target.suffix != ".py":
         # A component is imported by `register`, so it must be a loadable module. Writing an
         # extensionless file here reports success and then fails one command later, where the
@@ -654,7 +679,7 @@ def _exchange_template(args: argparse.Namespace, project_root: Path) -> dict[str
     quantity step: expressing it in YAML would mean inventing a second spelling for something the
     package already has one spelling for.
     """
-    target = args.out or project_root / "exchange.py"
+    target = _script_target(args.out, project_root / "exchange.py")
     refuse_existing(target, what="exchange scaffold")
     target.parent.mkdir(parents=True, exist_ok=True)
     instruments = getattr(args, "instruments", None) or ["A005930", "A000660"]
@@ -788,7 +813,7 @@ def _instruments_template(args: argparse.Namespace, project_root: Path) -> dict[
     a refusal, which is exactly the stall `new exchange` was built to remove -- an author guessed
     six times at a type no template, help text or skill section ever named.
     """
-    target = args.out or project_root / "instruments.py"
+    target = _script_target(args.out, project_root / "instruments.py")
     refuse_existing(target, what="instrument roster script")
     target.parent.mkdir(parents=True, exist_ok=True)
 

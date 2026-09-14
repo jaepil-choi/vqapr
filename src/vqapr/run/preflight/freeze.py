@@ -33,7 +33,6 @@ from vqapr.domain.listing import TradeRule
 from vqapr.domain.memory import ModelMemory
 from vqapr.domain.schedule import Schedule
 from vqapr.domain.wiring import Role
-from vqapr.run.preflight.checks import require_declared_roster
 from vqapr.run.preflight.facts import RunFacts, unresolved_target_failures, unresolved_targets
 from vqapr.run.preflight.frozen import FrozenDataModel, FrozenRun, FrozenSchedule, FrozenStrategy
 from vqapr.workspace.registry import Workspace
@@ -636,9 +635,9 @@ def freeze(
     # Unconditional: `_require_execution_authority` has already refused a definition without
     # them, so the universe and account checks below can no longer be skipped by omission.
     exchange = _registered_exchange(workspace, definition.exchange or "")
-    # The venue needs to know what every ordered id IS (design §6.2). Which ids get ordered is
-    # the strategy's to decide at run time; that NOTHING is declared is knowable now.
-    require_declared_roster(workspace, run_id=definition.run_id)
+    # Whether any instrument is declared is the `roster` judgment's question, and every door
+    # judges before it freezes (record `240`); asking it here too made `check` list it twice
+    # (record `283`).
     loaded_exchange = facts.exchange()
     execution_table = facts.execution_table()
     horizon = facts.horizon()
