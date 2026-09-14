@@ -13,6 +13,8 @@ cp "$D"/* "$P"/
 X() { name="$1"; shift; uv run python "$E/trace_io.py" "$T/$name.json" --want "$W" --name "$name" --project "$P" -- --project-root "$P" "$@"; }
 git rev-parse HEAD > "$T/TREE"; git status --short -- src >> "$T/TREE"
 
+# record 284: the sample declares its roster apart from its data, registered first
+X 00_register_instruments register "$P/instruments.yaml"
 X 01_register register "$P/sample.yaml"
 X 02_register_bad register "$P/bad.yaml"
 cp "$P/execution.parquet" "$S/execution.orig.parquet"

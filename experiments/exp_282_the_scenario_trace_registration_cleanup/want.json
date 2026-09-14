@@ -1,4 +1,20 @@
 {
+ "00_register_instruments": [
+  "Transaction.commit",
+  "Workspace._write",
+  "Workspace._write_roster",
+  "Workspace.transaction",
+  "_instruments",
+  "_swap",
+  "apply",
+  "build_roster",
+  "main",
+  "read_declaration",
+  "register.run",
+  "success",
+  "verify_roster",
+  "write_atomically"
+ ],
  "01_register": [
   "Diagnosis.raise_if_failed",
   "Transaction.commit",

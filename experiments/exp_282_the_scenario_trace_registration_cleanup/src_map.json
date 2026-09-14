@@ -422,7 +422,7 @@
     {
      "path": "src/vqapr/data/dataset.py",
      "name": "dataset.py",
-     "lines": 607,
+     "lines": 635,
      "role": "dataset 등록 선언과 grain",
      "explain": "<code>DatasetRegistration</code>은 원천의 어느 컬럼이 종목(<code>instrument_field</code>)이고 어느 컬럼이 행이 알려지는 시각(<code>available_at</code>)인지, 그리고 어떤 이름(<code>fields</code>)으로 어떤 값 표현식을 노출하는지를 담은 선언이다. <code>Grain</code>은 한 행이 무엇인지를 작성자에게 선언하게 한다: <code>instrument_instant</code>(시각×종목), <code>instant</code>(시각만), <code>rows</code>(벤더가 주는 긴 표). 등록 과정에서 측정한 값(<code>span</code>, <code>source_digest</code>, <code>aggregated</code>, <code>execution_prices</code>)은 <code>with_span</code>·<code>with_verification</code>·<code>with_aggregation</code>이 사본에 붙인다. <code>ExecutionRole</code>은 이 테이블이 거래소가 체결에 쓰는 집행 테이블이라는 표시다. <code>lookback_fits_grain</code>과 <code>require_declared</code>는 grain에 맞지 않는 lookback이나 grain·field_types가 빠진 옛 등록을 읽기 전에 거절한다.",
      "bullets": [
@@ -515,7 +515,7 @@
     {
      "path": "src/vqapr/data/scan.py",
      "name": "scan.py",
-     "lines": 1690,
+     "lines": 1694,
      "role": "parquet을 여는 유일한 곳",
      "explain": "duckdb로 parquet을 실제로 여는 코드는 모두 이 파일에 있다. 어느 컬럼이 <code>available_at</code>인지 같은 의미는 모르고 SQL만 만든다. 등록 검증용 스캔(<code>describe</code>, <code>describe_projection</code>, <code>key_check</code>, <code>span_check</code>, <code>finite_check</code>, <code>positive_finite_when_true</code>), 관측 조회(<code>observation_rows</code>는 dict 행, <code>observation_table</code>은 Arrow 표로 반환), 집행 테이블 조회(<code>candidate_instants</code>, <code>exact_snapshot_rows</code>, <code>execution_window_table</code>)가 들어 있다. 시점 조건(<code>available_at &lt;= 평가 시각</code>, lookback 하한, 종목 목록)은 <code>_observation_query</code> 한 곳에서만 SQL에 들어간다. <code>ScanSession</code>은 run 동안 duckdb 커넥션, 시각 격자, <code>RowsLookback</code> 하한 증명(<code>_RowsBound</code>)을 캐시해서 콜백마다 전체 이력을 다시 읽지 않게 한다.",
      "bullets": [
@@ -563,9 +563,9 @@
     {
      "path": "src/vqapr/data/verification.py",
      "name": "verification.py",
-     "lines": 863,
+     "lines": 873,
      "role": "등록 때 한 번 재는 검문소",
-     "explain": "원칙은 이렇다: 파일은 workspace에 들어올 때 한 번 검사하고, 이후 읽기는 내용을 다시 보지 않고 신원(digest)만 확인한다. <code>verify_source</code>는 다섯 단계를 차례로 돈다. 스키마(<code>check_schema</code>: 컬럼 존재, 시간대 있는 <code>available_at</code>, 서브쿼리 금지, 선언 타입과 실제 타입 대조), key 유일성(<code>check_key</code>), 구간(<code>check_span</code>), NaN·inf 여부(<code>check_values</code>), 집행 가격 후보(<code>check_execution_prices</code>) 순이다. 모두 통과하면 span·digest 같은 측정값을 붙인 등록을 돌려준다. run이 dataset을 읽기 전에는 <code>require_verified</code>가 저장된 digest와 현재 파일의 sha256만 비교하고, 파일이 바뀌었으면 거절한다. <code>verify_roster</code>는 종목 roster 테이블도 같은 경로로 읽는다.",
+     "explain": "원칙은 이렇다: 파일은 workspace에 들어올 때 한 번 검사하고, 이후 읽기는 내용을 다시 보지 않고 신원(digest)만 확인한다. <code>verify_source</code>는 다섯 단계를 차례로 돈다. 스키마(<code>check_schema</code>: 컬럼 존재, 시간대 있는 <code>available_at</code>, 서브쿼리 금지, 선언 타입과 실제 타입 대조), key 축(<code>check_key</code>: panel grain은 유일성을 증명하고, rows는 반복 · null을 세어 영수증에 적는다 — 기록 282), 구간(<code>check_span</code>), NaN·inf 여부(<code>check_values</code>), 집행 가격 후보(<code>check_execution_prices</code>) 순이다. 모두 통과하면 span·digest 같은 측정값을 붙인 등록을 돌려준다. run이 dataset을 읽기 전에는 <code>require_verified</code>가 저장된 digest와 현재 파일의 sha256만 비교하고, 파일이 바뀌었으면 거절한다. <code>verify_roster</code>는 종목 roster 테이블도 같은 경로로 읽는다.",
      "bullets": [
       "verify_source — 5단계 검증 후 측정값이 붙은 등록 반환",
       "mismatched_source — 카드와 파일 위치의 source 이름 대조: 규칙 하나 · 400 (record 281)",
@@ -1725,7 +1725,7 @@
     {
      "path": "src/vqapr/run/preflight/checks.py",
      "name": "checks.py",
-     "lines": 735,
+     "lines": 718,
      "role": "check·run이 공유하는 판정 모음",
      "explain": "<code>vqapr check</code>가 보고하고 <code>vqapr run</code>이 거절 근거로 삼는 판정(judgment)들을 모은 파일이다. <code>judgments</code>는 universe, roster, period, execution_ordering, 멤버별 datasets, weights, outputs 판정을 서로 독립적으로 돌려서, 결함이 네 개면 네 개를 한 번에 돌려준다(<code>found</code>). 판정 하나가 예외 때문에 답을 못 하면 통과로 치지 않고 <code>judgment.blocked</code> 실패로 따로 담는다(<code>blocked</code>). 각 판정은 <code>dataset.unregistered</code>, <code>field.absent</code>, <code>lookback.uncovered</code>, <code>execution.not_after_decision</code>, <code>run.output_stale</code> 같은 코드와 고칠 방법(fix)을 담은 <code>Failure</code>를 만든다. cli 아래층에 있으므로 check와 run이 서로를 import하지 않고도 같은 답을 쓴다.",
      "bullets": [
@@ -1735,7 +1735,7 @@
       "_judge_execution_ordering — 모든 결정 뒤에 fill 규칙이 허락하는 체결 시각이 있는지",
       "_judge_outputs / _judge_output_freshness — <code>writes</code> 이름이 이미 쓰였는지, 이전 출력이 현재 컴포넌트 버전 것인지",
       "_judge_weights — long-only 계좌의 공매도 보유, signed 계좌와 거래소 상장 조건의 충돌",
-      "require_declared_roster / absent_roster_failure — 명부가 없는 전략 run 거절 (freeze도 사용)"
+      "absent_roster_failure — 명부가 없는 전략 run 거절 (freeze도 사용) (기록 283부터 판정만 묻는다)"
      ],
      "used": "쓰는 곳: <code>run/preflight/verdict.py</code>, <code>run/preflight/freeze.py</code>, <code>cli/check.py</code>"
     },
@@ -1759,7 +1759,7 @@
     {
      "path": "src/vqapr/run/preflight/freeze.py",
      "name": "freeze.py",
-     "lines": 750,
+     "lines": 749,
      "role": "선언 이름을 값으로 풀어 FrozenRun 생성",
      "explain": "이름으로 적힌 run 선언을 실제 값으로 풀어 <code>FrozenRun</code>을 만드는 동결 단계다. 체결 권한(거래소와 체결 데이터셋)이 있는지, 명부가 선언됐는지, 거래소가 요구하는 가격 필드가 있는지, 거래 종목이 모두 상장·거래 가능한지, 초기 보유분이 그 거래소에서 청산 가능한지, 전략의 초기 payload가 save→load→save로 같은 바이트가 되는지, 모든 결정 이벤트에 체결 시각이 있는지를 차례로 확인하고, 처음 걸리는 곳에서 <code>VqaprError</code>(stage freeze)로 거절한다. 통과하면 전략과 컴플라이언스 규칙이 읽는 요구사항의 합집합, 데이터셋, 소스와 소스 digest를 모아 동결한다. 데이터모델 run은 거래소와 계좌가 없으므로 <code>_preflight_datamodel_run</code>에서 더 짧게 동결한다. 계좌가 바뀌기 전에 모든 거절을 끝내는 것이 목적이며, <code>verdict.preflight</code> 안에서만 불린다.",
      "bullets": [
@@ -1987,7 +1987,7 @@
     {
      "path": "src/vqapr/cli/new.py",
      "name": "new.py",
-     "lines": 873,
+     "lines": 902,
      "role": "<code>vqapr new</code>: 코드·템플릿 생성",
      "explain": "아무것도 등록하지 않고 시작 파일만 만든다. <code>new strategy|datamodel &lt;id&gt; --dataset &lt;d&gt;</code>는 <code>agent.scaffold.render</code>로 바로 실행되는 .py와, 옆에 그것을 등록하는 .yaml(<code>_declaration</code>, datamodel이면 run 블록 포함)을 쓴다. 이때 <code>_require_registered_dataset</code>으로 dataset이 등록돼 있는지 먼저 확인하고, --lookback / --calendar-lookback / --instants-lookback 중 무엇을 줬는지에 따라 읽기 창을 정한다. <code>new compliance &lt;id&gt; --cap</code>은 규칙 파일을 만든다. <code>new dataset|run --out</code>은 주석이 달린 YAML 템플릿(<code>_DATASET_TEMPLATE</code>, <code>_RUN_TEMPLATE</code>)을 쓰고, <code>new exchange --profile academic|krx</code>는 거래소 .py와 .yaml을, <code>new instruments</code>는 roster 스크립트와 선언을, <code>new sample</code>은 바로 register·check·run 할 수 있는 예제 한 벌을 쓴다. 이미 있는 파일은 이 파일의 <code>refuse_existing</code>으로 덮어쓰지 않는다(record 280에서 domain에서 옮겨 옴).",
      "bullets": [
@@ -2137,7 +2137,7 @@
     {
      "path": "src/vqapr/agent/sample/README.md",
      "name": "README.md",
-     "lines": 38,
+     "lines": 39,
      "role": "샘플 패키지 안내(유지보수자용)",
      "explain": "샘플 패키지가 무엇인지(PRD §11.4의 샘플 여정), 네 명령으로 돌리는 법, 파일별 역할, 데이터가 비공개 KRX 데이터를 한 번 잘라 변형한 합성이라는 점을 설명한다. record 170에서 src 밖으로 뺐다가 record 172에서 <code>vqapr new sample</code>이라는 입구와 함께 되돌린 역사와, '숨은 내장 알파가 아니다' 같은 경계도 적혀 있다(사용자 디렉터리에 쓰이는 README와는 다른 파일이다).",
      "bullets": [],
@@ -2168,12 +2168,13 @@
     {
      "path": "src/vqapr/agent/sample/materialize.py",
      "name": "materialize.py",
-     "lines": 276,
+     "lines": 295,
      "role": "샘플 프로젝트를 디렉터리에 풀기",
-     "explain": "<code>vqapr new sample</code>이 부르는 <code>materialize(directory)</code>가 핵심이다. 비어 있는 대상 디렉터리에 전략·거래소 소스 2개와 데이터 파일 4개를 복사하고, 종목 명부(roster) parquet를 내보낸 다음 <code>sample.yaml</code>과 README를 쓴다. <code>sample.yaml</code>에는 가격 데이터셋 <code>sample-prices</code>, 체결용 데이터셋 <code>sample-execution</code>, 두 컴포넌트, 실행 <code>sample-run</code>(매일 08:00 결정, 15:30 종가 체결, 초기 현금 1억, LONG_ONLY)이 모두 들어간다. 실행 시작일은 데이터에서 읽은 두 번째 거래일이다. 첫날 08:00 결정 시점에는 아직 공개된 종가가 없어 <code>vqapr check</code>가 거부하기 때문이다. 등록은 하지 않아서 사용자가 일반 선언과 같은 <code>vqapr register</code> 경로를 밟게 된다.",
+     "explain": "<code>vqapr new sample</code>이 부르는 <code>materialize(directory)</code>가 핵심이다. 비어 있는 대상 디렉터리에 전략·거래소 소스 2개와 데이터 파일 4개를 복사하고, 종목 명부(roster) parquet를 내보낸 다음 명단 선언 <code>instruments.yaml</code>과 <code>sample.yaml</code>, README를 쓴다(기록 284: 명단은 데이터와 따로). <code>sample.yaml</code>에는 가격 데이터셋 <code>sample-prices</code>, 체결용 데이터셋 <code>sample-execution</code>, 두 컴포넌트, 실행 <code>sample-run</code>(매일 08:00 결정, 15:30 종가 체결, 초기 현금 1억, LONG_ONLY)이 모두 들어간다. 실행 시작일은 데이터에서 읽은 두 번째 거래일이다. 첫날 08:00 결정 시점에는 아직 공개된 종가가 없어 <code>vqapr check</code>가 거부하기 때문이다. 등록은 하지 않아서 사용자가 일반 선언과 같은 <code>vqapr register</code> 경로를 밟게 된다.",
      "bullets": [
-      "<code>materialize(directory)</code> — 파일 복사, 명부 내보내기, <code>sample.yaml</code>·README 작성 후 <code>Materialized</code> 반환",
-      "<code>declaration(panel, second_session, roster_tables)</code> — <code>sample.yaml</code> 본문 딕셔너리 생성",
+      "<code>materialize(directory)</code> — 파일 복사, 명부 내보내기, <code>instruments.yaml</code>·<code>sample.yaml</code>·README 작성 후 <code>Materialized</code>(<code>roster</code> 포함) 반환",
+      "<code>declaration(panel, second_session)</code> — <code>sample.yaml</code> 본문(데이터셋 · 부품 · run) 딕셔너리 생성",
+      "<code>roster_declaration(roster_tables)</code> — <code>instruments.yaml</code> 본문: 명단은 데이터와 따로 (기록 284)",
       "<code>Materialized</code> — 결과 위치, id들, 늦은 상장·상폐 종목 같은 속성을 담는 데이터클래스",
       "<code>panel_metadata()</code> — 패키지 안 <code>panel.json</code> 읽기",
       "<code>_next_session(sessions, observations_path)</code> — parquet에서 두 번째 거래일 계산, 거래일 수가 다르면 오류",
@@ -2259,7 +2260,7 @@
     {
      "path": "src/vqapr/agent/skills/_shipped.json",
      "name": "_shipped.json",
-     "lines": 269,
+     "lines": 277,
      "role": "출하한 skill 파일 해시 이력",
      "explain": "<code>&lt;skill&gt;/&lt;상대경로&gt;</code> → <code>{sha256: 그 내용이 처음 출하된 릴리스}</code> 형태의 표로, 현재 60개 경로에 147개 해시(0.8.0~0.16.0)가 기록돼 있다. <code>skillset.judge</code>가 설치본이 과거 정식 판 그대로(<code>outdated</code>)인지 사용자가 고친 것(<code>modified</code>)인지 가르는 근거이며, 릴리스마다 <code>scripts/record_shipped_skills.py</code>가 갱신하고 오래된 항목도 지우지 않는다.",
      "bullets": [],
@@ -2391,7 +2392,7 @@
     {
      "path": "src/vqapr/agent/skills/introduce-vqapr/SKILL.md",
      "name": "SKILL.md",
-     "lines": 155,
+     "lines": 157,
      "role": "vqapr 소개와 skill 안내 입구",
      "explain": "vqapr가 무엇인지 설명하는 입구 skill이다. 스크립트가 한 줄씩 조용히 정해 버리는 결정들(그 값을 그때 알 수 있었나, 실제로 얼마를 벌었나, 거래비용은 얼마인가, 이 숫자는 어디서 왔나 등)을 vqapr가 어떻게 드러내 대신 처리하는지 표로 보여 주고, 사용자 요청별로 어느 skill로 가야 하는지 안내한다. 포트폴리오를 보유하지 않는 통계라면 pandas로 충분하고, 누군가 인용할 수익률이라면 vqapr를 쓰라는 기준을 준다. 상폐 종목은 팔리지 않는다 같은 한계, 샘플 실행 다섯 명령, 사용자가 쓰는 네 가지(DataModel, StrategyModel, Exchange, Compliance), skill 설치 명령과 응답 JSON 읽는 법도 요약한다.",
      "bullets": [],
@@ -2430,7 +2431,7 @@
     {
      "path": "src/vqapr/agent/skills/introduce-vqapr/references/sample-journey.md",
      "name": "sample-journey.md",
-     "lines": 82,
+     "lines": 91,
      "role": "샘플 여정 단계별 설명",
      "explain": "<code>vqapr new sample</code>부터 <code>register</code>, <code>check</code>, <code>run</code>, <code>show run</code>까지 각 명령이 무엇을 만들고 무엇에 답하는지 따라가며, 일부러 불균형하게 만든 합성 패널의 의미와 다음에 볼 테이블을 알려 준다. 새 선언을 쓸 때 <code>sample.yaml</code>은 베끼되 데이터는 베끼지 말라고 한다.",
      "bullets": [],
@@ -2595,7 +2596,7 @@
     {
      "path": "src/vqapr/agent/skills/make-strategy/SKILL.md",
      "name": "SKILL.md",
-     "lines": 176,
+     "lines": 180,
      "role": "StrategyModel 작성 skill 입구",
      "explain": "StrategyModel을 쓰는 skill로, <code>vqapr new strategy &lt;id&gt; --dataset &lt;d&gt;</code>가 만든 파일을 먼저 읽으라고 한다(두 번째 데이터셋, <code>self.memory</code>, 자기 테이블 기록 위치가 모두 들어 있다). 한 전략은 한 파일이며, 수정 후 재등록은 같은 전략의 튜닝으로, 다른 변형은 새 id로 기록된다는 규칙과 옆 파일을 import할 수 없다는 점을 설명한다. 반드시 맞출 네 가지로 메모리(엄격한 JSON, 인스턴스 하나), <code>Rebalance.of</code>(양쪽 균등 분할)와 <code>Rebalance.signed</code>(신호가 비율 결정)의 차이, 비중이 아닌 확신도(conviction) 입력, 공매도 표기법을 든다. 포트폴리오 계산을 손으로 짜기 전에 <code>vqapr.public</code>의 약 160개 이름을 확인하고, 팩터 수익률은 각 다리를 별도 실행으로 돌린 뒤 NAV 수익률로 계산하라고 한다.",
      "bullets": [],
@@ -2664,7 +2665,7 @@
     {
      "path": "src/vqapr/agent/skills/register-dataset/SKILL.md",
      "name": "SKILL.md",
-     "lines": 180,
+     "lines": 186,
      "role": "데이터셋 등록 인터뷰 skill 입구",
      "explain": "사용자의 원본 파일을 읽고 컬럼의 의미를 인터뷰해서 <code>vqapr register</code>를 통과하는 선언을 쓰는 skill이다. 핵심 규칙은 '데이터가 증명하는 것'(유일 키, 가격 막대의 순서, 시간대 유무)은 에이전트가 정해도 되지만 '이름으로만 아는 것'(어느 컬럼이 시가인지, 날짜가 관측일인지 공개일인지)은 반드시 사용자가 정한다는 것이다. 7단계 체크리스트(프로파일 → 분류 → 답 받기 → grain 선택 → parquet 준비와 시간대 증명 → 선언 작성·등록 → 확인과 한계 기록)를 따르며, 1단계에서 <code>scripts/profile_source.py</code>를 실행한다. 선언은 <code>vqapr new dataset</code> 템플릿을 채워 쓰고, <code>DECIMAL</code>과 NaN은 거부되니 준비 단계에서 <code>DOUBLE</code>과 <code>NULL</code>로 바꾼다. <code>available_at</code>이 확인되지 않은 등록은 끝난 것이 아니다.",
      "bullets": [],
@@ -2694,7 +2695,7 @@
     {
      "path": "src/vqapr/agent/skills/register-dataset/references/grain-and-cost.md",
      "name": "grain-and-cost.md",
-     "lines": 80,
+     "lines": 86,
      "role": "grain 선택과 비용",
      "explain": "세 grain(<code>instrument_instant</code>, <code>instant</code>, <code>rows</code>)의 뜻, 등록 비용(행×키 폭)과 읽기 비용(panel은 실행당 한 번, rows는 읽을 때마다; 측정상 614배 차이)을 설명한다. 벤더 테이블을 <code>rows</code>로도 등록하고 DataModel로 패널을 파생하는 방법도 다룬다.",
      "bullets": [],
@@ -2774,7 +2775,7 @@
     {
      "path": "src/vqapr/agent/skills/report-issue-dev/references/report-template.md",
      "name": "report-template.md",
-     "lines": 130,
+     "lines": 131,
      "role": "결함 보고서 양식과 예시",
      "explain": "복사해서 채울 보고서 뼈대(버전 표, 하던 일, 기대, 실제, 재현, 영향, 예방책)와 채워진 예시 하나를 담았다. 버전은 기억이 아니라 사실로, envelope는 통째로, 관찰과 진단은 분리하라는 규칙도 있다.",
      "bullets": [],
@@ -2795,7 +2796,7 @@
     {
      "path": "src/vqapr/agent/skills/run-backtest/SKILL.md",
      "name": "SKILL.md",
-     "lines": 159,
+     "lines": 181,
      "role": "실행 선언·검증·실행 skill 입구",
      "explain": "등록된 컴포넌트를 묶어 실행을 선언·검증·실행하는 skill이다. 실행은 스크립트가 아니라 등록되는 설정이며, 전략은 <code>schedule</code>의 매 시점마다 호출되어 스스로 행동할지 정하고(<code>every: 1d</code>, <code>1M</code>, <code>on: last</code> 등), 한 실행은 모델 하나를 돌린다. 절차는 <code>vqapr new run</code> → 등록된 id로 채우기 → <code>vqapr register</code> → <code>vqapr check</code>(아무것도 쓰지 않고 모든 문제를 한 번에 보고) → <code>vqapr run</code> → 모든 전략이 <code>status: completed</code>인지 확인이다. <code>--jobs N</code> 배치 실행, 배치 안에서의 의존 금지, 메모리 추정치는 하한일 뿐이라는 점, 배치에서 한 실행이 실패해도 나머지 기록은 유지된다는 점을 설명한다.",
      "bullets": [],
@@ -2834,7 +2835,7 @@
     {
      "path": "src/vqapr/agent/skills/run-backtest/references/run-declaration.md",
      "name": "run-declaration.md",
-     "lines": 115,
+     "lines": 118,
      "role": "실행 선언의 선택지",
      "explain": "<code>schedule</code>(every/at/from/to/on: last; 거래일은 체결 데이터에서 옴), <code>execution.fill</code>(after/within은 벽시계 시간), 한 실행 = 한 모델 = 한 <code>writes</code>, 전략 실행에 필요한 종목 명부(roster)를 설명한다. 실행 선언은 제자리 수정이 거부된다는 점도 다룬다.",
      "bullets": [],
