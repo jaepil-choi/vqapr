@@ -85,12 +85,14 @@ def definition(sample: Materialized, run_id: str = RUN_ID) -> RunDefinition:
 
 
 def install(project_root: Path) -> Materialized:
-    """Materialize the sample under `project_root/sample` and register its declaration."""
+    """Materialize the sample under `project_root/sample` and register its two declarations: the
+    roster, then the data, the components and the run (record `284`)."""
     sample = materialize(Path(project_root) / "sample")
-    registered = register_cli(
-        argparse.Namespace(declaration=str(sample.declaration)), project_root=Path(project_root)
-    )
-    assert registered["ok"], registered
+    for document in (sample.roster, sample.declaration):
+        registered = register_cli(
+            argparse.Namespace(declaration=str(document)), project_root=Path(project_root)
+        )
+        assert registered["ok"], registered
     return sample
 
 

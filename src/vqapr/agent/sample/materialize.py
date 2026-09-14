@@ -1,10 +1,13 @@
 """Write the sample journey into a directory the user owns.
 
 Copies the strategy and the exchange as source files the user can read and edit, the synthetic
-panel beside them, and one declaration document (`sample.yaml`) that registers the dataset, the
-execution dataset, both components and the run. Nothing is registered here: the next step is
-`vqapr register DIR/sample.yaml`, the same step every user declaration takes, so the sample shows
-the real path rather than a shortcut through it.
+panel beside them, and two declaration documents: `instruments.yaml`, the roster -- what each of
+the ten names IS -- and `sample.yaml`, which registers the dataset, the execution dataset, both
+components and the run. They are two because the data and the instruments a venue may trade are
+separate declarations (owner, 2026-09-14; record `284`): a dataset may carry names no strategy
+trades, and only the roster's names can be ordered. Nothing is registered here: the next steps are
+`vqapr register DIR/instruments.yaml` and `vqapr register DIR/sample.yaml`, the same verb every
+user declaration takes, so the sample shows the real path rather than a shortcut through it.
 """
 
 from __future__ import annotations
@@ -37,8 +40,11 @@ OPENING_CASH = "100000000"
 """The book starts in cash, so the first rebalance is a plain set of purchases."""
 
 DECLARATION = "sample.yaml"
+ROSTER_DECLARATION = "instruments.yaml"
 COMPONENT_FILES = ("reversal_5d.py", "exchange.py")
 DATA_FILES = ("observations.parquet", "execution.parquet", "instruments.csv", "panel.json")
+
+_HEADER = "# Written by `vqapr new sample`. Register with: vqapr register <this file>\n"
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +53,7 @@ class Materialized:
 
     directory: Path
     declaration: Path
+    roster: Path
     run_id: str
     strategy_id: str
     exchange_id: str
@@ -116,17 +123,19 @@ def _zone():
     return ZoneInfo(VENUE)
 
 
-def declaration(
-    panel: dict[str, Any], second_session: str, roster_tables: dict[str, str]
-) -> dict[str, Any]:
-    """The `sample.yaml` body: every section a run needs, paths relative to the document.
+def roster_declaration(roster_tables: dict[str, str]) -> dict[str, Any]:
+    """The `instruments.yaml` body: `{kind: file name}` for the roster `materialize` exported.
 
-    `roster_tables` is `{kind: file name}` for the roster `materialize` exported beside the data:
-    a strategy run needs the project to have declared what each name IS (design §6.2), so the
-    sample declares its ten names before it declares the run that orders them.
+    Its own document (record `284`). A strategy run needs the project to have declared what each
+    name IS before it can size or charge an order (design §6.2), so `vqapr check` refuses the
+    sample's run until this is registered -- and the data registers without it.
     """
+    return {"instruments": {"tables": roster_tables}}
+
+
+def declaration(panel: dict[str, Any], second_session: str) -> dict[str, Any]:
+    """The `sample.yaml` body: the datasets, the components and the run, paths relative to it."""
     return {
-        "instruments": {"tables": roster_tables},
         "datasets": {
             DATASET_ID: {
                 "source_id": f"{DATASET_ID}-source",
@@ -212,16 +221,22 @@ end); the strategy and the venue are yours to read and change.
 | `observations.parquet` | daily OHLCV, one row per (close, instrument) |
 | `execution.parquet` | the venue table a run fills against |
 | `instruments.csv`, `panel.json` | the names and the panel's shape |
-| `instruments_stock.parquet` | the roster: what each of the ten names IS (all shares) |
-| `sample.yaml` | the one declaration that registers all of the above and the run `{run_id}` |
+| `instruments_stock.parquet` | the roster table: what each of the ten names IS (all shares) |
+| `instruments.yaml` | the roster declaration: the names a strategy may order |
+| `sample.yaml` | registers the data, the strategy, the venue and the run `{run_id}` |
 
-Three commands, from the directory that holds `.vqapr/` (or that will):
+Four commands, from the directory that holds `.vqapr/` (or that will):
 
 ```bash
+vqapr register {directory}/instruments.yaml
 vqapr register {directory}/sample.yaml
 vqapr check {run_id}
 vqapr run {run_id}
 ```
+
+The roster is its own declaration: a dataset may carry names no strategy trades, and only the
+names in the roster can be ordered. Register `sample.yaml` alone and `vqapr check {run_id}` refuses
+the run (`roster.absent`) until `instruments.yaml` is registered too.
 
 Then `vqapr show run {run_id}` and `vqapr show strategy {run_id}` read the record back.
 
@@ -250,12 +265,15 @@ def materialize(directory: str | Path) -> Materialized:
     # The ten names are synthetic shares. Exported here rather than shipped, so the parquet is
     # written by the same exporter `vqapr new instruments` uses and never drifts from it.
     roster = export_roster({name: "stock" for name in panel["instruments"]}, target)
-    body = declaration(panel, second, {kind: path.name for kind, path in sorted(roster.items())})
-    (target / DECLARATION).write_text(
-        "# Written by `vqapr new sample`. Register with: vqapr register <this file>\n"
-        + yaml.safe_dump(body, sort_keys=False, allow_unicode=True),
-        encoding="utf-8",
-    )
+    tables = {kind: path.name for kind, path in sorted(roster.items())}
+    for name, body in (
+        (ROSTER_DECLARATION, roster_declaration(tables)),
+        (DECLARATION, declaration(panel, second)),
+    ):
+        (target / name).write_text(
+            _HEADER + yaml.safe_dump(body, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
     (target / "README.md").write_text(
         _README.format(
             run_id=RUN_ID,
@@ -268,6 +286,7 @@ def materialize(directory: str | Path) -> Materialized:
     return Materialized(
         directory=target,
         declaration=target / DECLARATION,
+        roster=target / ROSTER_DECLARATION,
         run_id=RUN_ID,
         strategy_id=STRATEGY_ID,
         exchange_id=EXCHANGE_ID,

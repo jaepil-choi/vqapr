@@ -870,13 +870,17 @@ def _sample(args: argparse.Namespace, project_root: Path) -> dict[str, Any]:
         refuse_existing(target, what="sample directory")
     materialized = materialize_sample(target)
     declaration = materialized.declaration
+    # The roster is its own declaration (record `284`), registered first: the run's `check`
+    # refuses `roster.absent` without it.
     return success(
         "template.new",
         kind="sample",
         path=str(target),
         declaration=str(declaration),
+        instruments=str(materialized.roster),
         run_id=SAMPLE_RUN_ID,
         next=[
+            f"vqapr register {materialized.roster}",
             f"vqapr register {declaration}",
             f"vqapr check {SAMPLE_RUN_ID}",
             f"vqapr run {SAMPLE_RUN_ID}",

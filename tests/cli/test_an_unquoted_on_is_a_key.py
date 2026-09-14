@@ -63,7 +63,7 @@ def test_a_month_end_run_written_unquoted_registers(
     (project / "month-end.yaml").write_text(_MONTH_END, encoding="utf-8")
     root = ("--project-root", str(project))
 
-    for declaration in ("sample.yaml", "month-end.yaml"):
+    for declaration in ("instruments.yaml", "sample.yaml", "month-end.yaml"):
         code, body = _cli(capsys, *root, "register", str(project / declaration))
         assert code == 0, body
     code, body = _cli(capsys, *root, "check", "month-end")

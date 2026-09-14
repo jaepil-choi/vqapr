@@ -95,7 +95,7 @@ def _envelopes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> dict[str, 
         shutil.copy(DECLARATIONS / name, project / name)
     (project / "bad.yaml").write_text(_BAD_RUNS, encoding="utf-8")
     root = ("--project-root", str(project))
-    for declaration in ("sample.yaml", "features.yaml", "bad.yaml"):
+    for declaration in ("instruments.yaml", "sample.yaml", "features.yaml", "bad.yaml"):
         code, body = _cli(capsys, *root, "register", str(project / declaration))
         assert code == 0, body
     roots = (str(project), str(project.resolve()))
