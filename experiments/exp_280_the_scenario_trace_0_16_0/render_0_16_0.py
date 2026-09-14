@@ -134,11 +134,9 @@ def shelf_html(names: list[str], traces: dict[str, dict], changes: dict[str, dic
             )
         rows.append(f'<div class="cmd"><code>{html_module.escape(command_words(traces[name]))}</code></div><ul>{"".join(items)}</ul>')
     initial = changes["_initial"]["files"]
-    same = (
-        f'<div class="same">원본 {len(initial)}개(<code>observations.parquet</code> · <code>execution.parquet</code> · <code>*.yaml</code> · <code>*.py</code> …)는 이름 그대로 있고, 트레이스에 기록된 쓰기는 모두 <code>.vqapr/</code> 아래다 — 창고는 원본 상자를 고치지 않는다.</div>'
-    )
+    same = f'<div class="same">원본 {len(initial)}개는 그대로.</div>'
     extra = f'<div class="same">{note}</div>' if note else ""
-    return f'<div class="shelf"><div class="sh">창고 — 이 장면의 명령이 디스크에 남긴 것 (트레이스의 파일 목록에서)</div>{"".join(rows)}{same}{extra}</div>'
+    return f'<div class="shelf"><div class="sh">디스크에 남은 것</div>{"".join(rows)}{same}{extra}</div>'
 
 
 def chronicle_html(traces: dict[str, dict], changes: dict[str, dict], notes: dict[str, str]) -> str:
@@ -154,10 +152,8 @@ def chronicle_html(traces: dict[str, dict], changes: dict[str, dict], notes: dic
         )
     initial = changes["_initial"]["files"]
     return (
-        "<h2>창고 연대기 — 명령 16개가 디스크에 남긴 것</h2>\n"
-        '<p class="lede">위 요약을 한 표로. 각 명령을 돌린 직후의 프로젝트 파일 목록(트레이스의 <code>files_after</code>)을 바로 앞 명령의 목록과 견주었고, '
-        "“고쳐 씀”은 그 명령의 트레이스에 장부 쓰기 호출(<code>Workspace._write</code>, <code>_write_roster</code>)이 있는 경우입니다. "
-        f"시작할 때 폴더엔 원본 {len(initial)}개만 있었습니다: <code>{'</code> · <code>'.join(initial)}</code>.</p>\n"
+        "<h2>명령별 파일 변화</h2>\n"
+        f'<p class="lede">시작할 때는 원본 {len(initial)}개뿐. 트레이스의 파일 목록을 앞 명령과 비교했습니다.</p>\n'
         '<div class="tablewrap chron"><table>\n<tr><th class="num">#</th><th>명령</th><th class="num">호출</th><th>새로 생긴 파일</th><th>고쳐 쓴 파일</th></tr>\n'
         + "".join(rows)
         + "\n</table></div>\n"
@@ -224,7 +220,7 @@ def srcmap_html(data: dict, lede: str) -> str:
 HELPERS_JS = r"""
 function fileKey(loc){ return String(loc||'').replace(/:\d+$/,''); }
 function slug(p){ return 'f-'+p.replace(/[^A-Za-z0-9]+/g,'-'); }
-function fileCard(loc){ const p=fileKey(loc), f=FILES[p]; if(!f) return ''; const link=f.author?'':`<a href="#${slug(p)}" data-open="${p}">src 지도에서 보기 ↓</a>`; return `<div class="fcard${f.author?' author':''}"><div class="fh"><span class="fk">${f.author?'당신의 코드':'이 파일'}</span><code>${esc(p)}</code>${f.lines?`<span class="ln">${f.lines}줄</span>`:''}${link}</div><div class="fr">${f.role}</div><p>${f.explain}</p></div>`; }
+function fileCard(loc){ const p=fileKey(loc), f=FILES[p]; if(!f) return ''; const link=f.author?'':`<a href="#${slug(p)}" data-open="${p}">src 지도에서 보기 ↓</a>`; return `<div class="fcard${f.author?' author':''}"><div class="fh"><span class="fk">${f.author?'당신의 코드':'이 파일'}</span><code>${esc(p)}</code>${f.lines?`<span class="ln">${f.lines}줄</span>`:''}${link}</div><div class="fr">${f.role}</div></div>`; }
 function openFile(p){ const el=document.getElementById(slug(p)); if(!el) return; el.open=true; const fold=el.closest('details.fold'); if(fold) fold.open=true; }
 function buildFrameIndex(){
   const idx={}; S.forEach((sc,s)=>sc.frames.forEach((fr,f)=>{ const p=fileKey(fr.loc); (idx[p]=idx[p]||[]).push([s,f]); }));
@@ -310,7 +306,7 @@ SHELF_CSS = """
 def analogy_html(rows: list[tuple[str, str, str]]) -> str:
     body = "".join(f"<tr><td>{a}</td><td>{b}</td><td>{c}</td></tr>" for a, b, c in rows)
     return (
-        "<h2>이 페이지의 비유 — 창고 한 채</h2>\n"
+        "<h2>비유 — 창고 한 채</h2>\n"
         '<div class="tablewrap analogy"><table>\n<tr><th>창고에서</th><th>vqapr에서</th><th>자리 (파일)</th></tr>\n'
         + body
         + "\n</table></div>\n"
