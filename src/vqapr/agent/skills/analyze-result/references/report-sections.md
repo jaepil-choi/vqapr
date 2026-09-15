@@ -15,8 +15,9 @@ Each section is a pydantic document. Each is `None` with a reason in `omitted` w
 cannot give it — read `omitted` before concluding a strategy did nothing.
 
 A NAV that is not positive at some valuation omits `performance`, `book` and `intent`, because
-every number in them is a share of NAV. `trading` stays: its turnover is `None` for a period that
-opens at such a NAV, and its costs and counts are money. `attribution` and `compliance` stay whole.
+every number in them is a share of NAV, and `budget` with them, since its use is measured from the
+book against the returns. `trading` stays: its turnover is `None` for a period that opens at such a
+NAV, and its costs and counts are money. `attribution` and `compliance` stay whole.
 
 Every series is `instants` beside `values`, which is the whole bridge to a frame:
 
