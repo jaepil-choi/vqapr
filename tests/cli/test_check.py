@@ -700,6 +700,60 @@ def test_the_venue_judgment_reads_every_shipped_listing_shape(tmp_path: Path) ->
     assert "long_only" in (judged[0].observed or "")
 
 
+def test_a_borrowing_account_on_a_cash_limited_venue_is_refused(tmp_path: Path) -> None:
+    """Record 290: KRX cuts every buy to the cash on hand, so a borrowing account never borrows.
+
+    Read from the venue's declared settings (`partial_fills: cash-limited`), so the same account
+    on an academic venue -- which fills past the cash -- is not refused.
+    """
+    from vqapr.domain.account import CashMode
+    from vqapr.run.preflight.checks import _judge_weights
+    from vqapr.run.preflight.facts import RunFacts
+
+    Workspace.create(tmp_path)
+    krx = tmp_path / "krx_venue.py"
+    krx.write_text(
+        "from vqapr.public import KrxExchange, krx_rules\n"
+        "class Krx(KrxExchange):\n"
+        "    def __init__(self):\n"
+        "        listings, instruments = krx_rules({'ABC': 'stock'}, price_limits=True)\n"
+        "        super().__init__(listings)\n",
+        encoding="utf-8",
+    )
+    academic = tmp_path / "academic_venue.py"
+    academic.write_text(
+        "from decimal import Decimal\n"
+        "from vqapr.public import AcademicExchange, ListingAccess, TradeRule\n"
+        "class Academic(AcademicExchange):\n"
+        "    def __init__(self):\n"
+        "        super().__init__({'ABC': TradeRule('ABC', Decimal(1), Decimal(1), False, "
+        "ListingAccess.LONG_ONLY)}, 'academic')\n",
+        encoding="utf-8",
+    )
+    _register_component(tmp_path, "krx", Role.EXCHANGE, krx)
+    _register_component(tmp_path, "academic", Role.EXCHANGE, academic)
+
+    def judged(exchange: str) -> list:
+        borrowing = _definition(
+            instruments=("ABC",),
+            exchange=exchange,
+            initial_account_snapshot=AccountSnapshot(0, Decimal("1000"), {}),
+            initial_account_mode=AccountMode.LONG_ONLY,
+            initial_account_cash_mode=CashMode.BORROWING,
+        )
+        return _judge_weights(
+            borrowing,
+            FailureSource(key_path="runs.x"),
+            RunFacts(Workspace.open(tmp_path), borrowing),
+        )
+
+    refused = judged("krx")
+    assert [failure.code for failure in refused] == ["weights.cash_conflict"]
+    assert refused[0].source is not None
+    assert refused[0].source.key_path == "runs.x.initial_account.cash_mode"
+    assert judged("academic") == [], "a venue that fills past the cash is not refused"
+
+
 def test_check_writes_nothing_under_the_workspace(workspace: Path) -> None:
     """AC-C1, asserted byte-for-byte rather than claimed.
 

@@ -100,6 +100,7 @@
     "universe.unlisted_instrument",
     "universe.untradable_listing",
     "usage.rejected",
+    "weights.cash_conflict",
     "weights.mode_conflict",
     "weights.venue_conflict",
     "workspace.invalid",
@@ -214,6 +215,7 @@
       "run.output_stale",
       "universe.unlisted_instrument",
       "universe.untradable_listing",
+      "weights.cash_conflict",
       "weights.mode_conflict",
       "weights.venue_conflict"
     ],

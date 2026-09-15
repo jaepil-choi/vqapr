@@ -40,7 +40,7 @@ from difflib import get_close_matches
 from typing import Any
 
 from vqapr.component.loading import load_data_model, load_strategy_model
-from vqapr.domain.account import AccountMode
+from vqapr.domain.account import AccountMode, CashMode
 from vqapr.domain.errors import Failure, FailureSource, Stage, Status, VqaprError, status_of
 from vqapr.run.preflight.facts import RunFacts, unresolved_target_failures, unresolved_targets
 from vqapr.workspace.registry import Workspace
@@ -86,6 +86,9 @@ WEIGHTS_MODE_CONFLICT = "weights.mode_conflict"
 WEIGHTS_VENUE_CONFLICT = "weights.venue_conflict"
 
 
+WEIGHTS_CASH_CONFLICT = "weights.cash_conflict"
+
+
 RUN_OUTPUT_REGISTERED = "run.output_registered"
 
 
@@ -101,6 +104,7 @@ JUDGMENT_CODES = (
     LOOKBACK_UNCOVERED,
     DATASET_UNREGISTERED,
     WEIGHTS_MODE_CONFLICT,
+    WEIGHTS_CASH_CONFLICT,
     WEIGHTS_VENUE_CONFLICT,
     RUN_OUTPUT_REGISTERED,
     RUN_OUTPUT_STALE,
@@ -614,9 +618,10 @@ def _first_decision(definition: RunDefinition, schedule: Callable[[], object]) -
 def _judge_weights(definition: RunDefinition, at: FailureSource, facts: RunFacts) -> list[Failure]:
     """The account mode and the venue must both permit the positions the run can take.
 
-    Two codes for two different contradictions: a long-only account that will be asked to short,
-    and a venue whose listings do not permit the side the account allows. Both are declared facts
-    that disagree, and both are answerable before the run.
+    Three codes for three different contradictions: a long-only account that will be asked to
+    short; a borrowing account on a venue that cuts every buy to the cash on hand (record 290);
+    and a venue whose listings do not permit the side the account allows. Each is two declared
+    facts that disagree, and each is answerable before the run.
     """
     found: list[Failure] = []
     snapshot, mode = definition.initial_account_snapshot, definition.initial_account_mode
@@ -641,6 +646,34 @@ def _judge_weights(definition: RunDefinition, at: FailureSource, facts: RunFacts
                     source=_key(at, "initial_account", "positions"),
                 )
             )
+
+    # A borrowing account may overdraw its cash; a venue that declares its fills cash-limited
+    # (`partial_fills: cash-limited`, the KRX profile) cuts every buy to the cash on hand, so the
+    # leverage would never happen and nothing would say why. Read from the venue's own settings,
+    # the one place a venue states what it models, rather than from its class: a path-loaded
+    # builtin is a different class object from the one this package exports.
+    if (
+        definition.exchange is not None
+        and definition.initial_account_cash_mode is CashMode.BORROWING
+        and facts.exchange().settings.get("partial_fills") == "cash-limited"
+    ):
+        found.append(
+            Failure.bounded(
+                WEIGHTS_CASH_CONFLICT,
+                (
+                    "a borrowing account needs a venue that fills a buy past the cash on hand, or "
+                    "it declares a freedom the venue will not fill"
+                ),
+                observed=f"{definition.exchange}: partial_fills cash-limited",
+                fix=(
+                    "declare initial_account.cash_mode as FUNDED, or run on a venue that does not "
+                    "cut buys to cash (the academic profile, or a venue subclassing "
+                    "AcademicExchange)"
+                ),
+                status=Status.PRECONDITION,
+                source=_key(at, "initial_account", "cash_mode"),
+            )
+        )
 
     # The venue side of the same contradiction. A SIGNED account claims it may hold a negative
     # position; a listing marked LONG_ONLY or NONE says the venue will not fill one. Both are
