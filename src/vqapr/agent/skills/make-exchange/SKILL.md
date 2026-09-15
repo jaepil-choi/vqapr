@@ -40,6 +40,10 @@ default `--profile academic` fills free, **which is what makes it academic**.
 `initial_account.mode: SIGNED` is a combination **nothing refuses at scaffold time** and that
 cannot hold a position — the account permits the short and the venue declines it, every time.
 
+The same holds for cash. `initial_account.cash_mode: BORROWING` needs a venue that fills a buy
+past the cash on hand. KRX cuts buys to cash, and `check` refuses that pair
+(`weights.cash_conflict`).
+
 **2. There is no shipped costed signed profile.**
 
 A costed long/short book needs a venue you write. Set `access=ListingAccess.SIGNED` on your own

@@ -72,3 +72,18 @@ because **cash is a decided value rather than a derived one** and stays in the r
 
 When you report a book's cash, say which of the two it is. If the declaration does not make it
 clear, ask the user rather than choosing the flattering reading.
+
+## More than NAV long: borrowed cash
+
+A book that holds more than its NAV long needs cash below zero. Two declarations make it:
+
+- **The run:** `initial_account.cash_mode: BORROWING`. Without it the account refuses negative
+  cash and the planner cuts buys to the cash on hand, so the leverage silently does not happen.
+- **The strategy:** a budget whose `cash_lower` is below zero. `Rebalance.signed({"A": 1, "B": 1},
+  gross=2)` is 200% long with cash at -1, and `cash_lower=-1` means at most one NAV borrowed.
+  `Rebalance.of` caps `invested` at 1 and cannot express this.
+
+Borrowed cash is free: no interest, no margin, no forced sale. A borrowing backtest's return is
+higher than a real one's by the financing cost, so say so when you report it. For a financing
+cost, keep `FUNDED`, declare the account `SIGNED`, and short a registered derived unit-price asset
+that grows at the borrowing rate instead: the short's growth is the interest.

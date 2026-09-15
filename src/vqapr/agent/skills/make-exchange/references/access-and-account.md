@@ -26,12 +26,28 @@ for a rule that may be held either way — and declare the costs yourself, subcl
 `AcademicExchange`. Start from `krx_rules` for the cost shapes if the venue is Korean, but do not
 start from `--profile krx` itself: you would be removing its access rule from every listing.
 
+## Borrowing needs a venue that fills past the cash
+
+`initial_account.cash_mode: BORROWING` lets the account's cash go below zero, so a budget with
+`cash_lower < 0` buys more than NAV. `--profile krx` cuts every buy to the cash on hand
+(`partial_fills: cash-limited` in its settings), so on KRX the account would never borrow.
+`check` refuses that pair as `weights.cash_conflict`.
+
+| the book | venue | `cash_mode` |
+|---|---|---|
+| never more than NAV long | any | `FUNDED` (the default, not written) |
+| more than NAV long | `--profile academic`, or your own `AcademicExchange` subclass | `BORROWING` |
+
+Borrowed cash costs nothing: no interest, no margin, no forced sale. Say so when you report a
+borrowing run.
+
 ## Two things that look like one switch and are not
 
 | what | decided by |
 |---|---|
 | fractional allowed, lot / quantity step, rounding, price source, cost, fill timing | **the execution profile**, per instrument listing at that venue |
 | whether a negative position is allowed | **the account's state-transition validity**, frozen when the run starts |
+| whether cash may go below zero | **the account's `cash_mode`**, frozen when the run starts |
 
 Merging them creates the false inference *"academic, therefore fractional"*, and makes it
 impossible to treat the same instrument differently at two venues — which is the whole point of
