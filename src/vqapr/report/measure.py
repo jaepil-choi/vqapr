@@ -275,6 +275,29 @@ def _calendar(
     )
 
 
+class SectionUndefined(ValueError):
+    """A section the record cannot give, carrying the reason `StrategyReport.omitted` states.
+
+    Raised by a section's builder and caught by `compose.strategy_report` one section at a time,
+    so a number undefined in one section -- a return off a NAV that is not positive -- no longer
+    takes the other sections down with it (testbed report 2026-09-15). A `ValueError`, so a
+    caller that caught the bare error before still catches it.
+    """
+
+
+def nonpositive_nav(grid: Sequence[Valuation]) -> str | None:
+    """Why no share of NAV is defined on this grid, or `None` when every NAV is positive."""
+    below = [valuation for valuation in grid if valuation.nav <= 0]
+    if not below:
+        return None
+    lowest = min(below, key=lambda valuation: valuation.nav)
+    return (
+        f"nav is not positive at {len(below)} of {len(grid)} valuations, first at "
+        f"{below[0].at.isoformat()}, lowest {lowest.nav} at {lowest.at.isoformat()}: a return "
+        "or a share of NAV is undefined there"
+    )
+
+
 def performance(
     grid: Sequence[Valuation],
     *,
@@ -289,6 +312,9 @@ def performance(
     """
     if not grid:
         raise ValueError("performance needs at least one valuation")
+    undefined = nonpositive_nav(grid)
+    if undefined is not None:
+        raise SectionUndefined(undefined)
     instants = [valuation.at for valuation in grid]
     nav = [valuation.nav for valuation in grid]
     rets = list(period_returns(nav)) if len(nav) >= 2 else []
@@ -381,6 +407,9 @@ def _weights(valuation: Valuation) -> dict[str, Decimal]:
 
 
 def book(grid: Sequence[Valuation]) -> Book:
+    undefined = nonpositive_nav(grid)
+    if undefined is not None:
+        raise SectionUndefined(undefined)
     instants, held, long, short, unmarked = [], [], [], [], []
     gross, net, long_exp, short_exp, cash = [], [], [], [], []
     top, hhi = [], []
@@ -656,12 +685,19 @@ def trading(
 ) -> Trading:
     periods, outside = _by_period(grid, placed)
     years = Decimal(len(periods)) / Decimal(periods_per_year) if periods else None
-    # One-way, like the intended series: a buy and the sale that funds it are one turn.
-    turnover = [
-        sum((fill.notional for fill in window), ZERO) / grid[index].nav / 2
+    # One-way, like the intended series: a buy and the sale that funds it are one turn. A period
+    # that opens at a NAV that is not positive has no turnover -- a share of nothing, or of a
+    # debt, is not a number -- so its point is `None`, the mark `Curve` already gives a point it
+    # cannot value. The money beside it (costs, notional, fills) is unaffected.
+    undefined = nonpositive_nav(grid)
+    turnover: list[Decimal | None] = [
+        None
+        if grid[index].nav <= 0
+        else sum((fill.notional for fill in window), ZERO) / grid[index].nav / 2
         for index, window in enumerate(periods)
     ]
     realized = Curve(instants=[v.at for v in grid[1:]], values=list(turnover))
+    defined_turnover = [value for value in turnover if value is not None]
     previous: dict[str, Decimal] = {}
     intended_turnover: list[Decimal] = []
     for _, weights in intended:
@@ -677,7 +713,7 @@ def trading(
     for fill in placed:
         key = "unknown" if fill.kind is None else fill.kind
         by_kind[key] = by_kind.get(key, ZERO) + fill.commission + fill.tax
-    mean_nav = _mean([valuation.nav for valuation in grid])
+    mean_nav = None if undefined is not None else _mean([valuation.nav for valuation in grid])
     costs = Costs(
         commission=commission,
         tax=tax,
@@ -693,7 +729,9 @@ def trading(
     )
     return Trading(
         realized_turnover=realized,
-        annualized_realized_turnover=_ratio(sum(turnover, ZERO), years),
+        annualized_realized_turnover=(
+            None if undefined is not None else _ratio(sum(defined_turnover, ZERO), years)
+        ),
         intended_turnover=Curve(
             instants=[at for at, _ in intended], values=list(intended_turnover)
         ),
@@ -715,6 +753,9 @@ def trading(
 def intent(
     grid: Sequence[Valuation], intended: Sequence[tuple[datetime, dict[str, Decimal]]]
 ) -> Intent:
+    undefined = nonpositive_nav(grid)
+    if undefined is not None:
+        raise SectionUndefined(undefined)
     instants_on_grid = [valuation.at for valuation in grid]
     realized_weights = [_weights(valuation) for valuation in grid]
     instants, realized_at, gaps = [], [], []
@@ -825,15 +866,17 @@ def compliance(monitoring_rows: Iterable[Row]) -> Compliance:
 
 
 def headline(report: StrategyReport) -> HeadlineRow:
+    """One row; the return columns are `None` when the report omitted `performance`."""
+    performance = report.performance
     return HeadlineRow(
         strategy_ref=report.strategy_ref,
         strategy_id=report.strategy_id,
-        periods=report.performance.periods,
-        total_return=report.performance.total_return,
-        annualized_return=report.performance.annualized_return,
-        annualized_volatility=report.performance.annualized_volatility,
-        sharpe=report.performance.sharpe,
-        max_drawdown=report.performance.max_drawdown,
+        periods=None if performance is None else performance.periods,
+        total_return=None if performance is None else performance.total_return,
+        annualized_return=None if performance is None else performance.annualized_return,
+        annualized_volatility=None if performance is None else performance.annualized_volatility,
+        sharpe=None if performance is None else performance.sharpe,
+        max_drawdown=None if performance is None else performance.max_drawdown,
         annualized_realized_turnover=report.trading.annualized_realized_turnover,
         cost_share_of_mean_nav_per_year=report.trading.costs.share_of_mean_nav_per_year,
         mean_use=None if report.budget is None else report.budget.mean_use,
@@ -845,40 +888,47 @@ def headline(report: StrategyReport) -> HeadlineRow:
     )
 
 
-def _aligned(reports: Sequence[StrategyReport]) -> tuple[list[datetime], list[list[Decimal]]]:
-    """Period returns on the instants every report shares, in the same order."""
+def _aligned(series: Sequence[Curve]) -> tuple[list[datetime], list[list[Decimal]]]:
+    """Period returns on the instants every series shares, in the same order."""
     shared: set[datetime] | None = None
-    for report in reports:
-        instants = set(report.performance.returns.instants)
+    for curve in series:
+        instants = set(curve.instants)
         shared = instants if shared is None else shared & instants
     instants = sorted(shared or ())
     columns = []
-    for report in reports:
-        lookup = dict(
-            zip(report.performance.returns.instants, report.performance.returns.values, strict=True)
-        )
+    for curve in series:
+        lookup = dict(zip(curve.instants, curve.values, strict=True))
         columns.append([lookup[at] for at in instants])  # type: ignore[misc]
     return instants, columns
 
 
 def correlation(reports: Sequence[StrategyReport]) -> Correlation | None:
-    if len(reports) < 2:
+    """Between the strategies that have returns; one whose `performance` was omitted is left
+    out, and its own `omitted` says why."""
+    measured = [
+        (report.strategy_ref, report.performance.returns)
+        for report in reports
+        if report.performance is not None
+    ]
+    if len(measured) < 2:
         return None
-    instants, columns = _aligned(reports)
+    instants, columns = _aligned([returns for _, returns in measured])
     if len(instants) < 3:
         return None
     # The diagonal is not set by hand: the shared correlation is exactly 1 for a series against
     # itself, and a constant series is `None` there as everywhere else in its row.
-    values = [
-        [_pearson(columns[i], columns[j]) for j in range(len(reports))] for i in range(len(reports))
-    ]
-    return Correlation(
-        refs=[report.strategy_ref for report in reports], periods=len(instants), values=values
+    count = len(measured)
+    values = [[_pearson(columns[i], columns[j]) for j in range(count)] for i in range(count)]
+    return Correlation(refs=[ref for ref, _ in measured], periods=len(instants), values=values)
+
+
+def relative(report: StrategyReport, benchmark: StrategyReport) -> Relative | None:
+    """`None` when either side has no returns (its `performance` omitted, with the reason)."""
+    if report.performance is None or benchmark.performance is None:
+        return None
+    instants, (own, bench) = _aligned(
+        [report.performance.returns, benchmark.performance.returns]
     )
-
-
-def relative(report: StrategyReport, benchmark: StrategyReport) -> Relative:
-    instants, (own, bench) = _aligned([report, benchmark])
     active = [a - b for a, b in zip(own, bench, strict=True)]
     annual = Decimal(report.performance.periods_per_year)
     mean = _mean(active)

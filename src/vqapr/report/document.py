@@ -229,6 +229,9 @@ class Trading(_Document):
     is `vqapr.report.metrics.fill_summary` over the fill table, unchanged.
     `fills_outside_periods` counts fills committed before the first valuation or after the last,
     which the per-period series cannot place.
+    A period that opens at a NAV that is not positive has no realised turnover (`None`), and
+    when any valuation's NAV is not positive the annualised realised turnover and the cost share
+    of mean NAV are `None` too; the money and the counts are unaffected.
     """
 
     realized_turnover: Curve
@@ -292,13 +295,18 @@ class Compliance(_Document):
 
 
 class StrategyReport(_Document):
+    """One strategy's record, section by section. A section the record cannot give is `None`, and
+    `omitted` names it with the reason: no position rows, no compliance rule, or a NAV that is
+    not positive -- then every section made of shares of NAV (`performance`, `book`, `intent`)
+    is omitted, and `trading` keeps its money and counts."""
+
     run_id: str
     strategy_ref: str
     strategy_id: str
     period: dict[str, Any]
     positions_recorded: bool
     omitted: dict[str, str]
-    performance: Performance
+    performance: Performance | None
     book: Book | None
     budget: BudgetUse | None
     attribution: Attribution | None
@@ -308,16 +316,17 @@ class StrategyReport(_Document):
 
 
 class HeadlineRow(_Document):
-    """One line of the table a paper puts first: one strategy of the run."""
+    """One line of the table a paper puts first: one strategy of the run. The return columns
+    are `None` for a strategy whose `performance` was omitted."""
 
     strategy_ref: str
     strategy_id: str
-    periods: int
-    total_return: Decimal
-    annualized_return: Decimal
+    periods: int | None
+    total_return: Decimal | None
+    annualized_return: Decimal | None
     annualized_volatility: Decimal | None
     sharpe: Decimal | None
-    max_drawdown: Decimal
+    max_drawdown: Decimal | None
     annualized_realized_turnover: Decimal | None
     cost_share_of_mean_nav_per_year: Decimal | None
     mean_use: Decimal | None

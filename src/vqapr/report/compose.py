@@ -12,6 +12,7 @@ not the project directory, exactly as for `read_strategy_table`.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -26,7 +27,7 @@ from vqapr.record import (
 )
 from vqapr.record.schema import ACCOUNT_TABLE, FILL_TABLE, MONITORING_TABLE, WEIGHT_TABLE
 from vqapr.report import measure
-from vqapr.report.document import RunReport, StrategyReport
+from vqapr.report.document import BudgetUse, Compliance, RunReport, StrategyReport
 
 __all__ = ["run_report", "strategy_report", "valuation_grid"]
 
@@ -76,38 +77,78 @@ def strategy_report(
     else:
         source = "given"
 
+    # One door for every omission: a section's builder raises `SectionUndefined` with its reason,
+    # and the section is `None` with that reason in `omitted`. A number undefined in one section
+    # -- a return off a NAV that is not positive -- used to raise out of here and take all six
+    # sections with it (testbed report 2026-09-15).
     omitted: dict[str, str] = {}
-    performance = measure.performance(
-        grid,
-        periods_per_year=periods_per_year,
-        periods_per_year_source=source,
-        risk_free_annual=risk_free_annual,
-        initial_nav=initial_nav,
-    )
-    declared = record.get("budget")
-    budget = None
-    if positions_recorded:
-        book = measure.book(grid)
-        attribution = measure.attribution(grid, placed)
-        intent = measure.intent(grid, intended)
-        # Use is measured against the declaration the run froze (record `292`). A record
-        # written before 0.17.0 has none: the budget rode on each decision and was dropped.
-        if declared:
-            budget = measure.budget_use(book, performance, declared)
-        else:
-            omitted["budget"] = (
-                "the record states no budget: it was written before 0.17.0, when the budget "
-                "rode on each decision and was not recorded"
-            )
-    else:
-        book = attribution = intent = None
-        why = (
+
+    def section[T](name: str, build: Callable[[], T]) -> T | None:
+        try:
+            return build()
+        except measure.SectionUndefined as undefined:
+            omitted[name] = str(undefined)
+            return None
+
+    unrecorded = (
+        None
+        if positions_recorded
+        else (
             f"{ACCOUNT_TABLE} holds only the {measure.ACCOUNT_ROW} row (the run was recorded "
             "without positions), so the book cannot be read back"
         )
-        omitted.update(
-            {"book": why, "budget": why, "attribution": why, "intent": why, "trading.holding": why}
-        )
+    )
+
+    def from_positions[T](build: Callable[[], T]) -> Callable[[], T]:
+        def built() -> T:
+            if unrecorded is not None:
+                raise measure.SectionUndefined(unrecorded)
+            return build()
+
+        return built
+
+    def monitored() -> Compliance:
+        if not monitoring_rows:
+            raise measure.SectionUndefined(
+                f"{MONITORING_TABLE} is empty: the run declared no compliance rule"
+                if not record.get("compliance")
+                else f"{MONITORING_TABLE} is empty although compliance rules were declared"
+            )
+        return measure.compliance(monitoring_rows)
+
+    performance = section(
+        "performance",
+        lambda: measure.performance(
+            grid,
+            periods_per_year=periods_per_year,
+            periods_per_year_source=source,
+            risk_free_annual=risk_free_annual,
+            initial_nav=initial_nav,
+        ),
+    )
+    book = section("book", from_positions(lambda: measure.book(grid)))
+
+    def budget_use() -> BudgetUse:
+        # Use is measured against the declaration the run froze (record `292`): a share of the
+        # book, against its returns. A record written before 0.17.0 has none -- the budget rode on
+        # each decision and was dropped -- and a book or returns omitted above leave nothing to
+        # measure use with.
+        declared = record.get("budget")
+        if not declared:
+            raise measure.SectionUndefined(
+                "the record states no budget: it was written before 0.17.0, when the budget "
+                "rode on each decision and was not recorded"
+            )
+        if book is None or performance is None:
+            raise measure.SectionUndefined(
+                omitted.get("performance") or omitted.get("book") or "no book or no returns"
+            )
+        return measure.budget_use(book, performance, declared)
+
+    budget = section("budget", from_positions(budget_use))
+    attribution = section("attribution", from_positions(lambda: measure.attribution(grid, placed)))
+    intent = section("intent", from_positions(lambda: measure.intent(grid, intended)))
+    # `trading` is money and counts and always stands; its shares of NAV say `None` themselves.
     trading = measure.trading(
         grid,
         placed,
@@ -116,15 +157,9 @@ def strategy_report(
         periods_per_year=periods_per_year,
         positions_recorded=positions_recorded,
     )
-    if monitoring_rows:
-        compliance = measure.compliance(monitoring_rows)
-    else:
-        compliance = None
-        omitted["compliance"] = (
-            f"{MONITORING_TABLE} is empty: the run declared no compliance rule"
-            if not record.get("compliance")
-            else f"{MONITORING_TABLE} is empty although compliance rules were declared"
-        )
+    if unrecorded is not None:
+        omitted["trading.holding"] = unrecorded
+    compliance = section("compliance", monitored)
     return StrategyReport(
         run_id=run_id,
         strategy_ref=resolved,
@@ -154,7 +189,9 @@ def run_report(
 
     `benchmark` names a strategy of the same run (a ref or a bare id); every other strategy is
     then also reported against it. A benchmark outside the run -- an index level, say -- is not
-    something the record holds, and is not invented here.
+    something the record holds, and is not invented here. A strategy whose `performance` was
+    omitted keeps its `headline` row with the return columns empty and is left out of
+    `correlation` and `relative`; its own `omitted` says why.
     """
     root, run_id, named = record_address(root, run_id)
     if named is not None:
@@ -181,7 +218,8 @@ def run_report(
                 f"finished: {', '.join(refs)}"
             )
         base = reports[resolved]
-        relative = [measure.relative(report, base) for report in ordered if report is not base]
+        against = (measure.relative(report, base) for report in ordered if report is not base)
+        relative = [entry for entry in against if entry is not None]
     return RunReport(
         run_id=run_id,
         strategies=reports,
