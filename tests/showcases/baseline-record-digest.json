@@ -27,23 +27,23 @@
     "digest": "146972da3396a656",
     "kind": "facts"
   },
-  "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/datamodels/momentum-model@6d0dfb87/datamodel.json": {
-    "digest": "a68dd208601960db",
+  "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/datamodels/momentum-model@88bd36e7/datamodel.json": {
+    "digest": "4106c8132a5dc4f8",
     "kind": "facts"
   },
   "showcases/show_004_krx_execution_profile/outputs/project/.vqapr/runs/momentum-score/run.json": {
-    "digest": "e79d47bfb4bebe1c",
+    "digest": "8059822dcda720cd",
     "kind": "facts"
   },
   "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/run.json": {
-    "digest": "076d8833bafd215d",
+    "digest": "f35c8a5bc7c3c3af",
     "kind": "facts"
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/strategy.json": {
-    "digest": "89213eea7c18edd5",
+  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/strategy.json": {
+    "digest": "019ca43c5d875de8",
     "kind": "facts"
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/alpha.signal/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/alpha.signal/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -57,7 +57,7 @@
     "kind": "table",
     "rows": 105
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.account/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -72,11 +72,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "722de11e74f763d8",
+    "digest": "a5a93a50a583921f",
     "kind": "table",
     "rows": 126
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.fill/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -95,11 +95,11 @@
       "stage",
       "tax"
     ],
-    "digest": "5a87158a01785ff5",
+    "digest": "e0ba0b5aa78d86c5",
     "kind": "table",
     "rows": 105
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.weight/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-a/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -109,19 +109,19 @@
       "stage",
       "weight"
     ],
-    "digest": "be5c31204dace397",
+    "digest": "6cca1c51fe4164fd",
     "kind": "table",
     "rows": 105
   },
   "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/run.json": {
-    "digest": "076d8833bafd215d",
+    "digest": "f35c8a5bc7c3c3af",
     "kind": "facts"
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/strategy.json": {
-    "digest": "9deff0bd3247af73",
+  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/strategy.json": {
+    "digest": "b95876d9d2601e79",
     "kind": "facts"
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/alpha.signal/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/alpha.signal/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -135,7 +135,7 @@
     "kind": "table",
     "rows": 105
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.account/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -150,11 +150,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "722de11e74f763d8",
+    "digest": "a5a93a50a583921f",
     "kind": "table",
     "rows": 126
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.fill/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -173,11 +173,11 @@
       "stage",
       "tax"
     ],
-    "digest": "5a87158a01785ff5",
+    "digest": "e0ba0b5aa78d86c5",
     "kind": "table",
     "rows": 105
   },
-  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@e2076749/tables/vqapr.weight/all.parquet": {
+  "showcases/show_005_enhanced_index/outputs/replicate-b/.vqapr/runs/show005-alpha/strategies/show005-alpha@617a4c5a/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -187,19 +187,19 @@
       "stage",
       "weight"
     ],
-    "digest": "be5c31204dace397",
+    "digest": "6cca1c51fe4164fd",
     "kind": "table",
     "rows": 105
   },
   "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/run.json": {
-    "digest": "1314ace041b4aa91",
+    "digest": "8b81cd05a991b739",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/strategy.json": {
-    "digest": "86dc2c908403b145",
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/strategy.json": {
+    "digest": "3961767a91618212",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.account/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -214,11 +214,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "d6bec2a80ce9a1da",
+    "digest": "f662fc7b0a44247f",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.fill/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -237,11 +237,11 @@
       "stage",
       "tax"
     ],
-    "digest": "52a6b9fb36e531ff",
+    "digest": "a10a748c4a3bf23a",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.weight/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -251,19 +251,19 @@
       "stage",
       "weight"
     ],
-    "digest": "5331a97d3bf42cc5",
+    "digest": "3ee38174419cfd30",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/run.json": {
-    "digest": "239f00c5a41a4070",
+    "digest": "77d51e5e3bb7e208",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/strategy.json": {
-    "digest": "74adda92d971acbc",
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/strategy.json": {
+    "digest": "73411c96a7eafef9",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.account/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -278,11 +278,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "9be9ec1ac9f34b7b",
+    "digest": "49eaf8fc710730f7",
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.fill/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -301,11 +301,11 @@
       "stage",
       "tax"
     ],
-    "digest": "e77b19b0b3756fa6",
+    "digest": "238c7a738047b964",
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.weight/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-a/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -315,19 +315,19 @@
       "stage",
       "weight"
     ],
-    "digest": "96ce173d3c6a8e18",
+    "digest": "ba32971e8218c48a",
     "kind": "table",
     "rows": 64
   },
   "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/run.json": {
-    "digest": "1314ace041b4aa91",
+    "digest": "8b81cd05a991b739",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/strategy.json": {
-    "digest": "5c8a386ea2e37b90",
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/strategy.json": {
+    "digest": "2d5dfa0d9d391858",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.account/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -342,11 +342,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "d6bec2a80ce9a1da",
+    "digest": "f662fc7b0a44247f",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.fill/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -365,11 +365,11 @@
       "stage",
       "tax"
     ],
-    "digest": "52a6b9fb36e531ff",
+    "digest": "a10a748c4a3bf23a",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@6d742c82/tables/vqapr.weight/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-momentum/strategies/show006-momentum@c8903734/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -379,19 +379,19 @@
       "stage",
       "weight"
     ],
-    "digest": "5331a97d3bf42cc5",
+    "digest": "3ee38174419cfd30",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/run.json": {
-    "digest": "239f00c5a41a4070",
+    "digest": "77d51e5e3bb7e208",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/strategy.json": {
-    "digest": "4552fa19a5e8b593",
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/strategy.json": {
+    "digest": "e618e455529a9154",
     "kind": "facts"
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.account/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -406,11 +406,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "9be9ec1ac9f34b7b",
+    "digest": "49eaf8fc710730f7",
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.fill/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -429,11 +429,11 @@
       "stage",
       "tax"
     ],
-    "digest": "e77b19b0b3756fa6",
+    "digest": "238c7a738047b964",
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@a81a533c/tables/vqapr.weight/all.parquet": {
+  "showcases/show_006_ensemble_netting/outputs/replicate-b/.vqapr/runs/show006-reversal/strategies/show006-reversal@214ac137/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -443,19 +443,19 @@
       "stage",
       "weight"
     ],
-    "digest": "96ce173d3c6a8e18",
+    "digest": "ba32971e8218c48a",
     "kind": "table",
     "rows": 64
   },
   "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/run.json": {
-    "digest": "21b6bddf7e5a78bf",
+    "digest": "3de90f0a7acec64a",
     "kind": "facts"
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/strategy.json": {
-    "digest": "6fb05339c96e9de6",
+  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@bace301a/strategy.json": {
+    "digest": "928b85fc594b1220",
     "kind": "facts"
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/signal.measurement/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/signal.measurement/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -470,7 +470,7 @@
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.account/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -489,7 +489,7 @@
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.fill/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -512,7 +512,7 @@
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.weight/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-a/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -522,19 +522,19 @@
       "stage",
       "weight"
     ],
-    "digest": "3808ecf33a4744f1",
+    "digest": "32b2a5d99a13aefa",
     "kind": "table",
     "rows": 64
   },
   "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/run.json": {
-    "digest": "21b6bddf7e5a78bf",
+    "digest": "3de90f0a7acec64a",
     "kind": "facts"
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/strategy.json": {
-    "digest": "9202135684a7a89e",
+  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@bace301a/strategy.json": {
+    "digest": "d4c78b9a979772d9",
     "kind": "facts"
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/signal.measurement/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/signal.measurement/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -549,7 +549,7 @@
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.account/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -568,7 +568,7 @@
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.fill/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -591,7 +591,7 @@
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@d57afbe1/tables/vqapr.weight/all.parquet": {
+  "showcases/show_007_signal_measurement/outputs/replicate-b/.vqapr/runs/show007/strategies/show007-signal@bace301a/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -601,19 +601,19 @@
       "stage",
       "weight"
     ],
-    "digest": "3808ecf33a4744f1",
+    "digest": "32b2a5d99a13aefa",
     "kind": "table",
     "rows": 64
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/run.json": {
-    "digest": "3d19d75e3c6f8588",
+    "digest": "96e44a1d8e6f0265",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/strategy.json": {
-    "digest": "12a050c3f190bf7f",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/strategy.json": {
+    "digest": "97e56962879b8faa",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -628,11 +628,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "afd430a52f5c7913",
+    "digest": "ca13d254330507db",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -651,11 +651,11 @@
       "stage",
       "tax"
     ],
-    "digest": "abedbd0eed0264d0",
+    "digest": "6a0eb18122de8314",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -665,19 +665,19 @@
       "stage",
       "weight"
     ],
-    "digest": "c5bf70d8c36361d0",
+    "digest": "d6906b843fb4a675",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/run.json": {
-    "digest": "db098f9f27b06094",
+    "digest": "b77e466dd0e03532",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/strategy.json": {
-    "digest": "9896a937aa087e53",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/strategy.json": {
+    "digest": "1d2da6eb0059de45",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -692,11 +692,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "1da8ab4803865fdc",
+    "digest": "2ffee0be267bc7dc",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -715,11 +715,11 @@
       "stage",
       "tax"
     ],
-    "digest": "72fe0695d5ffe055",
+    "digest": "1a95d91e5f4e1a23",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -729,19 +729,19 @@
       "stage",
       "weight"
     ],
-    "digest": "1f56814adf42e4f0",
+    "digest": "0156f5ea9dd3df52",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/run.json": {
-    "digest": "4db905483e67ae3d",
+    "digest": "cd6ee10809b91232",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/strategy.json": {
-    "digest": "f5a0e323bdede8f5",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/strategy.json": {
+    "digest": "5a3644b37afbc8d3",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -756,11 +756,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "125db064458cbc17",
+    "digest": "ad935bf52a39606b",
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -779,11 +779,11 @@
       "stage",
       "tax"
     ],
-    "digest": "0117eb99323b217a",
+    "digest": "f72ea103871cd867",
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-a/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -793,19 +793,19 @@
       "stage",
       "weight"
     ],
-    "digest": "06309e2b1b50f9c8",
+    "digest": "dd92380288ece644",
     "kind": "table",
     "rows": 64
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/run.json": {
-    "digest": "3d19d75e3c6f8588",
+    "digest": "96e44a1d8e6f0265",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/strategy.json": {
-    "digest": "ee7f62a2397b0a9f",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/strategy.json": {
+    "digest": "5cc3865897a404fb",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -820,11 +820,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "afd430a52f5c7913",
+    "digest": "ca13d254330507db",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -843,11 +843,11 @@
       "stage",
       "tax"
     ],
-    "digest": "abedbd0eed0264d0",
+    "digest": "6a0eb18122de8314",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@36e09951/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-lowvol/strategies/show008-lowvol@77b6c1e6/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -857,19 +857,19 @@
       "stage",
       "weight"
     ],
-    "digest": "c5bf70d8c36361d0",
+    "digest": "d6906b843fb4a675",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/run.json": {
-    "digest": "db098f9f27b06094",
+    "digest": "b77e466dd0e03532",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/strategy.json": {
-    "digest": "f8def516ed4db70b",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/strategy.json": {
+    "digest": "63507fb6c12e3a5f",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -884,11 +884,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "1da8ab4803865fdc",
+    "digest": "2ffee0be267bc7dc",
     "kind": "table",
     "rows": 65
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -907,11 +907,11 @@
       "stage",
       "tax"
     ],
-    "digest": "72fe0695d5ffe055",
+    "digest": "1a95d91e5f4e1a23",
     "kind": "table",
     "rows": 44
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@69a7eca5/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-momentum/strategies/show008-momentum@cf417ee8/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -921,19 +921,19 @@
       "stage",
       "weight"
     ],
-    "digest": "1f56814adf42e4f0",
+    "digest": "0156f5ea9dd3df52",
     "kind": "table",
     "rows": 44
   },
   "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/run.json": {
-    "digest": "4db905483e67ae3d",
+    "digest": "cd6ee10809b91232",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/strategy.json": {
-    "digest": "48aef52d21a7c33d",
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/strategy.json": {
+    "digest": "b494f5f48e1828fa",
     "kind": "facts"
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.account/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.account/all.parquet": {
     "columns": [
       "account_version",
       "cash",
@@ -948,11 +948,11 @@
       "sequence",
       "stage"
     ],
-    "digest": "125db064458cbc17",
+    "digest": "ad935bf52a39606b",
     "kind": "table",
     "rows": 85
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.fill/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.fill/all.parquet": {
     "columns": [
       "account_version",
       "cash_delta",
@@ -971,11 +971,11 @@
       "stage",
       "tax"
     ],
-    "digest": "0117eb99323b217a",
+    "digest": "f72ea103871cd867",
     "kind": "table",
     "rows": 64
   },
-  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@a81a533c/tables/vqapr.weight/all.parquet": {
+  "showcases/show_008_alpha_family_ensemble/outputs/replicate-b/.vqapr/runs/show008-reversal/strategies/show008-reversal@214ac137/tables/vqapr.weight/all.parquet": {
     "columns": [
       "event_time",
       "instrument",
@@ -985,7 +985,7 @@
       "stage",
       "weight"
     ],
-    "digest": "06309e2b1b50f9c8",
+    "digest": "dd92380288ece644",
     "kind": "table",
     "rows": 64
   }

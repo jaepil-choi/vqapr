@@ -1,6 +1,6 @@
 # The strategy that `vqapr new sample` emits imports `Budget` and `PortfolioDirection` from the private module `vqapr.domain.intent`
 
-**Status: RECEIVED 2026-09-15 (접수) — confirmed against `develop` (`src/vqapr/agent/sample/reversal_5d.py:16`). Being fixed on `redesign/strategy-budget`: the budget becomes a declaration on the strategy class (`vq.Budget`, `vqapr.portfolio.budget`) and `PortfolioDirection` goes away, so the sample imports from `vqapr.public` only.**
+**Status: RECEIVED 2026-09-15 (접수) — confirmed against `develop` (`src/vqapr/agent/sample/reversal_5d.py:16`). Being fixed on `redesign/strategy-budget`: the budget becomes a declaration on the strategy class (`vq.Budget`, `vqapr.portfolio.budget`) and `PortfolioDirection` goes away, so the sample imports from `vqapr.public` only.** **CLOSED 2026-09-15 by record `291` — the budget is the strategy's declaration (`vq.Budget`, exported from `vqapr.public`), `PortfolioDirection` is gone, and the sample declares `budget()` and imports from `vqapr.public` only.**
 
 | | |
 |---|---|

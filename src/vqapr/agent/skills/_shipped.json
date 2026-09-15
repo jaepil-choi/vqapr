@@ -28,6 +28,7 @@
   "analyze-result/references/report-sections.md": {
     "3178053843a6bf0a24ab21ad8d89234f406dc35cb42906b3e2b5b3840bfdc20d": "0.8.0",
     "5d0be40c6a2f963d7b263cd8025dd1a8adcd16244b0a1317a225755e691740e0": "0.14.4",
+    "63e61fbd344d9e219ac3ff8853e288089fe6ea23ac3669fda83275cd487fcb0d": "0.17.0",
     "cf82917bf2cccc37faf9ce0a71093bd1f3a67fc4a3ee1a3090a2932ad0e72bd5": "0.10.0"
   },
   "analyze-result/references/result-tables.md": {
@@ -85,9 +86,11 @@
   "make-compliance/SKILL.md": {
     "330e4c02877ad61831e49820ac379af543bcaffe978240c0cb162f5ea191065d": "0.10.0",
     "ce3b6f88898350f519831d058a4a8c22960d5987fd835766acb467f11c99c0e0": "0.11.0",
+    "e903acc9035b4a948198c6c807163c65b6ab0a3394aff8d6cfd75da91a15845e": "0.17.0",
     "fbcbdf8de40d5c648c3076b2bf2c8f4e2e3f0ba27164f2c4fbe312485f8b943b": "0.16.0"
   },
   "make-compliance/references/declaring-data.md": {
+    "5240dd387757c515015282cfb642e165e9a59f83ab39aa03ad41a6c1a3c34aa9": "0.17.0",
     "c1324a254368607a5a7704c3239e8dd93f3b65eca7b255e0a062233b29d3d6e4": "0.10.0"
   },
   "make-compliance/references/observe.md": {
@@ -149,6 +152,7 @@
   },
   "make-exchange/references/access-and-account.md": {
     "56e6812a274837c3897a3f0b580db489b9b6c3333a2476ccb055ee0c90d2d5ee": "0.16.2",
+    "97ef5142e8c432eb2d88ef70a6e0797fd76213ca3ee5e7d8a7fc760810c9d48c": "0.17.0",
     "d4f4a9bc3ee3f12d4864ece4b46c13208caf0761c902c562ec9d327c0620af89": "0.8.0"
   },
   "make-exchange/references/cost-model.md": {
@@ -165,6 +169,7 @@
   "make-strategy/SKILL.md": {
     "02895a4545f6fb49ed4650bbbe1491d310f93a7d8fb2db23656f79e951b0d757": "0.15.0",
     "279649bea0c91a7b433508357233b2cb3a2d89deab19dbe179248fe4722521bf": "0.14.4",
+    "303124007142c22653a7c645125af1a6dda3916b8f0e058f21daafbf20e84e50": "0.17.0",
     "541e46f9041a7ba3678fa992f26dab1dbe67e695bf2ba6a88f33cf125f3a0b59": "0.11.0",
     "6a88569cafd74e717093acb8669a8c70df5baabf115f0b608f9a3d512572f11e": "0.16.1",
     "7ac1a6d4244e19308aeb7543e556bf214fec2556ae315680e216b4008df7dcd8": "0.16.0",
@@ -173,11 +178,13 @@
   },
   "make-strategy/references/composition-and-budget.md": {
     "44f694b1dfabfa0be7cc373118956a304f081d7e98fdadbd3a11320050734960": "0.16.2",
-    "9338d7dc7f3c2b47ccffb153c556b21e53e4af56c69ffb938e30781eb66bf65f": "0.8.0"
+    "9338d7dc7f3c2b47ccffb153c556b21e53e4af56c69ffb938e30781eb66bf65f": "0.8.0",
+    "f7d99cdc95c1fa7e8df30925e68d9337d01a700613d33ffc7e22f9e5ebedefdc": "0.17.0"
   },
   "make-strategy/references/factor-portfolios.md": {
     "3acb707a3a8880734e23879dd4aa110879fa1173afb96fdf97806621429fb5b8": "0.16.0",
-    "60e375b279ac9c8c710eb08e98b9c88d2bdf00e19183060579145635bb42822b": "0.14.4"
+    "60e375b279ac9c8c710eb08e98b9c88d2bdf00e19183060579145635bb42822b": "0.14.4",
+    "7e0f199ab8fc9cfef7c7f8690252049b75588da38fe82d2439320a9a94e8db83": "0.17.0"
   },
   "make-strategy/references/memory-and-payload.md": {
     "5cb2473443628daf196af870d0ef7c6c1ed465f2b22fdb039f467862fc014708": "0.8.0",
@@ -186,16 +193,19 @@
   },
   "make-strategy/references/public-helpers.md": {
     "2e37bb1f593be2185841b68fdae660baa615bc83906b96cbdb1fa7362e4ed1a7": "0.10.0",
-    "30042906d2fa185a979addcd3206865f41071efbea2bc0ecaac7e9569f14d2e4": "0.8.0"
+    "30042906d2fa185a979addcd3206865f41071efbea2bc0ecaac7e9569f14d2e4": "0.8.0",
+    "4b340afd3d5523d06be02da8046fed6c52cca97634886cddea06e56380cf311d": "0.17.0"
   },
   "make-strategy/references/reading-inputs.md": {
     "0bb1100ab8d1290f0033395426092f98844cb8ecc14fb824c47487ea7cf59754": "0.8.0",
     "23a2e6446f851b2c3ae60f05279fe513d4acc91a45739d3eab75a6e35f58dcd2": "0.16.0",
+    "7cf6c6c6801c3e61da187625240aeb40f22034cb52e4f0ca182c10e0c5e80fdb": "0.17.0",
     "eb369ff17671e0edebba8280d800d9d6b18f632f525412eddf4e1f8254f80590": "0.12.0"
   },
   "make-strategy/references/rebalance.md": {
     "73b394fdb0b64cc75ad8902f67b8c0b5821d4ad93747b3359f1213a4b4e5f7b7": "0.8.0",
-    "ee0b9cf5e17a85cc7b0a6dd89f0cb009177057de5468eed2f3e8c437e6ca8c34": "0.16.0"
+    "ee0b9cf5e17a85cc7b0a6dd89f0cb009177057de5468eed2f3e8c437e6ca8c34": "0.16.0",
+    "f090dba26dd2041dfac649b6d9039b051c884ec254e1fe6e9fe09ec01d5dfda1": "0.17.0"
   },
   "register-dataset/SKILL.md": {
     "3744c4b026b14ecc260646504695fa3efbf25959fe84cb37e0069ea717335968": "0.8.0",
