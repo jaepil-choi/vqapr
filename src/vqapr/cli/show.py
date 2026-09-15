@@ -228,6 +228,8 @@ def _model(component_id: str, project_root: Path) -> dict[str, Any]:
         ),
         "forms": [str(table.table_id) for table in tables],
         "weights": "derived from the Rebalance the model returns",
+        # How large each side may be, as the run will freeze it (record `291`).
+        "budget": model.budget().encoded() if isinstance(model, StrategyModel) else None,
         "records": [str(table.table_id) for table in tables]
         + (["vqapr.account"] if history is not None else []),
     }

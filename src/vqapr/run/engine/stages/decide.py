@@ -6,6 +6,7 @@ authority checked, the package's own rows recorded, and the accepted intent publ
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from decimal import Decimal
@@ -20,7 +21,7 @@ from vqapr.component.strategy.recorder import InvocationRecorder, TableSpec
 from vqapr.data.execution_table import ExecutionTable
 from vqapr.data.window import ModelWindow
 from vqapr.domain.account import AccountSnapshot, AccountState
-from vqapr.domain.errors import VqaprError
+from vqapr.domain.errors import Failure, FailureSource, Stage, Status, VqaprError
 from vqapr.domain.fill import ExecutionHorizon
 from vqapr.domain.identifiers import ModelStateRef
 from vqapr.domain.intent import (
@@ -36,6 +37,7 @@ from vqapr.domain.memory import (
     prepare_model_state,
 )
 from vqapr.domain.schedule import ScheduledEvent
+from vqapr.portfolio.budget import BudgetRefusal
 from vqapr.record.schema import DEFAULT_TABLE_PREFIX
 from vqapr.run.engine.calls import StrategyModelContext
 from vqapr.run.engine.context import (
@@ -52,6 +54,39 @@ from vqapr.run.engine.evidence import CallbackEvidence
 from vqapr.run.engine.failure import SimulationFailure, SimulationFailureKind, SimulationStage
 from vqapr.run.engine.run_state import LifecycleKind, LifecycleTrace, PreparedRunState
 from vqapr.run.engine.stages.observe import build_account_view
+
+
+def _outside_budget(refusal: BudgetRefusal, strategy: object, component_id: str) -> VqaprError:
+    """A book the strategy's own `budget()` does not admit, as the author's contract failure.
+
+    `Budget.check` raises from inside the package, so left bare the envelope would read the
+    innermost frame and call it the framework's crash (500). It is the author's: their decision
+    against their own declaration (record `291`). Named as a CONTRACT refusal, it says so and
+    points at their file.
+    """
+    try:
+        path = inspect.getsourcefile(type(strategy)) or inspect.getfile(type(strategy))
+    except (TypeError, OSError):
+        path = None
+    return VqaprError(
+        stage=Stage.RUN,
+        failures=[
+            Failure.bounded(
+                "rebalance.outside_budget",
+                "every Rebalance must fit the budget the strategy declares in budget()",
+                status=Status.CONTRACT,
+                observed=str(refusal),
+                fix=(
+                    "change the weights decide() returns, or declare in budget() the budget the "
+                    "strategy actually keeps"
+                ),
+                cause=refusal,
+                source=FailureSource(file=path, key_path=f"strategies.{component_id}"),
+            )
+        ],
+        mutation=False,
+        retry_precondition="fix the strategy's decide() or budget(), then re-run",
+    )
 
 
 class CallbackHandler:
@@ -133,6 +168,7 @@ class CallbackHandler:
             source_refs = self._callback_actual_source_refs(event, window)
             if isinstance(result, Rebalance):
                 with self._callback_intent_boundary(event, self._context.layer.config):
+                    self._check_budget(result, event)
                     result = self._stamp_intent(result, event, account, source_refs)
 
             if isinstance(result, Hold):
@@ -526,6 +562,21 @@ class CallbackHandler:
             self._context.strategy.load_payload(BytesIO(payload_before))
             raise
 
+    def _check_budget(self, decision: Rebalance, event: ScheduledEvent) -> None:
+        """The declared budget, frozen with the run (record `291`): checked once, here, on the
+        weights the strategy wrote -- refused, never clipped and never topped up."""
+        layer = self._context.layer
+        try:
+            layer.budget.check(decision.target_weights)
+        except BudgetRefusal as refusal:
+            raise self._context.failure(
+                stage=SimulationStage.CALLBACK_INTENT,
+                cutoff=event.evaluation_time,
+                owner=layer.config,
+                cause=_outside_budget(refusal, self._context.strategy, layer.component_id),
+                kind=SimulationFailureKind.PRE_COMMIT,
+            ) from refusal
+
     def _stamp_intent(
         self,
         decision: Rebalance,
@@ -555,7 +606,6 @@ class CallbackHandler:
             strategy_id,
             targets,
             Decimal(decision.cash_weight),
-            decision.budget,
             source_refs,
             account.version,
             self._context.state.current.current_model_state_ref,

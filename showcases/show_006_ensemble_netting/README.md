@@ -23,7 +23,7 @@ It reads `tests/fixtures/real`, so it runs on a clean checkout with no vendor wa
 | The members genuinely disagreed | At least one ticker on at least one event carries a non-zero `offset_weight`; the run asserts this rather than printing it, and it holds on the committed fixture (11 of 11 overlap events cross zero on this run) |
 | One member's memory moved, the other's never did | `reversal` mutates `self.memory` every event; `momentum` never assigns it. The two members' published lineage — computed by the package from committed vs. current model-state refs, not self-reported — carries `state_path == ["moved"]` for `reversal` and `["constant"]` for `momentum` |
 | Long-only is emergent | Both members are signed and dollar-neutral. Neither is filtered before combination; the registered `no_short` intersected with `single_name_cap` is what removes the short leg |
-| The combination rule is the Strategy's own choice | The ensemble combines the netted per-ticker signal with `equal_weight` and matches its own declared gross-active budget with `rescale`. `net_members` itself never decides a combination — it only measures |
+| The combination rule is the Strategy's own choice | The ensemble combines the netted per-ticker signal with `equal_weight`, sizes it to its own active target (0.04 a side) with `rescale`, and returns the `optimize` result as `Rebalance(result.weights)`, checked against its declared `Budget.flexible(long_limit=1, short_limit=0)`. `net_members` itself never decides a combination — it only measures |
 | The bounds are the shipped kit's own | `optimize` is called against the box the strategy builds from `no_short` and `single_name_cap` on the benchmark it subscribes to |
 | The account is verified against its own journal | Cash and every position are rebuilt from the committed fill journal and compared to the committed `AccountSnapshot`; a mismatch aborts the run |
 | Output is deterministic | The whole pipeline runs twice into separate projects, and both the reported outcome and the SHA-256 artifact digests must match |
@@ -33,7 +33,8 @@ It reads `tests/fixtures/real`, so it runs on a clean checkout with no vendor wa
 - **No cost model beyond the declared KRX profile.** 3bp commission both sides and 20bp sale tax on
   sells, whole shares, long only. No ticks, price limits, queue position, liquidity or borrow.
 - **The members are demonstration signals**, a demeaned five-day reversal and a demeaned ten-day
-  momentum tilt, each sized equal-weight and rescaled to a 4% gross active budget. They exist to be
+  momentum tilt, each sized equal-weight and filled to `Budget.fixed(long=0.04, short=-0.04)` with
+  `self.budget().fill`. They exist to be
   signed, dollar-neutral, and mutually disagreeing on this fixture — not to be profitable.
 - **`net_members` never decides the combination.** It is a pure measurement (implementation record
   010's prohibition on a package-supplied ensemble combination rule stands); the equal-weight

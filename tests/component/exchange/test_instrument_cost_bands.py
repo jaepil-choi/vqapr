@@ -40,18 +40,11 @@ from vqapr.domain.instrument import (
     instrument,
     instruments,
 )
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import Side, TradeRule
 from vqapr.domain.order import OrderBatch, OrderRequest, plan_orders
 
 FIXTURE = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "real"
 VENUE = "Asia/Seoul"
-LONG_ONLY = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("1")
-)
-LONG_ONLY_SHARES = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("100000")
-)
 
 
 @pytest.fixture(scope="module")
@@ -184,7 +177,6 @@ def test_the_exempt_band_reaches_the_account_through_a_real_fill(real_close) -> 
         prices={etf: price},
         weight_targets={etf: Decimal("40") * price / nav},
         cash_target=(account.cash + Decimal("60") * price) / nav,
-        budget=LONG_ONLY_SHARES,
         rules=venue.rules,
     )
     assert batch.requests[0].delta_quantity == Decimal("-60")
@@ -212,7 +204,6 @@ def test_the_exempt_band_reaches_the_account_through_a_real_fill(real_close) -> 
         },
         cash_target=(stock_account.cash + Decimal("60") * prices[stock])
         / (stock_account.cash + held * prices[stock]),
-        budget=LONG_ONLY_SHARES,
         rules=stock_venue.rules,
     )
     stock_fill = stock_venue.execute(execution_call(stock_venue, 
@@ -241,7 +232,6 @@ def test_the_exempt_sleeve_funds_more_of_the_buy_it_pays_for(real_close) -> None
             prices={etf: prices[etf], stock: prices[stock]},
             weight_targets={stock: Decimal("1")},
             cash_target=Decimal("0"),
-            budget=LONG_ONLY,
             rules=rules,
         )
         return {request.instrument_id: request.delta_quantity for request in batch.requests}
@@ -266,7 +256,6 @@ def test_the_exempt_sleeve_funds_more_of_the_buy_it_pays_for(real_close) -> None
         prices={etf: prices[etf], stock: prices[stock]},
         weight_targets={stock: Decimal("1")},
         cash_target=Decimal("0"),
-        budget=LONG_ONLY,
         rules=venue.rules,
     )
     fills = venue.execute(execution_call(venue, batch, account, _snapshot(at, {etf: prices[etf], stock: prices[stock]})))

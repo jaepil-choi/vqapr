@@ -7,7 +7,7 @@ functions a callback calls before `Rebalance`, each returning the lower and uppe
 every name it was given:
 
     lo, hi = intersect(no_short(names), single_name_cap(names, benchmark, cap))
-    return Rebalance(**optimize(desired=..., lower=lo, upper=hi, ...))
+    return Rebalance(optimize(desired=..., lower=lo, upper=hi, ...).weights)
 
 Everything here is a pure function of its arguments. A rule that needs data -- the cap needs the
 benchmark's weight per name -- is handed it by the strategy, which subscribes to that dataset

@@ -23,18 +23,9 @@ from vqapr.public import (
     Budget,
     DatasetInput,
     Hold,
-    PortfolioDirection,
     Rebalance,
     RowsLookback,
     StrategyModel,
-)
-
-BUDGET = Budget(
-    direction=PortfolioDirection.LONG_ONLY,
-    cash_lower=Decimal(0),
-    cash_upper=Decimal(1),
-    target_lower=Decimal(0),
-    target_upper=Decimal(1),
 )
 
 
@@ -54,14 +45,15 @@ class ShowcaseStrategy(StrategyModel):
             ),
         }
 
+    def budget(self) -> Budget:
+        # Long-only and allowed to hold cash: the long side may use up to all of NAV.
+        return Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call) -> Hold | Rebalance:
         if self.memory is not None:
             return Hold(reason="already-issued")
         if not call.read("prices", "close").latest():
             return Hold(reason="no-observed-price")
         self.memory = {"issued": True}
-        return Rebalance(
-            target_weights={"A": Decimal("0.5")},
-            cash_weight=Decimal("0.5"),
-            budget=BUDGET,
-        )
+        # A hand-written book: half in A, and the other half is cash because 1 - 0.5 = 0.5.
+        return Rebalance({"A": Decimal("0.5")})

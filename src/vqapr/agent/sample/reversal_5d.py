@@ -13,8 +13,8 @@ from decimal import Decimal
 
 import numpy as np
 
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.public import (
+    Budget,
     DatasetInput,
     Hold,
     Rebalance,
@@ -28,15 +28,8 @@ LOOKBACK = 6
 """A five-day return compares the newest close with the close five sessions earlier."""
 
 INVESTED = Decimal("0.9")
+"""The share of the declared long side the book uses; the rest is cash, held by choice."""
 SELECTED = 3
-
-BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY,
-    Decimal("0"),
-    Decimal("1"),
-    Decimal("0"),
-    Decimal("1"),
-)
 
 
 class SampleReversal5d(StrategyModel):
@@ -50,6 +43,11 @@ class SampleReversal5d(StrategyModel):
                 lookback=RowsLookback(rows=LOOKBACK),
             ),
         }
+
+    def budget(self):
+        # Long-only and allowed to hold cash: the long side may use up to all of NAV, and
+        # `decide` uses INVESTED of it. A strategy that declares nothing is dollar neutral.
+        return Budget.flexible(long_limit=1, short_limit=0)
 
     def decide(self, call):
         # One field of the alias as a window: `instants` x `instruments`, the same six sessions
@@ -75,14 +73,8 @@ class SampleReversal5d(StrategyModel):
         )
         weakest = [name for _, name in ranked[:SELECTED]]
 
-        # Only the economics, and Decimal only here, at the intent boundary: the framework's
-        # arithmetic on weights is exact, the signal's is float. The intent id, strategy id,
-        # source references and account version are framework facts: an author who minted them
-        # could get them wrong, and this file is the one a reader copies against their own
-        # dataset.
-        weight = INVESTED / Decimal(SELECTED)
-        return Rebalance(
-            target_weights={name: weight for name in sorted(weakest)},
-            cash_weight=Decimal(1) - weight * Decimal(SELECTED),
-            budget=BUDGET,
-        )
+        # Only the economics: which names, and how much of the declared budget to use. `fill`
+        # sizes the three equally onto the canonical grid. The intent id, strategy id, source
+        # references and account version are framework facts: an author who minted them could
+        # get them wrong, and this file is the one a reader copies against their own dataset.
+        return Rebalance(self.budget().fill({name: 1 for name in weakest}, use=INVESTED))

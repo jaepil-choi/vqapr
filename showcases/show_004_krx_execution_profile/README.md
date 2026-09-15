@@ -42,10 +42,11 @@ Neither profile models price ticks, daily price limits, auction microstructure, 
 partial fills from liquidity, borrow and locate for short sales, or margin. The KRX profile claims
 only the rules listed above.
 
-A fully invested weight book is deliberately avoided: the strategy targets 98% invested and holds a
-2% cash buffer. At exact `cash_target = 0` a fractional weight book can round a hair over NAV at
-Decimal precision and be refused before mutation, which is correct fail-closed behaviour rather
-than something to paper over.
+A fully invested weight book is deliberately avoided: the strategy declares a long-only budget that
+may hold cash, `Budget.flexible(long_limit=1, short_limit=0)`, fills 98% of it
+(`self.budget().fill(signal, use=0.98)`), and holds a 2% cash buffer. At exactly zero cash a
+fractional weight book can round a hair over NAV at Decimal precision and be refused before
+mutation, which is correct fail-closed behaviour rather than something to paper over.
 
 ## Reproduce
 

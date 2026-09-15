@@ -19,6 +19,7 @@ from vqapr.component.strategy.recorder import InvocationRecorder, TableSpec
 from vqapr.data.observation import Observation
 from vqapr.data.panel import PanelWindow
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import DEFAULT_BUDGET, Budget
 
 __all__ = [
     "StrategyCall",
@@ -109,6 +110,19 @@ class StrategyModel(Part):
         """
         return None
 
+    def budget(self) -> Budget:
+        """Declare how large each side of the book is -- once, for the whole run.
+
+        `Budget.fixed(long=1, short=-1)` unless overridden: dollar neutral, each side filled in
+        full. A long-only strategy declares `Budget.fixed(long=1, short=0)`, or
+        `Budget.flexible(long_limit=1, short_limit=0)` when it may hold cash by choice.
+
+        Like `inputs()`, it is evaluated before `memory` exists: registration calls it, the run
+        freezes the value into this strategy's identity and record, and every `Rebalance` is
+        checked against it (record `291`). `self.budget().fill(signal)` sizes a signal to it.
+        """
+        return DEFAULT_BUDGET
+
     def save_payload(self, target: BinaryIO) -> None:
         """Persist private callback state that does not fit `memory` into Flow-owned staging.
 
@@ -129,8 +143,9 @@ class StrategyModel(Part):
     def decide(self, call: StrategyCall) -> Hold | Rebalance:
         """Return the economic decision for this event, and nothing else.
 
-        `Hold` declines. `Rebalance` names one complete desired portfolio: weights, cash, and the
-        budget they must satisfy. Everything an intent additionally carries -- its id, this
+        `Hold` declines. `Rebalance` names one complete desired portfolio as signed weights; cash
+        is what they leave, and the run checks them against `budget()`. Everything an intent
+        additionally carries -- its id, this
         Strategy's id, what was read, the account version seen -- is the Flow's to stamp, and a
         callback that tried to name any of it would be claiming authority it does not have.
         """

@@ -2,7 +2,8 @@
 
 A single price-derived alpha — a short-horizon reversal view, put on a common scale with `rank`,
 neutralised against a market column of ones with `neutralize`, sized with `signal_weight`, and
-matched to a small gross budget with `rescale` — runs through a real `run()` on committed KRX data.
+filled to its declared `Budget.fixed(long=0.02, short=-0.02)` with `self.budget().fill` — runs
+through a real `run()` on committed KRX data.
 Every event that computes a signal records the value *before* weighting (the ranked reversal)
 and the value *after* neutralisation on a declared recorder table, so what a later reader consumes
 is exactly what the callback saw, never a value reconstructed after the fact.
@@ -28,7 +29,7 @@ checks was produced by a real `StrategyModel.decide` callback, dispatched by a r
 
 | Claim | How it is shown |
 |---|---|
-| The signal transforms compose through a real callback | `rank` → `neutralize` → `signal_weight` → `rescale` all run inside `ReversalSignalStrategy.decide`, imported only from `vqapr.public` |
+| The signal transforms compose through a real callback | `rank` → `neutralize` → `signal_weight` → `budget().fill` all run inside `ReversalSignalStrategy.decide`, imported only from `vqapr.public` |
 | The recorded signal is what the callback actually saw | `signal.measurement` records `signal_before_weighting` (the ranked view) and `neutralized_signal` on every event with enough history, written from inside the callback body rather than reconstructed afterward |
 | A recorded diagnostic table round-trips through publication | `publish_run_record` publishes `signal.measurement` and the package-owned `vqapr.account` default table; both are read back from their published parquet — never from the producing run's own objects — and their row counts are checked against `result.final_state.recorder_rows` |
 | The neutralisation is a real property, not an assumed one | The published signal table alone (not the transform, not the run) is used to recompute, on every event, that the neutralised signal sums to exactly zero against a market column of ones |
@@ -42,7 +43,7 @@ checks was produced by a real `StrategyModel.decide` callback, dispatched by a r
   commission, zero tax, full fill). No KRX cost profile, whole-share rounding, or short-sale
   restriction is exercised here; `show_006` exercises the KRX profile.
 - **This is a demonstration signal, not a claim of predictive value.** A demeaned-by-rank five-day
-  reversal, neutralised and rescaled to a 2% gross active budget. It exists to be a real,
+  reversal, neutralised and filled to 0.02 a side (a 4% gross active budget). It exists to be a real,
   non-degenerate, neutral signal on this fixture — not to be profitable.
 - **No box, no compliance rules.** The run declares no `compliance`, and the strategy calls no kit
   function. Nothing here exercises `no_short`, `single_name_cap`, or any observation.

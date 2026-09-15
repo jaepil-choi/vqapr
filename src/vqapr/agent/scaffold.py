@@ -144,6 +144,11 @@ class {class_name}(vq.StrategyModel):
         # Every table decide() writes, with its exact fields; each row's time is stamped for you.
         return (vq.TableSpec(DECISIONS, ("instrument", "action", "score")),)
 
+    def budget(self):
+        # How large each side is, once for the run: long-only, up to all of NAV (`use` in
+        # decide takes part of it). Undeclared, it is Budget.fixed(long=1, short=-1).
+        return vq.Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call):
         # One field as a window: instants x instruments, {window_comment}.
         window = call.read("{alias}", "{field}")
@@ -167,9 +172,9 @@ class {class_name}(vq.StrategyModel):
             self.recorder.append(
                 DECISIONS, {{"instrument": name, "action": action, "score": chosen.get(name)}}
             )
-        # Relative conviction: the package normalises, rounds and balances against cash. A name
-        # left out of `long` is sold.
-        return vq.Rebalance.of(long=chosen, invested="{invested}")
+        # Relative conviction, sized by `budget()`: each side lands exactly on its declared
+        # size and the rest is cash. A name left out of the book is sold.
+        return vq.Rebalance(self.budget().fill(chosen, use="{invested}"))
 '''
 
 

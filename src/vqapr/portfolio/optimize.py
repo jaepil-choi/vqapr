@@ -134,8 +134,9 @@ def optimize(
 ) -> OptimizeResult:
     """Project ``desired`` onto the feasible set exactly.
 
-    ``cash_range`` is expected to be inset from the intent ``Budget`` by the quantization budget,
-    so a result accepted here cannot be refused a moment later at intent construction.
+    ``cash_range`` is expected to be the cash the strategy's declared ``Budget`` admits, inset by
+    the quantization budget, so a result accepted here is not refused a moment later when the run
+    checks the decision against that budget.
     """
     instruments = tuple(sorted(desired))
     if not instruments:

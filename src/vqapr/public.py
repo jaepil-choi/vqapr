@@ -58,10 +58,8 @@ from vqapr.domain.instrument import (
     instruments,
 )
 from vqapr.domain.intent import (
-    Budget,
     EconomicPortfolioIntent,
     IntentSourceRef,
-    PortfolioDirection,
     PortfolioTarget,
 )
 from vqapr.domain.listing import (
@@ -82,6 +80,7 @@ from vqapr.portfolio.allocation import (
     validate_allocation,
 )
 from vqapr.portfolio.bounds import intersect, no_short, single_name_cap
+from vqapr.portfolio.budget import Budget, BudgetRefusal
 from vqapr.portfolio.netting import TickerNetting, net_members
 from vqapr.portfolio.optimize import QUANTUM, OptimizeRefusal, OptimizeResult, optimize
 from vqapr.portfolio.weights import (
@@ -172,6 +171,7 @@ __all__ = (
     "AllocationSign",
     "AllocationViolation",
     "Budget",
+    "BudgetRefusal",
     "CalendarLookback",
     "Call",
     "CashMode",
@@ -236,7 +236,6 @@ __all__ = (
     "OptimizeResult",
     "PanelWindow",
     "Part",
-    "PortfolioDirection",
     "PortfolioTarget",
     "Rebalance",
     "Role",

@@ -59,16 +59,8 @@ STRATEGIES = textwrap.dedent(
     from vqapr.public import (
         DatasetInput, Hold, Rebalance, RowsLookback, StrategyModel,
     )
-    from vqapr.public import Budget, PortfolioDirection
+    from vqapr.public import Budget
     from vqapr.public import AcademicExchange, ListingAccess, TradeRule
-
-    BUDGET = Budget(
-        direction=PortfolioDirection.LONG_ONLY,
-        cash_lower=Decimal(0),
-        cash_upper=Decimal(1),
-        target_lower=Decimal(0),
-        target_upper=Decimal(1),
-    )
 
 
     class MonthlyDecider(StrategyModel):
@@ -87,17 +79,16 @@ STRATEGIES = textwrap.dedent(
                 ),
             }
 
+        def budget(self):
+            return Budget.flexible(long_limit=1, short_limit=0)
+
         def decide(self, call):
             state = self.memory if isinstance(self.memory, dict) else {}
             observed = call.read("prices", "close").latest()
             if state.get("formed") or not observed:
                 return Hold(reason="already-formed")
             self.memory = {"formed": True}
-            return Rebalance(
-                target_weights={"A005930": Decimal("0.5")},
-                cash_weight=Decimal("0.5"),
-                budget=BUDGET,
-            )
+            return Rebalance({"A005930": Decimal("0.5")})
 
 
     class ClockExchange(AcademicExchange):

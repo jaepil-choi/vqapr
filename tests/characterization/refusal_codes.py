@@ -1021,6 +1021,35 @@ def _runtime_conformance_and_loading(tmp_path: Path) -> list[str]:
         diagnosis = conformance(_ref(source, name, component_id=component_id))
         codes.extend(failure.code for failure in diagnosis.failures)
 
+    # A strategy whose declared budget cannot be read (record `291`): conformance calls
+    # `budget()` once, so the refusal is observed here rather than only declared in source.
+    sized = tmp_path / "sized.py"
+    sized.write_text(
+        textwrap.dedent(
+            """
+            from vqapr.public import Hold, StrategyModel
+
+            class Sized(StrategyModel):
+                def budget(self):
+                    return {"long": 1, "short": -1}
+
+                def decide(self, call):
+                    return Hold(reason="probe")
+            """
+        ),
+        encoding="utf-8",
+    )
+    diagnosis = conformance(
+        ComponentRef.of(
+            "sized",
+            Role.STRATEGY_MODEL,
+            sized,
+            "Sized",
+            fingerprint=fingerprint_component(sized, kind=Role.STRATEGY_MODEL, object_name="Sized"),
+        )
+    )
+    codes.extend(failure.code for failure in diagnosis.failures)
+
     try:
         register_compliance(tmp_path, "again", tmp_path / "does-not-exist.py", "Limit")
     except VqaprError as error:

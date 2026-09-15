@@ -19,7 +19,7 @@ import pytest
 
 from vqapr.agent.scaffold import render
 from vqapr.domain.wiring import Role
-from vqapr.public import Rebalance
+from vqapr.public import Budget, Rebalance
 
 BANNED = ("uuid5", "source_refs", "account_version", "strategy_id")
 """Identity and provenance the FRAMEWORK owns. AC-A2 forbids all four from authored code.
@@ -94,61 +94,76 @@ def test_the_author_never_rescales_or_names_the_grid() -> None:
 
 
 def test_the_scaffold_states_relative_conviction_not_absolute_weights() -> None:
-    """AC-A6's positive half: the author says what they like; the package does the arithmetic."""
-    assert "Rebalance.of(long=" in _strategy()
+    """AC-A6's positive half: the author says what they like and declares the budget once; the
+    package does the arithmetic (record `291`)."""
+    body = _strategy()
+
+    assert "def budget(self):" in body
+    assert "vq.Budget.flexible(long_limit=1, short_limit=0)" in body
+    assert "vq.Rebalance(self.budget().fill(chosen, use=" in body
 
 
 def test_relative_weights_normalise_to_an_exact_book() -> None:
-    """The invariant `Rebalance` already enforced, now reachable without hand arithmetic.
+    """The invariant `Rebalance` depends on, reachable without hand arithmetic.
 
-    `sum(weights) + cash == 1` EXACTLY -- and an author computing that by hand has to land on one
-    to the last digit, where a single-ulp miss is refused by the same check that catches a real
-    mistake. Relative conviction cannot make that error, because no total is ever stated.
+    `sum(weights) + cash == 1` EXACTLY -- and an author computing weights by hand has to land each
+    side on its declared size to the last digit, where a single-ulp miss is refused by the same
+    check that catches a real mistake. Relative conviction cannot make that error, because no
+    total is ever stated.
     """
-    book = Rebalance.of(long={"A": 2, "B": 1}, invested="0.9")
+    book = Rebalance(Budget.flexible(long_limit=1, short_limit=0).fill({"A": 2, "B": 1}, use="0.9"))
 
     assert sum(book.target_weights.values()) + book.cash_weight == Decimal(1)
     assert book.target_weights["A"] == book.target_weights["B"] * 2
 
 
 @pytest.mark.parametrize(
-    ("label", "kwargs"),
+    ("label", "budget", "signal", "use"),
     [
-        ("three equal, a 1/3 split that does not divide", {"long": {"A": 1, "B": 1, "C": 1}}),
-        ("seven equal", {"long": {f"N{i}": 1 for i in range(7)}}),
-        ("dollar neutral", {"long": {"A": 1}, "short": {"B": 1}}),
-        ("uneven sides", {"long": {"A": 1}, "short": {"B": 1, "C": 1, "D": 1}}),
-        ("awkward invested", {"long": {"A": 1, "B": 2}, "invested": "0.333"}),
+        (
+            "three equal, a 1/3 split that does not divide",
+            Budget.fixed(long=1, short=0),
+            {"A": 1, "B": 1, "C": 1},
+            1,
+        ),
+        ("seven equal", Budget.fixed(long=1, short=0), {f"N{i}": 1 for i in range(7)}, 1),
+        ("dollar neutral", Budget.fixed(long=1, short=-1), {"A": 1, "B": -1}, 1),
+        (
+            "uneven sides",
+            Budget.fixed(long="0.5", short="-0.5"),
+            {"A": 1, "B": -1, "C": -1, "D": -1},
+            1,
+        ),
+        ("awkward use", Budget.flexible(long_limit=1, short_limit=0), {"A": 1, "B": 2}, "0.333"),
         (
             "3 long vs 7 short",
-            {
-                "long": {f"L{i}": 1 for i in range(3)},
-                "short": {f"S{i}": i + 1 for i in range(7)},
-                "invested": "0.8",
-            },
+            Budget.flexible(long_limit=1, short_limit=-1),
+            {**{f"L{i}": 1 for i in range(3)}, **{f"S{i}": -(i + 1) for i in range(7)}},
+            "0.8",
         ),
     ],
 )
-def test_every_book_is_exact_and_inside_its_own_budget(label: str, kwargs: dict) -> None:
+def test_every_book_is_exact_and_inside_its_own_budget(
+    label: str, budget: Budget, signal: dict, use: object
+) -> None:
     """The arithmetic every authored strategy depends on, over inputs that do not divide evenly.
 
     Two real defects were found here by running these cases rather than reasoning about them.
 
     First, the rounding crumb was settled in CASH. Three shorts at -0.5/3 leave -1e-12, which
     pushed cash to 1.000000000001 -- one step past fully-uninvested -- and a book that is
-    arithmetically perfect was refused for a rounding artifact. The crumb now lands on the largest
-    position, where it is proportionally smallest and cannot move cash across a bound.
+    arithmetically perfect was refused for a rounding artifact. The crumb now lands on its own
+    side's largest name, where it is proportionally smallest and cannot move a side off its size.
 
-    Second, and worse: cash was computed as `1 - invested`. For a SIGNED book `invested` is GROSS
+    Second, and worse: cash was computed as `1 - invested`. For a SIGNED book `invested` was GROSS
     exposure while `sum(weights)` is NET, so a dollar-neutral book -- fully invested, netting to
-    zero -- produced a residual of about 1. Cash is the net residual; those are different numbers
-    and only one of them is cash.
+    zero -- produced a residual of about 1. Cash is the net residual, derived since record `291`
+    and never stated.
     """
-    book = Rebalance.of(**kwargs)
+    book = Rebalance(budget.fill(signal, use=use))
 
     assert sum(book.target_weights.values()) + book.cash_weight == Decimal(1), label
-    assert all(book.budget.validates_target(v) for v in book.target_weights.values()), label
-    assert book.budget.validates_cash(book.cash_weight), label
+    budget.check(book.target_weights)
 
 
 def test_a_short_only_book_is_expressible() -> None:
@@ -157,50 +172,13 @@ def test_a_short_only_book_is_expressible() -> None:
     `cash_upper` was pinned at 1 while `cash_lower` was correctly widened for shorts, and that
     asymmetry made the refusal name CASH when the real problem was a bound that cannot represent
     short-sale proceeds. Selling short raises cash: a book that is only short holds MORE than its
-    NAV in cash, by exactly what it shorted. The arithmetic was right and the bound was wrong.
+    NAV in cash, by exactly what it shorted. It is a declaration now, `fixed(long=0, short=-1)`.
     """
-    book = Rebalance.of(short={"A": 1, "B": 1})
+    book = Rebalance(Budget.fixed(long=0, short=-1).fill({"A": -1, "B": -1}))
 
     assert all(weight < 0 for weight in book.target_weights.values())
     assert book.cash_weight == Decimal(2), "shorting the whole book must raise cash above NAV"
     assert sum(book.target_weights.values()) + book.cash_weight == Decimal(1)
-
-
-def test_a_name_cannot_be_long_and_short_at_once() -> None:
-    """A contradiction, not a netting instruction.
-
-    The short silently overwrote the long, so a leg the author wrote disappeared and the book was
-    neither of the two things asked for. It was masked, too: the resulting net always tripped a
-    cash bound, so the author got a refusal about cash that never mentioned the duplicate.
-    """
-    with pytest.raises(ValueError, match="long and short the same name"):
-        Rebalance.of(long={"A": 1, "B": 1}, short={"A": 1})
-
-
-def test_invested_means_gross_exposure_for_a_signed_book() -> None:
-    """A long/short book puts `invested` to work in total, not net of the hedge."""
-    book = Rebalance.of(long={"A": 1}, short={"B": 1}, invested="0.8")
-
-    gross = sum(abs(weight) for weight in book.target_weights.values())
-    assert gross == Decimal("0.8"), f"gross exposure is {gross}, not the 0.8 the author asked for"
-
-
-def test_a_short_book_is_signed_without_the_author_saying_so() -> None:
-    """The budget follows from what was asked for rather than being declared a second time."""
-    book = Rebalance.of(long={"A": 1}, short={"B": 1})
-
-    assert book.target_weights["B"] < 0
-    assert sum(book.target_weights.values()) + book.cash_weight == Decimal(1)
-
-
-def test_a_side_is_chosen_by_its_mapping_never_by_a_sign() -> None:
-    """One intention must not have two spellings that disagree.
-
-    `short={"A": 2}` means twice as short. Accepting `short={"A": -2}` would make the same wish
-    expressible two ways, and the two would cancel rather than agree.
-    """
-    with pytest.raises(ValueError, match="must not be negative"):
-        Rebalance.of(short={"A": -2})
 
 
 @pytest.mark.parametrize(

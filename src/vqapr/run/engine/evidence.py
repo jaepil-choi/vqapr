@@ -67,7 +67,6 @@ class AccountCommitEvidence:
     rows: a 3,000-name book's rows per fill are the venue's data, read again from the table."""
     planning_nav: object
     planning_cash_target: object
-    planning_budget: object
     intended_targets: tuple[object, ...]
     requested_orders: object
     dealt_fills: object

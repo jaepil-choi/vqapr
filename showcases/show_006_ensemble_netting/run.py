@@ -89,10 +89,10 @@ CAP = "0.10"
 the shipped compliance rule of the same name observes the book against its own copy of it."""
 
 MEMBER_BUDGET = Decimal("0.04")
-"""Total absolute active weight each member is allowed to express."""
+"""Each side of a member's book: `Budget.fixed(long=0.04, short=-0.04)`."""
 
 ENSEMBLE_BUDGET = Decimal("0.04")
-"""Total absolute active weight the ensemble is rescaled to after equal-weight combination."""
+"""Each side of the active target the ensemble rescales its combination to, before `optimize`."""
 
 REVERSAL_LOOKBACK = 6
 """Six closes span a five-session return."""
@@ -174,7 +174,7 @@ def _member_source(
     memory_write: str,
 ) -> str:
     """Both members share the same shape: read closes, demean a cross-sectional return, size and
-    rescale to a fixed gross active budget. Only the horizon and the memory-mutation behaviour
+    fill a fixed budget on each side. Only the horizon and the memory-mutation behaviour
     differ, and both differences are the entire point of this showcase.
     """
     return (
@@ -189,28 +189,21 @@ from vqapr.public import (
     Budget,
     DataRequirement,
     Hold,
-    PortfolioDirection,
     Rebalance,
     RowsLookback,
     StrategyModel,
     equal_weight,
-    rescale,
 )
 
 LOOKBACK = {lookback}
 ACTIVE_BUDGET = Decimal("{MEMBER_BUDGET}")
 
-BUDGET = Budget(
-    PortfolioDirection.SIGNED,
-    Decimal("0"),
-    Decimal("2"),
-    Decimal("-1"),
-    Decimal("1"),
-)
-
 
 class {class_name}(StrategyModel):
-    """{horizon_sign}, demeaned, sized equal-weight and rescaled to a fixed gross active budget."""
+    """{horizon_sign}, demeaned, sized equal-weight and filled to a fixed budget on each side."""
+
+    def budget(self):
+        return Budget.fixed(long=ACTIVE_BUDGET, short=-ACTIVE_BUDGET)
 
     def requirements(self):
         return (
@@ -242,13 +235,7 @@ class {class_name}(StrategyModel):
             return Hold(reason="the cross-section is flat")
 
         sized = equal_weight(centred)
-        weights = rescale(sized, long=ACTIVE_BUDGET, short=-ACTIVE_BUDGET)
-
-        return Rebalance(
-            target_weights=dict(sorted(weights.items())),
-            cash_weight=Decimal(1) - sum(weights.values()),
-            budget=BUDGET,
-        )
+        return Rebalance(self.budget().fill(sized))
 '''
         + _SOURCE_REFS
     )
@@ -300,7 +287,6 @@ from vqapr.public import (
     Budget,
     DataRequirement,
     Hold,
-    PortfolioDirection,
     QUANTUM,
     Rebalance,
     RowsLookback,
@@ -322,14 +308,6 @@ ENSEMBLE_BUDGET = Decimal("'''
 NEUTRALITY = Decimal("0.000000001")
 """What "dollar neutral" is allowed to mean once a published member lands on the canonical grid."""
 
-BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY,
-    Decimal("0"),
-    Decimal("1"),
-    Decimal("0"),
-    Decimal("1"),
-)
-
 
 class EnsembleStrategy(StrategyModel):
     """desired = equal-weight(reversal, momentum) rescaled to budget, projected onto the box this
@@ -350,6 +328,11 @@ class EnsembleStrategy(StrategyModel):
         self._benchmark_dataset_id = benchmark_dataset_id
         self._cap = Decimal(cap)
         self._benchmark_tolerance = Decimal(benchmark_tolerance)
+
+    def budget(self):
+        # Long-only and allowed to hold cash: `optimize` builds inside no_short, and whatever the
+        # book does not use stays cash.
+        return Budget.flexible(long_limit=1, short_limit=0)
 
     def tables(self):
         return (
@@ -421,9 +404,9 @@ class EnsembleStrategy(StrategyModel):
         )
 
         # The economic combination is the Strategy's own choice: simple equal weight over the two
-        # members' *net* per-ticker weight, then rescaled to this run's own declared gross active
-        # budget. Neither member is filtered before combining -- long-only is never asked of
-        # either member here.
+        # members' *net* per-ticker weight, then rescaled to this ensemble's own active target,
+        # ENSEMBLE_BUDGET a side. Neither member is filtered before combining -- long-only is never
+        # asked of either member here.
         net_signal = {name: measured.net_weight for name, measured in netting.items()}
         if all(value == 0 for value in net_signal.values()):
             return Hold(reason="the netted signal is flat")
@@ -462,11 +445,7 @@ class EnsembleStrategy(StrategyModel):
         history["rebalances"] = int(history.get("rebalances", 0)) + 1
         self.memory = history
 
-        return Rebalance(
-            target_weights=dict(sorted(result.weights.items())),
-            cash_weight=result.cash,
-            budget=BUDGET,
-        )
+        return Rebalance(result.weights)
 '''
     + _SOURCE_REFS
 )

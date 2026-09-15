@@ -67,6 +67,7 @@
     "lookback.uncovered",
     "period.uncovered",
     "preflight.refused",
+    "rebalance.outside_budget",
     "record.exists",
     "record.live",
     "remove.referenced",
@@ -110,6 +111,7 @@
     "workspace.write_failed"
   ],
   "runtime_codes": [
+    "component.budget_invalid",
     "component.compliance_id_mismatch",
     "component.construction_failed",
     "component.signature_invalid",
@@ -220,6 +222,7 @@
       "weights.venue_conflict"
     ],
     "422": [
+      "component.budget_invalid",
       "component.compliance_id_mismatch",
       "component.execution_profile_invalid",
       "component.method_missing",
@@ -238,6 +241,7 @@
       "datamodel.output.instrument_unrequested",
       "datamodel.output.rows_invalid",
       "datamodel.output.schema_mismatch",
+      "rebalance.outside_budget",
       "requirement.undeclared"
     ],
     "423": [

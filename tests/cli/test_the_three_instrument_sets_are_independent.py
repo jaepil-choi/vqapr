@@ -41,8 +41,11 @@ class HoldsStock(vq.StrategyModel):
             )
         }
 
+    def budget(self):
+        return vq.Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call):
-        return vq.Rebalance.of(long={"A005930": Decimal(1)}, invested="1.0")
+        return vq.Rebalance(self.budget().fill({"A005930": Decimal(1)}))
 '''
 
 _WANTS_ALL = '''"""Orders every name in the table, two of which the project never declared."""
@@ -60,10 +63,13 @@ class WantsAll(vq.StrategyModel):
             )
         }
 
+    def budget(self):
+        return vq.Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call):
         third = Decimal(1) / Decimal(3)
-        return vq.Rebalance.of(
-            long={"A069500": third, "A005930": third, "A000660": third}, invested="1.0"
+        return vq.Rebalance(
+            self.budget().fill({"A069500": third, "A005930": third, "A000660": third})
         )
 '''
 

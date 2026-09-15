@@ -31,16 +31,12 @@ from vqapr.domain.instrument import (
     StockInstrument,
     instrument,
 )
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import ExchangeRulesView, ListingAccess, Side, TradeRule
 from vqapr.domain.order import plan_orders
 
 BOTH = ListingAccess.SIGNED
 NO_SIDE = ListingAccess.NONE
 FINE = Decimal("0.000001")
-SIGNED = Budget(
-    PortfolioDirection.SIGNED, Decimal("-2"), Decimal("2"), Decimal("-2"), Decimal("2")
-)
 
 
 def _fractional(instrument_id: str, access: ListingAccess = BOTH) -> TradeRule:
@@ -126,7 +122,6 @@ def test_a_target_on_an_untradable_listing_is_refused_by_order_planning() -> Non
             prices={"KOSPI200": Decimal("350")},
             weight_targets={"KOSPI200": Decimal("1")},
             cash_target=Decimal("0"),
-            budget=SIGNED,
             rules=view,
         )
 
@@ -137,7 +132,6 @@ def test_a_target_on_an_untradable_listing_is_refused_by_order_planning() -> Non
         prices={"KOSPI200": Decimal("350"), "A005930": Decimal("100")},
         weight_targets={"A005930": Decimal("1")},
         cash_target=Decimal("0"),
-        budget=SIGNED,
         rules=view,
     )
     assert {r.instrument_id for r in batch.requests} == {"A005930"}
@@ -159,7 +153,6 @@ def test_a_factor_fills_fractionally_through_the_ordinary_path() -> None:
         prices={name: price},
         weight_targets={name: Decimal("-0.5")},  # signed: a factor may be held short
         cash_target=Decimal("1.5"),
-        budget=SIGNED,
         rules=venue.rules,
     )
     quantity = batch.requests[0].delta_quantity

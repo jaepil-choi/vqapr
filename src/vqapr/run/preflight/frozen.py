@@ -25,6 +25,7 @@ from vqapr.domain.identifiers import ModelStateRef, ScheduleId
 from vqapr.domain.memory import ModelMemory, opening_memory
 from vqapr.domain.schedule import ScheduledEvent
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import DEFAULT_BUDGET, Budget
 from vqapr.workspace.run_definition import (
     FINGERPRINT_PREFIX,
     ComplianceSet,
@@ -94,8 +95,8 @@ def merged_events(*schedules: FrozenSchedule | None) -> tuple[ScheduledEvent, ..
 class FrozenStrategy:
     """One strategy's layer of a frozen run: what is its own and not the run's.
 
-    Its identity folds the component fingerprint, the run's Compliance rules, its schedule slice,
-    its opening memory and what it and the rules read.
+    Its identity folds the component fingerprint, its declared budget, the run's Compliance
+    rules, its schedule slice, its opening memory and what it and the rules read.
     """
 
     config: StrategyConfig
@@ -105,6 +106,7 @@ class FrozenStrategy:
     compliance_requirements: tuple[DataRequirement, ...] = ()
     initial_model_memory: ModelMemory = field(default_factory=dict)
     initial_payload: bytes = b""
+    budget: Budget = DEFAULT_BUDGET
     initial_model_state_ref: ModelStateRef = field(init=False)
     _identity: str = field(default="", init=False, repr=False, compare=False)
 
@@ -113,6 +115,8 @@ class FrozenStrategy:
             raise ValueError("schedule must match the strategy config's schedule_id")
         _require_requirements("requirements", self.requirements)
         _require_requirements("compliance_requirements", self.compliance_requirements)
+        if not isinstance(self.budget, Budget):
+            raise TypeError(f"budget must be a Budget; got {type(self.budget).__name__}")
         # `{}` when nothing was declared (`docs/issues/089`): the first callback finds a mapping.
         memory = opening_memory(self.initial_model_memory)
         object.__setattr__(self, "initial_model_memory", memory)
@@ -147,6 +151,7 @@ class FrozenStrategy:
                             self.component_id,
                             self.config.component.fingerprint,
                         ),
+                        "budget": self.budget.encoded(),
                         "compliance": [
                             (rule.component_id, rule.fingerprint) for rule in self.compliance.rules
                         ],

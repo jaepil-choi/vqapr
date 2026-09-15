@@ -102,7 +102,12 @@ StrategyModel built-ins as **없음** for that reason. All three members are pro
 files written by the run, exactly as show_006 does it.
 
 What the package supplies is the non-trivial portfolio and analysis surface: `equal_weight`,
-`rescale`, `net_members`, and `information_coefficient`. Nothing in `src/vqapr/` learns what a
-low-volatility alpha is.
+`Budget.fill`, `rescale`, `net_members`, and `information_coefficient`. Nothing in `src/vqapr/`
+learns what a low-volatility alpha is.
+
+Each member declares `Budget.fixed(long=0.04, short=-0.04)` and returns
+`Rebalance(self.budget().fill(sized))`; the ensemble declares
+`Budget.flexible(long_limit=1, short_limit=0)` and returns the `optimize` result as
+`Rebalance(result.weights)`.
 
 `outputs/` is gitignored, and each replicate builds its own project under it.

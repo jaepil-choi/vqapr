@@ -28,15 +28,14 @@ from vqapr.domain.instants import LocalInstantDeclaration
 from vqapr.domain.instrument import InstrumentRoster
 from vqapr.domain.instrument import instruments as _instruments
 from vqapr.domain.intent import (
-    Budget,
     EconomicPortfolioIntent,
     IntentSourceRef,
-    PortfolioDirection,
     validate_economic_intent,
 )
 from vqapr.domain.listing import ListingAccess, TradeRule
 from vqapr.domain.schedule import Schedule, ScheduledEvent
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import Budget
 from vqapr.public import (
     Compliance,
     ComplianceCall,
@@ -63,9 +62,7 @@ from vqapr.workspace.run_definition import ComplianceSet, StrategyConfig
 KST = ZoneInfo("Asia/Seoul")
 
 
-_BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("1")
-)
+_BUDGET = Budget.flexible(long_limit=1, short_limit=0)
 _SOURCE = IntentSourceRef("strategy-source", "0" * 64)
 
 
@@ -206,6 +203,7 @@ def _frozen(
         compliance_requirements=(
             (_requirement(),) if compliance is None or compliance.rules else ()
         ),
+        budget=_BUDGET,
     )
     return FrozenRun(
         run_id="test",
@@ -472,7 +470,7 @@ def test_compliance_observes_at_the_fill_instant_with_its_own_reads(
                 )
             ),
         ),
-        _Strategy((Rebalance(target_weights={}, cash_weight=Decimal("1"), budget=_BUDGET),)),
+        _Strategy((Rebalance({}),)),
         _state(),
         (rule,),
     ).run()
@@ -497,7 +495,7 @@ def test_strategy_payload_has_no_timing_authority_and_flow_stamps_current_event(
     # Flow produces carries no timing of its own, and only the stamped object has an identity
     # for a timing claim to hang on.
     payload = EconomicPortfolioIntent(
-        UUID(int=1), "strategy", (), Decimal("1"), _BUDGET, (_SOURCE,), 0, None
+        UUID(int=1), "strategy", (), Decimal("1"), (_SOURCE,), 0, None
     )
     at = datetime(2024, 3, 5, 4, tzinfo=KST)
     target = ExactExecutionTarget(
@@ -569,7 +567,7 @@ def test_the_flow_stamps_provenance_from_what_the_callback_actually_read(
 
         def decide(self, context: object) -> Rebalance:
             context.window.observations(requirement)
-            return Rebalance(target_weights={}, cash_weight=Decimal("1"), budget=_BUDGET)
+            return Rebalance({})
 
     frozen = _frozen(
         (callback,),
@@ -735,11 +733,7 @@ def test_intent_target_outside_frozen_universe_is_rejected(tmp_path: Path) -> No
             """,
         )
     )
-    intent = Rebalance(
-        target_weights={"C": Decimal("0")},
-        cash_weight=Decimal("1"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"C": Decimal("0")})
     state = _state()
 
     with pytest.raises(SimulationFailure, match="frozen instrument universe") as raised:
@@ -899,11 +893,7 @@ def test_flow_no_target_failure_retains_execution_owner_and_existing_pending(
             """,
         )
     )
-    intent = Rebalance(
-        target_weights={},
-        cash_weight=Decimal("1"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({})
     prior = type("PriorPending", (), {"pending_id": "prior"})()
     state = RunStateRepository(
         initial_account=AccountState(_ACCOUNT),
@@ -1082,11 +1072,7 @@ def test_typed_intent_runs_pending_to_due_academic_fill_feedback_and_finalizatio
     )
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"A": Decimal("1")},
-        cash_weight=Decimal("0"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"A": Decimal("1")})
     frozen = _frozen((callback, target), end=target, execution=registration)
     state = _state()
     strategy = _Strategy((intent, Hold(reason="after due")))
@@ -1179,11 +1165,7 @@ def test_no_decision_preserves_existing_pending_until_due(tmp_path: Path) -> Non
             """,
         )
     )
-    intent = Rebalance(
-        target_weights={"A": Decimal("1")},
-        cash_weight=Decimal("0"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"A": Decimal("1")})
 
     result = _flow(
         _frozen((first, second), end=target, execution=registration),
@@ -1217,11 +1199,7 @@ def test_target_only_absence_publishes_typed_zero_dealt_fill(tmp_path: Path) -> 
     )
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"B": Decimal("0")},
-        cash_weight=Decimal("1"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"B": Decimal("0")})
     state = _state()
     result = _flow(
         _frozen((callback,), end=target, execution=registration),
@@ -1284,11 +1262,7 @@ def test_a_held_instrument_absent_from_the_venue_is_carried_not_refused(tmp_path
     initial = AccountSnapshot(0, Decimal("90"), {"A": Decimal("1")})
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"B": Decimal("0")},
-        cash_weight=Decimal("1"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"B": Decimal("0")})
     state = _state(initial)
 
     _flow(
@@ -1317,11 +1291,7 @@ def test_due_failures_preserve_pre_and_post_commit_authority_lineage(
     )
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"A": Decimal("1")},
-        cash_weight=Decimal("0"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"A": Decimal("1")})
     state = _state()
 
     def required_valuation_failure(*_: object, **__: object) -> object:
@@ -1384,11 +1354,7 @@ def test_due_fault_boundaries_report_their_actual_owner_and_mutation(
     )
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"A": Decimal("1")},
-        cash_weight=Decimal("0"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"A": Decimal("1")})
     frozen = _frozen((callback,), end=target, execution=registration)
     state = _state()
     flow = _flow(frozen, _Strategy((intent,)), state)
@@ -1469,11 +1435,7 @@ def test_omitted_holding_is_liquidated_through_the_due_flow(tmp_path: Path) -> N
     initial = AccountSnapshot(0, Decimal("90"), {"A": Decimal("1")})
     callback = datetime(2024, 3, 5, 9, tzinfo=KST)
     target = datetime(2024, 3, 5, 15, 30, tzinfo=KST)
-    intent = Rebalance(
-        target_weights={"B": Decimal("0.1")},
-        cash_weight=Decimal("0.9"),
-        budget=_BUDGET,
-    )
+    intent = Rebalance({"B": Decimal("0.1")})
 
     result = _flow(
         _frozen((callback,), end=target, execution=registration, account=initial),

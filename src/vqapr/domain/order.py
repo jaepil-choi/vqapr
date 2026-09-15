@@ -20,7 +20,6 @@ from decimal import Decimal
 
 from vqapr.domain.account import AccountSnapshot, CashMode
 from vqapr.domain.instrument import base_quantity_for
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import ExchangeRulesView, Side
 
 __all__ = [
@@ -524,7 +523,6 @@ def plan_orders(
     prices: Mapping[str, Decimal],
     weight_targets: Mapping[str, Decimal],
     cash_target: Decimal,
-    budget: Budget,
     rules: ExchangeRulesView | None = None,
     tradable: Mapping[str, bool] | None = None,
     cash_mode: CashMode = CashMode.FUNDED,
@@ -557,8 +555,6 @@ def plan_orders(
             "and no margin call is modelled to have closed it earlier"
         )
     cash = _decimal(cash_target, name="cash_target")
-    if not budget.validates_cash(cash):
-        raise ValueError("cash_target is outside the declared budget")
     selected_prices = _prices(prices)
     weights = _targets(weight_targets, name="weight_targets")
     if sum(weights.values(), Decimal(0)) + cash != 1:
@@ -576,9 +572,8 @@ def plan_orders(
             # an unpriceable position cannot be sold, and closing it at an invented price would
             # fabricate the proceeds -- and the Exchange publishes typed ABSENT evidence for it.
             desired = held
-            allocation = weights.get(instrument_id, Decimal(0))
             if instrument_id in weights:
-                unresolved_weights[instrument_id] = allocation
+                unresolved_weights[instrument_id] = weights[instrument_id]
         elif instrument_id in weights:
             # The one place a weight becomes a quantity. Routed through the venue so a category
             # whose contract is not one unit of the quoted price sizes correctly here too.
@@ -588,14 +583,8 @@ def plan_orders(
                 if rules is None
                 else rules.quantity_for(instrument_id, exposure, price)
             )
-            allocation = weights[instrument_id]
         else:
             desired = Decimal(0)
-            allocation = Decimal(0)
-        if budget.direction is PortfolioDirection.LONG_ONLY and desired < 0:
-            raise ValueError("long_only budget forbids negative desired positions")
-        if not budget.validates_target(allocation):
-            raise ValueError("complete desired position is outside the declared budget bounds")
         desired_quantities[instrument_id] = desired
 
     sized_quantities = dict(desired_quantities)

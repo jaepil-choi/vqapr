@@ -9,7 +9,6 @@ from vqapr.domain.account import Account, AccountMode, AccountSnapshot, AccountS
 from vqapr.domain.cost import SideCost
 from vqapr.domain.fill import Fill, FillBatch, ZeroDealtReason, fill_entries
 from vqapr.domain.instrument import InstrumentKind, InstrumentRoster, instrument
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import ExchangeRulesView, ListingAccess, Side, TradeRule, TradeTerms
 from vqapr.domain.order import plan_orders
 
@@ -18,12 +17,6 @@ _AT = datetime(2024, 1, 2, 15, 30, tzinfo=UTC)
 
 def decimal(value: str) -> Decimal:
     return Decimal(value)
-
-
-_BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY, decimal("0"), decimal("1"), decimal("0"), decimal("1")
-)
-
 
 
 def snapshot(
@@ -43,7 +36,6 @@ def test_weight_target_uses_execution_time_nav_after_a_price_gap() -> None:
         prices={"A": decimal("40")},
         weight_targets={"A": decimal("0.5")},
         cash_target=decimal("0.5"),
-        budget=_BUDGET,
     )
 
     assert batch.requests[0].desired_quantity == decimal("2.5")
@@ -57,7 +49,6 @@ def test_omitted_holding_is_a_zero_target_and_sells_precede_buys() -> None:
         prices={"Z": decimal("10"), "A": decimal("10"), "B": decimal("10")},
         weight_targets={"A": decimal("0.1"), "B": decimal("0.2")},
         cash_target=decimal("0.7"),
-        budget=_BUDGET,
     )
 
     assert [(order.instrument_id, order.delta_quantity) for order in batch.requests] == [
@@ -80,44 +71,10 @@ def test_an_unchanged_weight_target_needs_no_trade_after_a_price_move() -> None:
         prices={"A": decimal("30"), "B": decimal("10")},
         weight_targets={"A": decimal("0.75"), "B": decimal("0.25")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
     )
 
     assert [order.delta_quantity for order in batch.requests] == [decimal("0"), decimal("0")]
     assert [diagnostic.instrument_id for diagnostic in batch.zero_delta_diagnostics] == ["A", "B"]
-
-
-def test_complete_desired_positions_enforce_budget_direction_and_bounds() -> None:
-    with pytest.raises(ValueError, match="long_only"):
-        plan_orders(
-            account=snapshot(),
-            execution_time_nav=decimal("100"),
-            prices={"A": decimal("10")},
-            weight_targets={"A": decimal("-0.1")},
-            cash_target=decimal("1.1"),
-            budget=Budget(
-                PortfolioDirection.LONG_ONLY,
-                decimal("0"),
-                decimal("2"),
-                decimal("-1"),
-                decimal("1"),
-            ),
-        )
-    with pytest.raises(ValueError, match="budget bounds"):
-        plan_orders(
-            account=snapshot(),
-            execution_time_nav=decimal("100"),
-            prices={"A": decimal("10")},
-            weight_targets={"A": decimal("0.7")},
-            cash_target=decimal("0.3"),
-            budget=Budget(
-                PortfolioDirection.LONG_ONLY,
-                decimal("0"),
-                decimal("1"),
-                decimal("0"),
-                decimal("0.6"),
-            ),
-        )
 
 
 def test_missing_target_only_price_remains_an_unresolved_exchange_request() -> None:
@@ -127,7 +84,6 @@ def test_missing_target_only_price_remains_an_unresolved_exchange_request() -> N
         prices={},
         weight_targets={"A": decimal("0.25")},
         cash_target=decimal("0.75"),
-        budget=_BUDGET,
     )
     assert weight.requests[0].execution_price is None
     assert weight.requests[0].unresolved_weight_target == decimal("0.25")
@@ -147,7 +103,6 @@ def test_an_unpriceable_holding_is_kept_rather_than_ending_the_batch() -> None:
         prices={},
         weight_targets={"TARGET": decimal("0.25")},
         cash_target=decimal("0.75"),
-        budget=_BUDGET,
     )
 
     held = next(order for order in batch.requests if order.instrument_id == "HELD")
@@ -165,7 +120,6 @@ def test_an_unpriceable_holding_is_left_out_of_the_priced_book() -> None:
         prices={"A": decimal("25")},
         weight_targets={"A": decimal("0.5")},
         cash_target=decimal("0.5"),
-        budget=_BUDGET,
     )
 
     priced = next(order for order in batch.requests if order.instrument_id == "A")
@@ -180,7 +134,6 @@ def test_equal_side_orders_use_instrument_tie_break() -> None:
         prices={"Z": decimal("1"), "A": decimal("1"), "B": decimal("1")},
         weight_targets={"B": decimal("1")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
     )
 
     assert [order.instrument_id for order in batch.requests] == ["A", "Z", "B"]
@@ -296,7 +249,6 @@ def test_buys_are_funded_largest_delta_first_not_in_ticker_order() -> None:
         prices={small: decimal("10000"), big: decimal("10000")},
         weight_targets={small: decimal("0.1"), big: decimal("0.9")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
         rules=rules,
     )
     planned = {request.instrument_id: request.delta_quantity for request in batch.requests}
@@ -331,7 +283,6 @@ def test_buy_order_compares_money_rather_than_share_count() -> None:
         prices={cheap: decimal("1000"), dear: decimal("300000")},
         weight_targets={cheap: decimal("0.1"), dear: decimal("0.9")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
         rules=rules,
     )
     planned = {request.instrument_id: request.delta_quantity for request in batch.requests}
@@ -367,7 +318,6 @@ def test_an_unaffordable_buy_is_clipped_by_arithmetic_not_by_walking_lots() -> N
             prices={"A": price},
             weight_targets={"A": decimal("1")},
             cash_target=decimal("0"),
-            budget=_BUDGET,
             rules=_fractional_venue("A", step=step, commission=str(commission)),
         )
         quantity = batch.requests[0].delta_quantity
@@ -429,7 +379,6 @@ def test_a_category_driven_venue_sizes_a_large_buy_from_the_channel_that_bills()
         prices={"A": price},
         weight_targets={"A": decimal("1")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
         rules=rules,
     )
 
@@ -474,7 +423,6 @@ def test_a_venue_whose_cost_never_shrinks_leaves_the_cash_rather_than_refusing()
         prices={"A": decimal("54321.9876")},
         weight_targets={"A": decimal("1")},
         cash_target=decimal("0"),
-        budget=_BUDGET,
         rules=_FlatFee("flat-fee", {"A": rule}),
     )
 
@@ -522,7 +470,6 @@ def test_a_halted_sale_does_not_fund_a_buy() -> None:
             prices={"HALTED": price, "BUYME": price},
             weight_targets={"BUYME": decimal("1")},
             cash_target=decimal("0"),
-            budget=_BUDGET,
             rules=rules,
             tradable=tradable,
         )
@@ -599,7 +546,6 @@ def test_a_fully_invested_batch_is_payable_under_the_accounts_own_arithmetic() -
         prices=prices,
         weight_targets=targets,
         cash_target=decimal("0"),
-        budget=_BUDGET,
         rules=rules,
     )
 

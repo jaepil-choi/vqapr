@@ -22,9 +22,7 @@ from vqapr.data.source import SourceSpec
 from vqapr.data.store import DuckDbObservationStore
 from vqapr.data.window import ModelWindow
 from vqapr.domain.intent import (
-    Budget,
     EconomicPortfolioIntent,
-    PortfolioDirection,
     PortfolioTarget,
     validate_economic_intent,
 )
@@ -268,13 +266,6 @@ def test_criterion_1_and_6_publish_round_trip_and_point_in_time(
         "enhanced-index",
         tuple(PortfolioTarget(n, weight=w) for n, w in sorted(result.weights.items())),
         result.cash,
-        Budget(
-            PortfolioDirection.LONG_ONLY,
-            Decimal("0"),
-            Decimal("1"),
-            Decimal("0"),
-            Decimal("1"),
-        ),
         (),
         0,
         None,
@@ -368,13 +359,6 @@ def test_criterion_7_a_frozen_holding_survives_into_a_validated_intent(
         "enhanced-index",
         tuple(PortfolioTarget(n, weight=w) for n, w in sorted(result.weights.items())),
         result.cash,
-        Budget(
-            PortfolioDirection.LONG_ONLY,
-            Decimal("0"),
-            Decimal("1"),
-            Decimal("0"),
-            Decimal("1"),
-        ),
         (),
         0,
         None,

@@ -15,12 +15,10 @@ from decimal import Decimal
 from vqapr.domain.account import AccountSnapshot
 from vqapr.domain.cost import SideCost
 from vqapr.domain.fill import Fill, FillBatch, fill_entries
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import ExchangeRulesView, ListingAccess, TradeRule
 from vqapr.domain.order import plan_orders
 
 _AT = datetime(2024, 1, 2, 15, 30, tzinfo=UTC)
-_BUDGET = Budget(PortfolioDirection.LONG_ONLY, Decimal(0), Decimal(1), Decimal(0), Decimal(1))
 SMALL, BIG = "A000001", "Z999999"
 
 
@@ -47,7 +45,6 @@ def _batch():
         prices={SMALL: Decimal(10_000), BIG: Decimal(10_000)},
         weight_targets={SMALL: Decimal("0.1"), BIG: Decimal("0.9")},
         cash_target=Decimal(0),
-        budget=_BUDGET,
         rules=rules,
     )
 

@@ -25,7 +25,6 @@ from vqapr.public import (
     DataModel,
     DatasetInput,
     Hold,
-    PortfolioDirection,
     Rebalance,
     RowsLookback,
     StrategyModel,
@@ -38,17 +37,7 @@ BOOK = 2
 """Equal-weight top-2 momentum book."""
 
 INVESTED = Decimal("0.98")
-"""98% invested, 2% cash buffer -- see README for why exact-zero cash_target is avoided."""
-
-CASH_TARGET = Decimal("1") - INVESTED
-
-BUDGET = Budget(
-    direction=PortfolioDirection.LONG_ONLY,
-    cash_lower=Decimal("0"),
-    cash_upper=Decimal("1"),
-    target_lower=Decimal("0"),
-    target_upper=Decimal("1"),
-)
+"""98% of the long side is filled, 2% stays cash -- see README for why zero cash is avoided."""
 
 
 class MomentumModel(DataModel):
@@ -96,6 +85,11 @@ class MomentumLongOnly(StrategyModel):
             )
         }
 
+    def budget(self) -> Budget:
+        # Long-only and allowed to hold cash: the long side may use up to all of NAV, and
+        # `decide` fills INVESTED of it.
+        return Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call) -> Hold | Rebalance:
         eligible = call.read("momentum_score", "eligible").latest()
         latest = {
@@ -109,15 +103,8 @@ class MomentumLongOnly(StrategyModel):
 
         ranked = sorted(latest.items(), key=lambda item: (-item[1], item[0]))
         chosen = {instrument for instrument, _ in ranked[:BOOK]}
-        weight = INVESTED / Decimal(BOOK)
-        target_weights = {
-            instrument: (weight if instrument in chosen else Decimal("0"))
-            for instrument in sorted(latest)
-        }
+        # Equal conviction in the chosen names, zero in the rest so a dropped name is sold.
+        signal = {instrument: int(instrument in chosen) for instrument in sorted(latest)}
 
         self.memory = {**previous, "rebalances": int(previous.get("rebalances", 0)) + 1}
-        return Rebalance(
-            target_weights=target_weights,
-            cash_weight=CASH_TARGET,
-            budget=BUDGET,
-        )
+        return Rebalance(self.budget().fill(signal, use=INVESTED))

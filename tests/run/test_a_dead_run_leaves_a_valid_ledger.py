@@ -35,12 +35,15 @@ class Dies(vq.StrategyModel):
             )
         }
 
+    def budget(self):
+        return vq.Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call):
         seen = int((self.memory or {}).get("decisions", 0)) + 1
         self.memory = {"decisions": seen}
         if seen >= 3:
             raise RuntimeError("the strategy died on its third decision")
-        return vq.Rebalance.of(long={"A": Decimal(1)}, invested="1.0")
+        return vq.Rebalance(self.budget().fill({"A": Decimal(1)}))
 '''
 
 

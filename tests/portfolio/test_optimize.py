@@ -15,9 +15,7 @@ from uuid import UUID
 import pytest
 
 from vqapr.domain.intent import (
-    Budget,
     EconomicPortfolioIntent,
-    PortfolioDirection,
     PortfolioTarget,
     validate_economic_intent,
 )
@@ -159,13 +157,6 @@ def test_the_budget_identity_holds_in_the_callers_own_context() -> None:
         "strategy",
         targets,
         result.cash,
-        Budget(
-            PortfolioDirection.LONG_ONLY,
-            Decimal("0"),
-            Decimal("1"),
-            Decimal("0"),
-            Decimal("1"),
-        ),
         (),
         0,
         None,

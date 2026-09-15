@@ -13,9 +13,10 @@ from vqapr.data.store import DuckDbObservationStore
 from vqapr.data.window import ModelWindow
 from vqapr.domain.account import Account, AccountMode, AccountSnapshot, AccountState
 from vqapr.domain.instants import LocalInstantDeclaration
-from vqapr.domain.intent import Budget, EconomicPortfolioIntent, IntentSourceRef, PortfolioDirection
+from vqapr.domain.intent import EconomicPortfolioIntent, IntentSourceRef
 from vqapr.domain.schedule import ScheduledEvent
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import Budget
 from vqapr.public import (
     Hold,
     Rebalance,
@@ -27,9 +28,7 @@ from vqapr.run.engine.run_state import RunStateRepository
 from vqapr.run.preflight.frozen import FrozenRun, FrozenSchedule, FrozenStrategy
 from vqapr.workspace.run_definition import ComplianceSet, StrategyConfig
 
-_BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("1")
-)
+_BUDGET = Budget.flexible(long_limit=1, short_limit=0)
 _SOURCE = IntentSourceRef("strategy-source", "0" * 64)
 
 
@@ -50,11 +49,7 @@ class EveryThreeOccurrences(StrategyModel):
         self.memory = {**memory, "event_count": count}
         if count % 3:
             return Hold(reason="cadence")
-        return Rebalance(
-            target_weights={},
-            cash_weight=Decimal(1),
-            budget=_BUDGET,
-        )
+        return Rebalance({})
 
 
 class _Catalog:
@@ -103,6 +98,7 @@ def _flow(
                 ),
                 compliance=ComplianceSet(()),
                 schedule=strategy_schedule,
+                budget=_BUDGET,
             ),
         start=events[0].evaluation_time,
         end=events[-1].evaluation_time,
@@ -160,11 +156,7 @@ def test_no_decision_state_continues_across_explicit_schedule_boundaries() -> No
 class TimingOverrideStrategy(EveryThreeOccurrences):
     def decide(self, context: StrategyModelContext) -> Rebalance:
         self.memory = {"event_count": 999}
-        return Rebalance(
-            target_weights={},
-            cash_weight=Decimal(1),
-            budget=_BUDGET,
-        )
+        return Rebalance({})
 
 
 class DocumentedMemoryExample(StrategyModel):

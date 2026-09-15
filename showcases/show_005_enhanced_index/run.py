@@ -138,8 +138,6 @@ from vqapr.public import (
     Budget,
     DataRequirement,
     Hold,
-    PortfolioDirection,
-    QUANTUM,
     Rebalance,
     RowsLookback,
     StrategyModel,
@@ -147,19 +145,15 @@ from vqapr.public import (
 )
 
 ACTIVE_BUDGET = Decimal("0.04")
-"""Total absolute active weight the view is allowed to express."""
-
-BUDGET = Budget(
-    PortfolioDirection.SIGNED,
-    Decimal("0"),
-    Decimal("2"),
-    Decimal("-1"),
-    Decimal("1"),
-)
+"""Total absolute active weight the view expresses: half on each side, since the legs cancel."""
 
 
 class SignedAlpha(StrategyModel):
     """Cheap names long, expensive names short, demeaned so the legs cancel."""
+
+    def budget(self):
+        # Dollar neutral at a small size: 0.02 long and -0.02 short, filled exactly every event.
+        return Budget.fixed(long=ACTIVE_BUDGET / 2, short=-ACTIVE_BUDGET / 2)
 
     def tables(self):
         """The signal, before weighting, so a later run can see what this view actually thought.
@@ -189,14 +183,9 @@ class SignedAlpha(StrategyModel):
         raw = {name: (mean - close) / mean for name, close in closes.items()}
         centre = sum(raw.values()) / len(raw)
         centred = {name: value - centre for name, value in raw.items()}
-        gross = sum(abs(value) for value in centred.values())
-        if gross == 0:
+        if all(value == 0 for value in centred.values()):
             return Hold(reason="the cross-section is flat")
 
-        scale = ACTIVE_BUDGET / gross
-        weights = {
-            name: (value * scale).quantize(QUANTUM) for name, value in centred.items()
-        }
         # The signal before weighting, recorded so a later run can reuse this view.
         for name, value in sorted(centred.items()):
             self.recorder.append("alpha.signal", {"instrument": name, "signal": str(value)})
@@ -205,11 +194,8 @@ class SignedAlpha(StrategyModel):
         history["views"] = int(history.get("views", 0)) + 1
         self.memory = history
 
-        return Rebalance(
-            target_weights=dict(sorted(weights.items())),
-            cash_weight=Decimal(1) - sum(weights.values()),
-            budget=BUDGET,
-        )
+        # `fill` sizes each side of the centred signal to the declared budget, on the grid.
+        return Rebalance(self.budget().fill(centred))
 '''
     + _SOURCE_REFS
 )
@@ -230,7 +216,6 @@ from vqapr.public import (
     DataRequirement,
     Hold,
     OptimizeRefusal,
-    PortfolioDirection,
     QUANTUM,
     Rebalance,
     RowsLookback,
@@ -248,14 +233,6 @@ SCALE = Decimal("0.5")
 NEUTRALITY = Decimal("0.000000001")
 """What "dollar neutral" is allowed to mean once the view lands on the canonical grid."""
 
-BUDGET = Budget(
-    PortfolioDirection.LONG_ONLY,
-    Decimal("0"),
-    Decimal("1"),
-    Decimal("0"),
-    Decimal("1"),
-)
-
 
 class EnhancedIndex(StrategyModel):
     """desired = benchmark + SCALE·active, projected onto the box this strategy builds itself:
@@ -268,6 +245,11 @@ class EnhancedIndex(StrategyModel):
         self._alpha_dataset_id = alpha_dataset_id
         self._cap = Decimal(cap)
         self._benchmark_tolerance = Decimal(benchmark_tolerance)
+
+    def budget(self):
+        # Long-only and allowed to hold cash: the index slice covers roughly half of NAV, and
+        # `optimize` leaves the rest as cash.
+        return Budget.flexible(long_limit=1, short_limit=0)
 
     def requirements(self):
         return (
@@ -373,11 +355,7 @@ class EnhancedIndex(StrategyModel):
         history["active_norm"] = str(self._active_norm(result.weights, benchmark))
         self.memory = history
 
-        return Rebalance(
-            target_weights=dict(sorted(result.weights.items())),
-            cash_weight=result.cash,
-            budget=BUDGET,
-        )
+        return Rebalance(result.weights)
 
     def _solve(self, desired, current, lower, upper, frozen):
         return optimize(

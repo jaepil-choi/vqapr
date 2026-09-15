@@ -14,21 +14,9 @@ import pytest
 from pydantic import ValidationError
 
 from vqapr import public
-from vqapr.domain.intent import Budget, PortfolioDirection
 
 UTC_NOW = datetime(2024, 3, 5, 15, 30, tzinfo=UTC)
 NAIVE_NOW = datetime(2024, 3, 5, 15, 30)
-
-
-def _budget(direction: PortfolioDirection = PortfolioDirection.LONG_ONLY) -> Budget:
-    lower = Decimal("0") if direction is PortfolioDirection.LONG_ONLY else Decimal("-1")
-    return Budget(
-        direction=direction,
-        cash_lower=lower,
-        cash_upper=Decimal("1"),
-        target_lower=lower,
-        target_upper=Decimal("1"),
-    )
 
 
 # --------------------------------------------------------------------------------------
@@ -293,52 +281,27 @@ def test_hold_requires_non_empty_reason() -> None:
         public.Hold(reason="")
 
 
-def test_rebalance_requires_complete_target_and_cash_within_budget() -> None:
-    budget = _budget()
-    public.Rebalance(
-        target_weights={"A": Decimal("0.6")}, cash_weight=Decimal("0.4"), budget=budget
-    )
-    with pytest.raises(ValueError):
-        public.Rebalance(
-            target_weights={"A": Decimal("0.6")}, cash_weight=Decimal("0.5"), budget=budget
-        )
+def test_rebalance_derives_its_cash_from_the_weights() -> None:
+    """Cash is not stated since record `291`: it is `1 - sum(weights)`, so a decision whose cash
+    disagrees with its weights can no longer be written at all."""
+    assert public.Rebalance({"A": Decimal("0.6")}).cash_weight == Decimal("0.4")
+    with pytest.raises(TypeError, match="Rebalance takes the weights alone"):
+        public.Rebalance(target_weights={"A": Decimal("0.6")}, cash_weight=Decimal("0.5"))
 
 
-def test_rebalance_empty_targets_require_full_cash() -> None:
-    budget = _budget()
-    public.Rebalance(target_weights={}, cash_weight=Decimal("1"), budget=budget)
-    with pytest.raises(ValueError):
-        public.Rebalance(target_weights={}, cash_weight=Decimal("0.5"), budget=budget)
+def test_rebalance_with_no_weights_holds_all_cash() -> None:
+    assert public.Rebalance({}).cash_weight == Decimal("1")
 
 
-def test_rebalance_long_only_budget_forbids_negative_targets() -> None:
-    budget = _budget(PortfolioDirection.LONG_ONLY)
-    with pytest.raises(ValueError):
-        public.Rebalance(
-            target_weights={"A": Decimal("-0.1"), "B": Decimal("1.1")},
-            cash_weight=Decimal("0"),
-            budget=budget,
-        )
-
-
-def test_rebalance_rejects_targets_outside_budget_bounds() -> None:
-    narrow_budget = Budget(
-        direction=PortfolioDirection.SIGNED,
-        cash_lower=Decimal("-1"),
-        cash_upper=Decimal("1"),
-        target_lower=Decimal("0"),
-        target_upper=Decimal("0.1"),
-    )
-    with pytest.raises(ValueError):
-        public.Rebalance(
-            target_weights={"A": Decimal("0.5")}, cash_weight=Decimal("0.5"), budget=narrow_budget
-        )
+def test_a_long_only_budget_forbids_negative_targets() -> None:
+    """The budget is the strategy's declaration now, and it judges the weights (record `291`)."""
+    with pytest.raises(ValueError, match="long-only"):
+        public.Budget.fixed(long=1, short=0).check({"A": Decimal("-0.1"), "B": Decimal("1.1")})
 
 
 def test_rebalance_weights_mapping_is_copied_and_immutable() -> None:
     weights = {"A": Decimal("0.5"), "B": Decimal("0.5")}
-    budget = _budget()
-    decision = public.Rebalance(target_weights=weights, cash_weight=Decimal("0"), budget=budget)
+    decision = public.Rebalance(weights)
     weights["A"] = Decimal("999")
     assert decision.target_weights["A"] == Decimal("0.5")
     with pytest.raises(TypeError):
@@ -406,6 +369,7 @@ def test_strategy_model_is_a_model_and_requires_only_decide() -> None:
     assert model.tables() == ()
     assert model.recorder is None
     assert model.memory is None
+    assert model.budget() == public.Budget.fixed(long=1, short=-1), "undeclared is dollar neutral"
     assert isinstance(model.decide(_FakeStrategyCall()), public.Hold)
     assert model.memory == {"seen": ["occ-1"]}
 

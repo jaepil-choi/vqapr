@@ -21,6 +21,7 @@ from vqapr.public import (
     AllocationSign,
     AllocationViolation,
     Budget,
+    BudgetRefusal,
     CalendarLookback,
     CashMode,
     Compliance,
@@ -50,7 +51,6 @@ from vqapr.public import (
     LocalInstantDeclaration,
     OptimizeRefusal,
     OptimizeResult,
-    PortfolioDirection,
     PortfolioTarget,
     Role,
     RowsLookback,
@@ -101,6 +101,7 @@ def test_public_exports_are_fixed() -> None:
             AccountMode,
             AccountSnapshot,
             Budget,
+            BudgetRefusal,
             CalendarLookback,
             CashMode,
             CrossSection,
@@ -131,7 +132,6 @@ def test_public_exports_are_fixed() -> None:
             ScheduledEvent,
             OptimizeRefusal,
             OptimizeResult,
-            PortfolioDirection,
             PortfolioTarget,
             RowsLookback,
             RunDefinition,
@@ -157,6 +157,10 @@ def test_public_exports_are_fixed() -> None:
     )
     assert QUANTUM is public.QUANTUM
     assert SHIPPED_COMPLIANCE is public.SHIPPED_COMPLIANCE
+    # Record `291`: the budget is the strategy's declaration, no longer a field of the intent,
+    # and long-only is `short=0` rather than a direction.
+    assert Budget.__module__ == "vqapr.portfolio.budget"
+    assert not hasattr(public, "PortfolioDirection")
     assert public.__all__ == (
         "QUANTUM",
         "SHIPPED_COMPLIANCE",
@@ -169,6 +173,7 @@ def test_public_exports_are_fixed() -> None:
         "AllocationSign",
         "AllocationViolation",
         "Budget",
+        "BudgetRefusal",
         "CalendarLookback",
         "Call",
         "CashMode",
@@ -228,7 +233,6 @@ def test_public_exports_are_fixed() -> None:
         "OptimizeResult",
         "PanelWindow",
         "Part",
-        "PortfolioDirection",
         "PortfolioTarget",
         "Rebalance",
         "Role",

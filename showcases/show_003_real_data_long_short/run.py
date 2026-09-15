@@ -145,24 +145,20 @@ from vqapr.public import (
     DataRequirement,
     Hold,
     IntentSourceRef,
-    PortfolioDirection,
     Rebalance,
     RowsLookback,
     StrategyModel,
 )
 
-SIDE_WEIGHT = Decimal("0.25")
-BUDGET = Budget(
-    PortfolioDirection.SIGNED,
-    Decimal("0"),
-    Decimal("1"),
-    Decimal("-1"),
-    Decimal("1"),
-)
+SIDE = Decimal("0.5")
+"""Each side of the book: two names at +0.25 long, two at -0.25 short."""
 
 
 class ReversalLongShort(StrategyModel):
     """Dollar-neutral top/bottom-2 book rebuilt from the derived reversal score."""
+
+    def budget(self):
+        return Budget.fixed(long=SIDE, short=-SIDE)
 
     def requirements(self):
         return (
@@ -180,22 +176,17 @@ class ReversalLongShort(StrategyModel):
             return Hold(reason="cross-section is too small to build both sides")
 
         ranked = sorted(latest.items(), key=lambda item: (item[1], item[0]))
-        book = {instrument: -SIDE_WEIGHT for instrument, _ in ranked[:2]}
-        book.update({instrument: SIDE_WEIGHT for instrument, _ in ranked[-2:]})
-        weights = {
-            instrument: book.get(instrument, Decimal("0")) for instrument in sorted(latest)
-        }
+        # Equal conviction on each side, zero for the rest so a dropped name is closed.
+        signal = dict.fromkeys(sorted(latest), 0)
+        signal.update({instrument: -1 for instrument, _ in ranked[:2]})
+        signal.update({instrument: 1 for instrument, _ in ranked[-2:]})
 
         history = dict(self.memory or {})
         history["rebalances"] = int(history.get("rebalances", 0)) + 1
         history["last_event"] = context.event.event_id
         self.memory = history
 
-        return Rebalance(
-            target_weights=weights,
-            cash_weight=Decimal("1"),
-            budget=BUDGET,
-        )
+        return Rebalance(self.budget().fill(signal))
 ''',
         encoding="utf-8",
     )

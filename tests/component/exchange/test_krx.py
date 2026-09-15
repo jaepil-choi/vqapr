@@ -22,21 +22,11 @@ from vqapr.domain.cost import FillCost
 from vqapr.domain.fill import ZeroDealtReason, fill_entries
 from vqapr.domain.instants import LocalInstantDeclaration
 from vqapr.domain.instrument import InstrumentRoster, instrument
-from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import Side
 from vqapr.domain.order import plan_orders
 
 FIXTURE = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "real"
 VENUE = "Asia/Seoul"
-LONG_ONLY = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("1")
-)
-LONG_ONLY_SHARES = Budget(
-    PortfolioDirection.LONG_ONLY, Decimal("0"), Decimal("1"), Decimal("0"), Decimal("100000")
-)
-SIGNED_SHARES = Budget(
-    PortfolioDirection.SIGNED, Decimal("0"), Decimal("10"), Decimal("-100000"), Decimal("100000")
-)
 
 
 @pytest.fixture(scope="module")
@@ -114,7 +104,6 @@ def test_real_prices_produce_whole_share_orders_that_fit_cash(real_close) -> Non
         prices=prices,
         weight_targets=dict.fromkeys(sorted(prices), weight),
         cash_target=Decimal("0"),
-        budget=LONG_ONLY,
         rules=exchange.rules,
     )
 
@@ -150,7 +139,6 @@ def test_sells_pay_commission_and_sale_tax_on_real_prices(real_close) -> None:
         prices={instrument: price},
         weight_targets={instrument: Decimal("40") * price / nav},
         cash_target=(account.cash + Decimal("60") * price) / nav,
-        budget=LONG_ONLY_SHARES,
         rules=exchange.rules,
     )
     request = batch.requests[0]
@@ -183,7 +171,6 @@ def test_krx_refuses_to_open_a_short_position(real_close) -> None:
         prices={instrument: price},
         weight_targets={instrument: Decimal("-10") * price / Decimal("1000000")},
         cash_target=(Decimal("1000000") + Decimal("10") * price) / Decimal("1000000"),
-        budget=SIGNED_SHARES,
         rules=exchange.rules,
     )
     with pytest.raises(ValueError, match="does not support short selling"):
@@ -203,7 +190,6 @@ def test_halted_real_instrument_is_zero_dealt_and_free(real_close) -> None:
         prices={instrument: price},
         weight_targets={instrument: Decimal("1")},
         cash_target=Decimal("0"),
-        budget=LONG_ONLY,
         rules=exchange.rules,
     )
     fills = exchange.execute(execution_call(exchange, 
@@ -230,7 +216,6 @@ def test_rounding_residual_stays_visible_against_the_intended_position(real_clos
         prices={instrument: price},
         weight_targets={instrument: Decimal("1")},
         cash_target=Decimal("0"),
-        budget=LONG_ONLY,
         rules=exchange.rules,
     )
     dealt = batch.requests[0].delta_quantity

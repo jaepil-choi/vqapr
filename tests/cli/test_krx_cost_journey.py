@@ -103,6 +103,9 @@ class Rotate(vq.StrategyModel):
             )
         }
 
+    def budget(self):
+        return vq.Budget.flexible(long_limit=1, short_limit=0)
+
     def decide(self, call):
         latest = {
             name: Decimal(str(value))
@@ -111,7 +114,7 @@ class Rotate(vq.StrategyModel):
         if not latest:
             return vq.Hold(reason="no-observations")
         winner = max(latest, key=lambda name: latest[name])
-        return vq.Rebalance.of(long={winner: Decimal(1)}, invested="1.0")
+        return vq.Rebalance(self.budget().fill({winner: Decimal(1)}))
 '''
 
 

@@ -9,7 +9,7 @@
                                               neutralize       (market column of ones)
                                                        |
                                                        v
-                                              signal_weight -> rescale to a small gross budget
+                                              signal_weight -> budget().fill, 0.02 a side
                                                        |
                                                        v
                                               EconomicPortfolioIntent -> Academic exchange (SIGNED)
@@ -84,7 +84,7 @@ LOOKBACK = 6
 """Six closes span a five-session reversal."""
 
 ACTIVE_BUDGET = Decimal("0.02")
-"""Total absolute active weight the signal is rescaled to after sizing."""
+"""Each side of the book the sized signal is filled to: 0.02 long and -0.02 short."""
 
 VERIFIED_AGAINST = "vqapr-0.16.2"
 LAST_VERIFIED_AT = "2026-09-10"
@@ -152,7 +152,7 @@ def _source_refs(context):
 
 
 _SIGNAL_SOURCE = (
-    '''"""A short-horizon reversal view: ranked, neutralised, sized, and rescaled to a fixed budget.
+    '''"""A short-horizon reversal view: ranked, neutralised, sized, and filled to a fixed budget.
 
 The signal before weighting (the ranked reversal) and the signal after neutralisation are both
 recorded on every event that computes one, so the record a later run reads back is exactly
@@ -168,14 +168,12 @@ from vqapr.public import (
     Budget,
     DataRequirement,
     Hold,
-    PortfolioDirection,
     Rebalance,
     RowsLookback,
     StrategyModel,
     TableSpec,
     neutralize,
     rank,
-    rescale,
     signal_weight,
 )
 
@@ -186,17 +184,13 @@ ACTIVE_BUDGET = Decimal("'''
     + str(ACTIVE_BUDGET)
     + '''")
 
-BUDGET = Budget(
-    PortfolioDirection.SIGNED,
-    Decimal("0"),
-    Decimal("2"),
-    Decimal("-1"),
-    Decimal("1"),
-)
-
 
 class ReversalSignalStrategy(StrategyModel):
-    """rank(reversal) -> neutralize against a market column of ones -> signal_weight -> rescale."""
+    """rank(reversal) -> neutralize against a market column of ones -> signal_weight -> fill."""
+
+    def budget(self):
+        # Dollar neutral at a small size, each side filled exactly every event.
+        return Budget.fixed(long=ACTIVE_BUDGET, short=-ACTIVE_BUDGET)
 
     def tables(self):
         return (
@@ -245,13 +239,7 @@ class ReversalSignalStrategy(StrategyModel):
             return Hold(reason="the neutralised signal is flat")
 
         sized = signal_weight(neutralized)
-        weights = rescale(sized, long=ACTIVE_BUDGET, short=-ACTIVE_BUDGET)
-
-        return Rebalance(
-            target_weights=dict(sorted(weights.items())),
-            cash_weight=Decimal(1) - sum(weights.values()),
-            budget=BUDGET,
-        )
+        return Rebalance(self.budget().fill(sized))
 '''
     + _SOURCE_REFS
 )

@@ -15,9 +15,10 @@ price, trading session and tradability flag is real. No value is mocked, stubbed
    `reversal_score` — not on the raw prices — and builds its book from what it actually read.
    Intent source lineage is derived from real `ModelWindow` accesses, including the physical
    digest of the materialized parquet.
-4. **Signed long/short execution.** The strategy emits a dollar-neutral complete portfolio
-   (top-2 long at +0.25, bottom-2 short at −0.25, remainder 0) into a `SIGNED` Account, and
-   `AcademicExchange` fills it at the exact selected close.
+4. **Signed long/short execution.** The strategy declares `Budget.fixed(long=0.5, short=-0.5)` and
+   emits a dollar-neutral complete portfolio with `self.budget().fill(signal)` (top-2 long at
+   +0.25, bottom-2 short at −0.25, remainder 0) into a `SIGNED` Account, and `AcademicExchange`
+   fills it at the exact selected close.
 5. **Full lifecycle per rebalance.** Each session runs
    `ACCEPTED_INTENT → ACCOUNT_COMMITTED → MARKED → FEEDBACK_PUBLISHED`, then independent
    valuation and monitoring events, and the run finalizes with no pending intent.

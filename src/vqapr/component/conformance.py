@@ -78,6 +78,7 @@ from vqapr.domain.errors import (
     collector,
 )
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import Budget
 
 __all__ = [
     "STAGE",
@@ -197,6 +198,45 @@ def _check_methods(component: object, kind: Role, found: Any) -> None:
         )
 
 
+_BUDGET_FIX = (
+    "return vq.Budget.fixed(long=, short=) or vq.Budget.flexible(long_limit=, short_limit=) from "
+    "budget(); the short side is written negative"
+)
+
+
+def _check_budget(component: StrategyModel, found: Any) -> None:
+    """`budget()` is called once here, the way the run will call it (record `291`).
+
+    The one returned value this suite judges, and the exception is principled: `budget()` takes
+    nothing from the run, so its value is decidable before a run, and a strategy whose declaration
+    cannot be read should not register.
+    """
+    try:
+        declared = component.budget()
+    except Exception as error:
+        found.add(
+            Failure.bounded(
+                "component.budget_invalid",
+                "StrategyModel.budget() must return a Budget",
+                status=Status.CONTRACT,
+                observed=f"{type(error).__name__}: {error}",
+                fix=_BUDGET_FIX,
+                cause=error,
+            )
+        )
+        return
+    if not isinstance(declared, Budget):
+        found.add(
+            Failure.bounded(
+                "component.budget_invalid",
+                "StrategyModel.budget() must return a Budget",
+                status=Status.CONTRACT,
+                observed=f"budget() returned {type(declared).__name__}",
+                fix=_BUDGET_FIX,
+            )
+        )
+
+
 def conformance(ref: ComponentRef, *, project_root: str | Path | None = None) -> Diagnosis:
     """Judge one component against the contract its kind declares.
 
@@ -233,6 +273,8 @@ def conformance(ref: ComponentRef, *, project_root: str | Path | None = None) ->
         return found.done(retry=_RETRY)
 
     _check_methods(component, ref.kind, found)
+    if isinstance(component, StrategyModel):
+        _check_budget(component, found)
     return found.done(retry=_RETRY)
 
 

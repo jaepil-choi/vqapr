@@ -33,6 +33,7 @@ from vqapr.domain.listing import TradeRule
 from vqapr.domain.memory import ModelMemory
 from vqapr.domain.schedule import Schedule
 from vqapr.domain.wiring import Role
+from vqapr.portfolio.budget import Budget
 from vqapr.run.preflight.facts import RunFacts, unresolved_target_failures, unresolved_targets
 from vqapr.run.preflight.frozen import FrozenDataModel, FrozenRun, FrozenSchedule, FrozenStrategy
 from vqapr.workspace.registry import Workspace
@@ -490,6 +491,13 @@ def _freeze_strategy(
     )
     rules = tuple(_registered_compliance(workspace, name) for name in compliance)
     strategy_requirements = tuple(loaded_strategy.requirements())
+    # Read once, the way registration read it, and frozen with the run (record `291`).
+    budget = loaded_strategy.budget()
+    if not isinstance(budget, Budget):
+        raise TypeError(
+            f"strategy {entry.component_id!r} budget() must return a Budget; got "
+            f"{type(budget).__name__}"
+        )
     loaded_rules: tuple[Compliance, ...] = tuple(
         facts.component(name, load_compliance) for name in compliance
     )
@@ -503,6 +511,7 @@ def _freeze_strategy(
         compliance=ComplianceSet(rules),
         schedule=schedule,
         requirements=strategy_requirements,
+        budget=budget,
         compliance_requirements=compliance_requirements,
         initial_model_memory=entry.initial_model_memory,
         initial_payload=initial_payload,

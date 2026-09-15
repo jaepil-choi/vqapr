@@ -48,8 +48,10 @@ It reads `tests/fixtures/real`, so it runs on a clean checkout with no vendor wa
 - **Price limits are switched off explicitly.** This fixture's execution table publishes a close
   and no session base price, so the limit-up/limit-down regime has nothing to compute from and
   preflight would refuse the run rather than produce numbers that look limit-aware and are not.
-- **The alpha is a demonstration signal**, a demeaned cross-sectional cheapness tilt scaled to a 4%
-  gross active budget. It exists to be signed and dollar-neutral, not to be profitable.
+- **The alpha is a demonstration signal**, a demeaned cross-sectional cheapness tilt filled to
+  `Budget.fixed(long=0.02, short=-0.02)`, a 4% gross active budget. It exists to be signed and
+  dollar-neutral, not to be profitable. The enhanced index declares
+  `Budget.flexible(long_limit=1, short_limit=0)`: long-only, the uncovered remainder held as cash.
 
 ## An unpredictable halt does not stop a rebalance
 
