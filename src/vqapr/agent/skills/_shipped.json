@@ -27,6 +27,7 @@
   },
   "analyze-result/references/report-sections.md": {
     "3178053843a6bf0a24ab21ad8d89234f406dc35cb42906b3e2b5b3840bfdc20d": "0.8.0",
+    "476006a41798697f2cdb1106e597db2dbb1bd3f1e2415e0a62509132b456e3ff": "0.17.1",
     "5d0be40c6a2f963d7b263cd8025dd1a8adcd16244b0a1317a225755e691740e0": "0.14.4",
     "63e61fbd344d9e219ac3ff8853e288089fe6ea23ac3669fda83275cd487fcb0d": "0.17.0",
     "cf82917bf2cccc37faf9ce0a71093bd1f3a67fc4a3ee1a3090a2932ad0e72bd5": "0.10.0"
@@ -215,6 +216,7 @@
   "register-dataset/references/correcting-a-registration.md": {
     "101616d267618abc77279f28fba7a1e70ea48b481c3a9e7ae1c3e80d8026c86c": "0.16.0",
     "1e32723c859f23da65d8bc023d7ad5d2c06fc35cb953579367f46b4f08d064d2": "0.10.0",
+    "94885dce82489e0380ffe0ae44cb487201063364f18ec0188884932b6ae291f8": "0.17.1",
     "96a7a2791e4a15d69e77b54bcc7466e80eede39e8edda9e55196ff59fc4caaf8": "0.8.0"
   },
   "register-dataset/references/discouraged-preparation.md": {
@@ -288,6 +290,7 @@
   },
   "run-backtest/references/watching-and-failures.md": {
     "2d03405e8146e56ff66299699d728ec03d67244793c4cd0313743c7ee05f5b76": "0.8.0",
-    "531ba12b21b34b6cfef45881c1318ca36fff6b0b14e449faddbd090dfeae7c8f": "0.14.4"
+    "531ba12b21b34b6cfef45881c1318ca36fff6b0b14e449faddbd090dfeae7c8f": "0.14.4",
+    "ff1787c5b6c3cef2a9b0212c9f2e503147997dfcc330d9ea56659500fb6a08ce": "0.17.1"
   }
 }

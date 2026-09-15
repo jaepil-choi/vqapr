@@ -82,6 +82,11 @@ canonical_documents:
   # (of · signed · PortfolioDirection 삭제, fill이 크기를 맞춤), decide 단계가 한 번 검사(rebalance.outside_budget 422),
   # strategy.json이 budget을 적고 리포트가 사용률과 mean_return 분해(timing)를 잰다. 차입의 한도는 순노출이 1을 넘는
   # budget. 0.17.0 (깨지는 변화; docs/releases/0.17.0.md). 현행 캠페인 없음.
+  # 2026-09-15: 보고서 절과 등록 창구 캠페인(records 296-299, worktree branch redesign/sections-and-one-register; 시나리오
+  # testbed run 5의 보고 다섯): 컴포넌트의 교체는 병합이 답한다(선언 경로도 `replaced`), 보고서 절은 하나씩 만든다
+  # (SectionUndefined; NAV <= 0이면 NAV 몫 절만 빠지고 budget 절도 같은 문), record가 그것을 쓴 vqapr를 적는다
+  # (package_version · vqapr.__version__ · vqapr --version, run identity 밖), 여러 run의 envelope가 elapsed와 bake를
+  # 싣는다. 0.17.1 (깨지는 변화 없음; docs/releases/0.17.1.md). 현행 캠페인 없음.
   active_campaign: docs/refactoring/2026-09-12-the-concept-tree-campaign.md
   # 두 시계(시장/전략)와 다섯 역할의 배선표. 확장점·시계·목적지·통장의 계약이 어디서 왔는가.
   # 배선표 자체는 domain/wiring.py, 현행 설명은 architecture §3.2·§10.2.

@@ -86,7 +86,7 @@ LOOKBACK = 6
 ACTIVE_BUDGET = Decimal("0.02")
 """Each side of the book the sized signal is filled to: 0.02 long and -0.02 short."""
 
-VERIFIED_AGAINST = "vqapr-0.17.0"
+VERIFIED_AGAINST = "vqapr-0.17.1"
 LAST_VERIFIED_AT = "2026-09-10"
 
 
