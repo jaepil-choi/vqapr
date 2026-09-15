@@ -2,21 +2,19 @@
 
 > 🌐 **한국어** → [README.md](README.md)
 
-**v**ibe **q**uant **a**sset **p**ricing / **a**lpha **p**ortfolio **r**esearch
+**V**ibe **Q**uant for **A**sset **P**ricing / **A**lpha **P**ortfolio **R**esearch
 
 **A quant strategy research framework you drive by talking.**
 You describe the strategy in plain language, a coding agent turns it into rules and code, and the
 framework validates and runs it deterministically.
 
-<!-- ─────────── DEMO PLACEHOLDER 1 ─────────── -->
-> 🎬 **Demo 1 — from an empty folder to registered data** *(recording pending)*
->
-> Point the agent at a few CSVs it has never seen. It opens them, proposes candidates for the axes,
-> the availability timestamps and the fill conditions, with its reasons. You confirm, and
-> registration is done.
->
-> `docs/assets/demo-01-register.gif`
-<!-- ─────────────────────────────────────────── -->
+![A Claude Code session: one sentence describes a strategy, and the agent writes it, backtests it and plots excess return against KOSPI200](docs/assets/demo-strategy.gif)
+
+> 🎬 **Demo — from one sentence to a backtest.**
+> Asked in Korean: *"Build a strategy — the top 30 by 12-month momentum, equal-weighted at month end,
+> a 5% single-name cap — backtest it, and show me the excess return over KOSPI200."* The agent writes
+> the strategy, backtests it with KRX costs, and sums up the result and its limits. A real Claude Code
+> session (about 12 minutes), edited only by fast-forwarding.
 
 ---
 
@@ -35,13 +33,17 @@ framework validates and runs it deterministically.
 - Four components are yours to write and plug in.
   - `StrategyModel` — how capital is divided
   - `DataModel` — features, signals and risk estimates that several strategies share
-  - `Exchange` — which venue fills orders, under which rules
-  - `Constraint` — what must be respected
+  - `Exchange` — which venue fills orders, under which rules. Subclass the built-in `Academic` or
+    `KRX` to add listings and costs
+  - `Compliance` — whether the filled account kept the rules. Measured and recorded at every market
+    instant
 - What ships built in is only the arithmetic that is easy to get wrong.
   - Fama-French breakpoints — cut points taken on a reference market and applied to the universe
   - Neutralization — regress market, sector and size exposures out of a signal and keep the residual
     (weighted regression supported)
   - Weighting — equal, size-proportional and signal-proportional allocation, and budget rescaling
+  - Optimization within limits — target weights that respect no-short, single-name caps and halts,
+    solved in one step
   - Integer quantity conversion — turning target weights into tradable lot sizes
 
 ### The decisions that matter are settled with you
@@ -50,6 +52,15 @@ framework validates and runs it deterministically.
   financial statement became knowable, for instance, is yours to decide.
 - The framework never guesses. It does not substitute a similar value for a missing one, and when it
   does not know, it stops before producing a result.
+
+![A Claude Code session: the agent opens three unfamiliar CSVs, separates what the data confirms from what a person must answer, and registers them once answered](docs/assets/demo-register.gif)
+
+> 🎬 **Demo — registering three CSVs it has never seen.**
+> Asked in Korean: *"Register the files in the data/ folder with vqapr."* The agent opens the files and
+> separates what the data confirms from what a person has to answer — when prices became knowable, that
+> the financials carry no filing date, that the only fill price is an adjusted close. Once answered, it
+> registers them and writes down the assumptions it cannot check as limits of the result. A real session
+> (about 6 minutes), edited only by fast-forwarding.
 
 ### A loop-based backtesting engine
 
@@ -76,8 +87,8 @@ framework validates and runs it deterministically.
 
 - Registered data, computed features, strategies you ran and what came out of them are all kept —
   **including the attempts that failed and why.**
-- A strategy's output becomes data that the next strategy reads. Stack long-short strategies into a
-  pool, ensemble them, and overlay them on an enhanced index if you want to.
+- A strategy's output becomes data that the next strategy reads. Stack long-short strategies,
+  ensemble them, and turn the ensemble into a long-only enhanced index.
   → [Strategy factory](#strategy-factory)
 
 ---
@@ -88,7 +99,7 @@ framework validates and runs it deterministically.
 flowchart TB
     H["You<br/>the hypothesis · what the data means · what must hold"]
     A["Agent — the bundled skill<br/>Claude Code · Codex · an autonomous research harness<br/>reads the sources · writes the rules and the code · fixes what failed"]
-    F["vqapr — the deterministic engine<br/>time · data · decision · fills · account · constraints · records"]
+    F["vqapr — the deterministic engine<br/>time · data · decision · fills · account · compliance · records"]
 
     H -->|"the strategy, in words"| A
     A -->|"what only you can decide"| H
@@ -101,8 +112,8 @@ flowchart TB
     class A agent
 ```
 
-**You** decide meaning: which hypothesis to test, what the data is, when it became knowable, what to
-constrain. Every decision that changes what a result means lives here.
+**You** decide meaning: which hypothesis to test, what the data is, when it became knowable, which
+rules must hold. Every decision that changes what a result means lives here.
 
 **The agent** reads the bundled skill. It opens your source files with its own tools, and when
 something fails it reads the failure and fixes it. A person can sit in that seat and talk, or an
@@ -117,58 +128,47 @@ autonomous harness can sit there and run a hypothesis loop.
 ```mermaid
 flowchart TD
     DATA[("(1) Registered datasets")]
-    SM["(2) StrategyModel<br/>divides capital"]
-    EXC["(3) Exchange<br/>Academic · KRX · your own"]
-    ACC[("(4) Account<br/>fills · cash · positions · NAV")]
-    MON["(5) Monitoring"]
-    CON["Constraint"]
+    SM["(2) StrategyModel<br/>sets the target portfolio"]
+    EXC["(3) Exchange<br/>fills the orders"]
+    ACC[("(4) Account<br/>cash · positions · valuation")]
+    CMP["(5) Compliance<br/>checks the rules were kept"]
 
-    DATA -->|"the window valid at that moment"| SM
-    SM -->|"frozen target portfolio<br/>converted to orders at fill time"| EXC
-    EXC -->|"fills · costs · clipped quantities"| ACC
-    ACC -->|"actual positions · cash · realized PnL"| SM
-    ACC --> MON
-    CON -.->|"respected at decision time"| SM
-    CON -.->|"observed on what is held"| MON
+    DATA -->|"data known up to that moment"| SM
+    SM -->|"target portfolio"| EXC
+    EXC -->|"what filled"| ACC
+    ACC -->|"actual positions · cash"| SM
+    ACC --> CMP
 
     classDef plug stroke-width:3px,stroke-dasharray:6 4
-    class SM,EXC,CON plug
+    class SM,EXC,CMP plug
 ```
 
-> The dashed bold borders are what your project replaces with local code.
+> The dashed bold borders are what you plug in as your own code.
 
-**(1) Registered datasets** — the tables you prepared. A strategy never opens the store; it declares
-what it needs and the engine hands it the window valid at that moment.
+**(1) Registered datasets** — a strategy never opens the data itself. It declares what it needs, and
+the engine hands it only what was known up to that moment.
 
-**(2) StrategyModel** — where the strategy lives. It reads that window and **its own account
-history**, then decides. The decision is always settled into **one frozen target portfolio**, long-short
-or long-only alike. If constraints are declared, this is where the best portfolio within them is built.
+**(2) StrategyModel** — where your strategy code goes. At each decision time it looks at the data and
+its own account and sets a target portfolio. Limits such as a single-name cap are applied here with
+the built-in functions (`bounds`, `optimize`).
 
-**Order conversion** — orders are built at **fill time**, not at decision time, using the positions and
-cash held then and the tradability and price of that moment. Requested and dealt quantities, and the
-reason anything was clipped, are all kept.
+**(3) Exchange** — turns the target portfolio into orders and fills them. Orders are built from the
+positions, cash and prices at fill time, not at decision time. `Academic` fills everything, fractional
+quantities included, at zero cost, for academic work; `KRX` applies fees, taxes, whole-share lots and
+cash shortfalls. Subclass either to add listings or costs.
 
-**(3) Exchange — where realism is decided.** `Academic` fills signed fractional quantities in full at
-zero cost, and says so — the result is marked hypothetical. `KRX` applies integer quantities,
-effective-dated fees and taxes, and clips quantities when cost-inclusive cash falls short. Write your
-own if your venue differs. **A name claims no realism** — only the rules implemented and the limits
-stated.
+**(4) Account** — only what actually filled is recorded here. Performance is measured on this cash and
+these positions, not on targets or orders, and the next decision starts from them. "Did not decide",
+"kept as is" and "ordered but nothing filled" stay distinct in the result.
 
-**(4) Account — the only authority.** What was filled, the actual cash and positions, their marks and
-their history. Neither the target nor the order is authoritative. *Intended ≠ requested ≠ dealt ≠
-committed* — the four stay distinguishable in the result. "Did not decide", "decided to hold" and
-"ordered but nothing filled" are not the same empty value.
-The next decision starts here. That is the closed loop.
-
-**(5) Monitoring** — watches the account on its own cadence, independent of decisions. If prices move
-a position past its cap, the breach is recorded even on a day with no orders at all. Monitoring never
-edits the account, and **never halts the run for a breach** — halting would hide what the strategy
+**(5) Compliance** — checks at every point whether the account keeps the rules (say, a 5% single-name
+cap). If prices move a position past its cap, that is recorded as a breach even on a day with no
+orders. It only records and never stops the run, because stopping would hide what the strategy
 actually does.
 
-Two places in this picture keep the future out: (1) hands over only the window of that moment, and
-execution information is invisible to (2). What the engine cannot judge is **when a fill price was
-actually observed** — the data does not say. The agent warns about that, you decide, and it stays in
-the result as a stated limitation.
+Future information is kept out in two places: the strategy receives only data known up to that moment,
+and fill prices are invisible to it. What the data cannot tell is when a fill price was actually
+observed. The agent warns about that, you decide, and it is written into the result as a limitation.
 
 ---
 
@@ -180,62 +180,54 @@ so past research becomes the input to the next.
 
 ```mermaid
 flowchart TD
-    RAW[("Registered data")]
+    RAW[("Source data")]
     DM["DataModel"]
-    FEAT[("Features · signals · risk estimates<br/>stored as data")]
+    FEAT[("Features<br/>derived data")]
     ST["StrategyModel<br/>long-short strategies 1 · 2 · … · N"]
-    POOL[("Strategy results<br/>stored as data")]
-    ENS["Ensemble strategy<br/>netted per instrument"]
-    EI["Enhanced-index overlay<br/>(optional)"]
+    POOL[("Strategy results<br/>keep accumulating")]
+    ENS["StrategyModel<br/>ensemble strategy · long-short"]
+    EI["StrategyModel<br/>enhanced index · long-only<br/>overweight / underweight vs the benchmark"]
 
     RAW --> DM
     DM --> FEAT
     RAW --> ST
     FEAT --> ST
     ST --> POOL
-    POOL -.->|"feeds the next strategy"| ST
     POOL --> ENS
-    FEAT --> ENS
     ENS --> EI
 ```
 
 1. **Build features.** Market cap, beta, predictions, factor loadings — values several strategies
-   share are computed once by a `DataModel`, and the output becomes data read the same way as any
-   other. It is optional: a strategy may compute its own.
-2. **Build several long-short strategies.** Signed cross-sectional judgement is the primary research
-   asset. Research intent is not pre-shrunk to long-only because shorting is hard in practice;
-   unrealized short intent and constraint residue are kept separately.
-3. **The pool accumulates.** Each result is timestamped data. Correlation, overlap and incremental
-   contribution against what already exists can be measured, failed attempts stay with their reasons,
-   and a new strategy can mix raw data, features and earlier strategy results.
-4. **Ensemble.** Reference stored strategies as members and net them per instrument into a single
-   decision, reading the stored results rather than recomputing the members.
-5. **Overlay on an enhanced index, if you want.** Build a physical long-only portfolio as active
-   weights against a benchmark, respecting constraints such as a single-name cap. This step is
-   optional — a single strategy or an ensemble runs just as well on its own.
-
-<!-- ─────────── DEMO PLACEHOLDER 2 ─────────── -->
-> 🎬 **Demo 2 — from a sentence to a result report** *(recording pending)*
->
-> One conversation: write a strategy on the registered data, validate it, run it, and read the result
-> along with the data it depended on.
->
-> `docs/assets/demo-02-strategy.gif`
-<!-- ─────────────────────────────────────────── -->
+   share are computed once by a `DataModel` and stored as derived data, read exactly like source
+   data. It is optional: a strategy may compute its own.
+2. **Build several long-short strategies.** Each reads source data and features and sets a buy (+) or
+   sell (−) weight per instrument. A strategy is not shrunk to long-only up front just because shorting
+   is hard in practice.
+3. **Strategy results accumulate.** Each strategy's weights and performance are kept as timestamped
+   data. You can compare correlation and incremental contribution against existing strategies, and
+   failed attempts stay with their reasons.
+4. **Ensemble.** Read the accumulated results and combine them into a single long-short strategy,
+   without re-running the members. How to combine them (equal weight, IC weight, …) is yours to decide;
+   the framework measures how much nets out between instruments.
+5. **Turn it into an enhanced index.** Following the ensemble's signal, overweight or underweight names
+   against the benchmark to build a long-only portfolio you could actually hold. Limits such as a
+   single-name cap are applied with `optimize` and checked by `Compliance`. You don't have to go through
+   every step — a single strategy or an ensemble backtests just as well on its own.
 
 ---
 
 ## Getting started
 
 ```bash
-uv add "vqapr @ git+https://github.com/jaepil-choi/vqapr@master"
+uv add "vqapr @ git+https://github.com/jaepil-choi/vqapr@develop"
 uv run vqapr skill install
 ```
 
-Two lines. It is not on PyPI yet, so it installs from the release branch on GitHub. The first line
-installs the engine; **the second installs the skill your agent reads.** Without the skill the agent
-does not know how to use the framework. The skill goes to `.agents/skills/vqapr/`, with a one-line
-adapter pointing at it under `.claude/skills/`. **Your `AGENTS.md` and `CLAUDE.md` are never
+Two lines. It is not on PyPI yet and releases live on the `develop` branch, so it installs from GitHub.
+To pin a version, use a release tag (say `@v0.16.1`) instead of `@develop`. The first line installs the
+engine; **the second installs the skill your agent reads.** Without the skill the agent does not know
+how to use the framework. The skill goes to both `.agents/skills/` (Codex and others) and
+`.claude/skills/` (Claude Code), with identical contents. **Your `AGENTS.md` and `CLAUDE.md` are never
 touched.** Add `--dry-run` to see the paths first.
 
 From there you work in sentences.
@@ -270,9 +262,9 @@ size, margin, rolls, coupons and maturity. Adding a name to a list while treatin
 not how they will arrive.
 
 **And shorting?**
-Signed long-short is **a first-class research intent.** Physical shorting — borrow, collateral,
-margin — is not modelled, and negative positions on the hypothetical profile are marked *hypothetical*
-in the result. The two are never treated as the same capability.
+You can **write and backtest long-short strategies as they are.** What is not modelled is what real
+shorting needs — borrowing the shares, collateral, margin. So short positions fill on the hypothetical
+`Academic` exchange and are marked *hypothetical* in the result.
 
 **Can it send real orders?**
 No. Broker connectivity, authentication, always-on scheduling and order slicing or replacement are
