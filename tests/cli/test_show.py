@@ -146,6 +146,8 @@ def test_a_field_written_to_the_record_but_never_surfaced_is_refused_at_the_writ
         "contract",
         "source_digest",
         "declared_digest",
+        # The budget the strategy declared (record 292): the report's denominator.
+        "budget",
         "roster",
         "period",
         # Seconds by phase (`docs/issues/archive/068`): where the run's wall clock went.

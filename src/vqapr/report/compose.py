@@ -84,17 +84,30 @@ def strategy_report(
         risk_free_annual=risk_free_annual,
         initial_nav=initial_nav,
     )
+    declared = record.get("budget")
+    budget = None
     if positions_recorded:
         book = measure.book(grid)
         attribution = measure.attribution(grid, placed)
         intent = measure.intent(grid, intended)
+        # Use is measured against the declaration the run froze (record `292`). A record
+        # written before 0.17.0 has none: the budget rode on each decision and was dropped.
+        if declared:
+            budget = measure.budget_use(book, performance, declared)
+        else:
+            omitted["budget"] = (
+                "the record states no budget: it was written before 0.17.0, when the budget "
+                "rode on each decision and was not recorded"
+            )
     else:
         book = attribution = intent = None
         why = (
             f"{ACCOUNT_TABLE} holds only the {measure.ACCOUNT_ROW} row (the run was recorded "
             "without positions), so the book cannot be read back"
         )
-        omitted.update({"book": why, "attribution": why, "intent": why, "trading.holding": why})
+        omitted.update(
+            {"book": why, "budget": why, "attribution": why, "intent": why, "trading.holding": why}
+        )
     trading = measure.trading(
         grid,
         placed,
@@ -121,6 +134,7 @@ def strategy_report(
         omitted=omitted,
         performance=performance,
         book=book,
+        budget=budget,
         attribution=attribution,
         trading=trading,
         intent=intent,

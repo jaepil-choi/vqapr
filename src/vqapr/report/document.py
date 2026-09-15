@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict
 __all__ = [
     "Attribution",
     "Book",
+    "BudgetUse",
     "CalendarRow",
     "Compliance",
     "ComplianceSummary",
@@ -126,6 +127,38 @@ class Book(_Document):
     cash_share: list[Decimal]
     max_weight: list[Decimal]
     hhi: list[Decimal]
+
+
+class BudgetUse(_Document):
+    """How much of its declared budget the book used, and what using it earned (record `292`).
+
+    `declared` is the budget as `strategy.json` states it. Per valuation, `long_use` and
+    `short_use` are each side's marked exposure over the side's declared size (`None` for a side
+    the budget does not have), and `use` is gross exposure over the declared gross. A fixed budget
+    reads near 1 throughout; a flexible one shows how much of the limit the strategy chose to use.
+
+    The split is over the `periods` whose opening book held something (`use > 0`), a period's
+    return being earned by the book held from its opening valuation:
+
+        mean_return = mean_use_held * mean_return_at_full_use + timing
+
+    `mean_return_at_full_use` averages `return / use` -- what the book earned per whole budget, the
+    number to compare with a strategy that used all of its own. `timing` is the covariance of use
+    and that return, computed as the difference so the two terms add up to `mean_return` exactly:
+    positive when the strategy used more of its budget in the periods that paid.
+    """
+
+    declared: dict[str, str]
+    instants: list[datetime]
+    long_use: list[Decimal] | None
+    short_use: list[Decimal] | None
+    use: list[Decimal]
+    mean_use: Decimal | None
+    periods: int
+    mean_return: Decimal | None
+    mean_use_held: Decimal | None
+    mean_return_at_full_use: Decimal | None
+    timing: Decimal | None
 
 
 class InstrumentPnl(_Document):
@@ -267,6 +300,7 @@ class StrategyReport(_Document):
     omitted: dict[str, str]
     performance: Performance
     book: Book | None
+    budget: BudgetUse | None
     attribution: Attribution | None
     trading: Trading
     intent: Intent | None
@@ -286,6 +320,9 @@ class HeadlineRow(_Document):
     max_drawdown: Decimal
     annualized_realized_turnover: Decimal | None
     cost_share_of_mean_nav_per_year: Decimal | None
+    mean_use: Decimal | None
+    """Mean share of the declared budget the book used (`BudgetUse.mean_use`); `None` when
+    the record states no budget or no book."""
     breached: int | None
 
 

@@ -234,6 +234,10 @@ class StrategyRecord(_Record):
     contract: dict[str, Any]
     source_digest: dict[str, str]
     declared_digest: str
+    budget: dict[str, Any] | None
+    """The budget the strategy declared, in its constructor's spelling (`Budget.encoded()`,
+    record `292`): the denominator the report measures use against. `None` only in a record
+    written before 0.17.0, when the budget rode on each decision and was never stated."""
     roster: dict[str, Any] | None
     period: dict[str, Any]
     timing: dict[str, float]

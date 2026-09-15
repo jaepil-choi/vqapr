@@ -27,6 +27,7 @@ from itertools import pairwise
 from vqapr.report.document import (
     Attribution,
     Book,
+    BudgetUse,
     CalendarRow,
     Compliance,
     ComplianceSummary,
@@ -415,6 +416,64 @@ def book(grid: Sequence[Valuation]) -> Book:
 
 
 # ---------------------------------------------------------------------------------------------
+# The budget
+# ---------------------------------------------------------------------------------------------
+
+
+def _declared_sides(declared: Mapping[str, object]) -> tuple[Decimal, Decimal]:
+    """The long and short sizes a recorded `Budget.encoded()` states, whichever kind it is."""
+    kind = declared.get("kind")
+    names = ("long", "short") if kind == "fixed" else ("long_limit", "short_limit")
+    if kind not in ("fixed", "flexible") or any(name not in declared for name in names):
+        raise ValueError(f"the record's budget is not a Budget.encoded() value: {dict(declared)}")
+    return Decimal(str(declared[names[0]])), Decimal(str(declared[names[1]]))
+
+
+def budget_use(book: Book, performance: Performance, declared: Mapping[str, object]) -> BudgetUse:
+    """Use of the declared budget per valuation, and the split of the mean period return.
+
+    `book` and `performance` come from the same valuation grid, so the book at `instants[i]` is
+    the one held through the period whose return is `performance.returns.values[i]`. Formulas are
+    on `document.BudgetUse`.
+    """
+    long_size, short_size = _declared_sides(declared)
+    gross_size = long_size - short_size
+    use = [exposure / gross_size for exposure in book.gross_exposure]
+    held = [
+        (opening, value)
+        for opening, value in zip(use[:-1], performance.returns.values, strict=True)
+        if value is not None and opening > 0
+    ]
+    mean_return = _mean([value for _, value in held])
+    mean_use_held = _mean([opening for opening, _ in held])
+    at_full_use = _mean([value / opening for opening, value in held])
+    timing = (
+        None
+        if mean_return is None or mean_use_held is None or at_full_use is None
+        else mean_return - mean_use_held * at_full_use
+    )
+    return BudgetUse(
+        declared={key: str(value) for key, value in declared.items()},
+        instants=list(book.instants),
+        long_use=(
+            None if long_size == 0 else [exposure / long_size for exposure in book.long_exposure]
+        ),
+        short_use=(
+            None
+            if short_size == 0
+            else [exposure / short_size for exposure in book.short_exposure]
+        ),
+        use=use,
+        mean_use=_mean(use),
+        periods=len(held),
+        mean_return=mean_return,
+        mean_use_held=mean_use_held,
+        mean_return_at_full_use=at_full_use,
+        timing=timing,
+    )
+
+
+# ---------------------------------------------------------------------------------------------
 # Fills placed on the grid
 # ---------------------------------------------------------------------------------------------
 
@@ -777,6 +836,7 @@ def headline(report: StrategyReport) -> HeadlineRow:
         max_drawdown=report.performance.max_drawdown,
         annualized_realized_turnover=report.trading.annualized_realized_turnover,
         cost_share_of_mean_nav_per_year=report.trading.costs.share_of_mean_nav_per_year,
+        mean_use=None if report.budget is None else report.budget.mean_use,
         breached=(
             None
             if report.compliance is None

@@ -210,6 +210,9 @@ def freeze_strategy_record(
         source_digest=dict(as_loaded),
         # The declaration this strategy froze against: its own identity, not the run's.
         declared_digest=str(layer.identity),
+        # How large each side of the book was allowed to be -- frozen with the run (record
+        # `291`) and stated here so the report has a denominator (record `292`).
+        budget=layer.budget.encoded(),
         # Which roster this run read, and `None` when it read none. STATED, never compared -- a
         # roster grows as a matter of course, so a run refused for reading a different one than
         # yesterday would be refused every morning.

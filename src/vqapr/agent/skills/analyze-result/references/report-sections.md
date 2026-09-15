@@ -1,9 +1,10 @@
-# The six sections of a `StrategyReport`
+# The seven sections of a `StrategyReport`
 
 ## Contents
 
 - performance
 - book
+- budget
 - attribution
 - trading
 - intent
@@ -38,6 +39,23 @@ per valuation, from the marked positions.
 
 This is the section that answers "was it actually long-short", and it answers it from what was
 held, not from what was intended.
+
+## `budget`
+
+How much of its declared budget the book used, per valuation: `long_use` and `short_use` are each
+side's exposure over its declared size (`None` for a side the budget does not have), `use` is gross
+over declared gross. `declared` is the budget as `strategy.json` states it.
+
+The mean period return, over the periods the book held something, splits as
+
+`mean_return = mean_use_held × mean_return_at_full_use + timing`
+
+- `mean_return_at_full_use` is what the book earned per whole budget. **Compare a strategy that
+  used part of its budget with one that used all of its own on this and on Sharpe, not on NAV
+  return.**
+- `timing` is what using more when it paid added (the covariance of use and that return).
+
+A record written before 0.17.0 states no budget; `omitted` says so.
 
 ## `attribution`
 

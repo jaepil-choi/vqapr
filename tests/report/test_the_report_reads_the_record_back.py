@@ -85,7 +85,14 @@ def _fill(at, version, name, requested, dealt, price, cash_delta, commission, ta
     }
 
 
-def _strategy_record(strategy_ref: str, compliance: list[dict[str, str]]) -> dict[str, object]:
+FLEXIBLE = {"kind": "flexible", "long_limit": "1", "short_limit": "-1"}
+
+
+def _strategy_record(
+    strategy_ref: str,
+    compliance: list[dict[str, str]],
+    budget: dict[str, str] | None = FLEXIBLE,
+) -> dict[str, object]:
     strategy_id = strategy_ref.split("@")[0]
     values: dict[str, object] = dict.fromkeys(record_fields(STRATEGY_KIND))
     values.update(
@@ -106,6 +113,7 @@ def _strategy_record(strategy_ref: str, compliance: list[dict[str, str]]) -> dic
             "roster": None,
             "period": {"start": T0.isoformat(), "end": T3.isoformat(), "events": 3},
             "timing": {},
+            "budget": budget,
         }
     )
     return values
@@ -421,7 +429,14 @@ def test_a_book_recorded_without_positions_says_which_sections_it_cannot_give(
     assert report.positions_recorded is False
     assert report.book is None and report.attribution is None and report.intent is None
     assert report.trading.holding is None
-    assert set(report.omitted) == {"book", "attribution", "intent", "trading.holding", "compliance"}
+    assert set(report.omitted) == {
+        "book",
+        "budget",
+        "attribution",
+        "intent",
+        "trading.holding",
+        "compliance",
+    }
     assert "recorded without positions" in report.omitted["book"]
     assert "declared no compliance rule" in report.omitted["compliance"]
     assert report.performance.total_return == Decimal("0.1")
@@ -547,3 +562,54 @@ def test_a_report_takes_the_address_the_cli_writes(store: Path) -> None:
     assert run_report(str(store), RUN).as_record() == run_report(store, RUN).as_record()
     with pytest.raises(ValueError, match="reports every strategy"):
         run_report(store, f"{RUN}/{S}")
+
+
+def test_the_budget_section_measures_use_against_the_recorded_declaration(store: Path) -> None:
+    """Record `292`: use is the book's exposure over what the strategy declared, and the mean
+    return splits into what a whole budget earned and what using more when it paid added."""
+    report = strategy_report(store, RUN, S)
+    budget, book = report.budget, report.book
+    assert budget is not None and book is not None
+    assert budget.declared == FLEXIBLE
+    assert budget.use == [gross / 2 for gross in book.gross_exposure]
+    assert budget.long_use == book.long_exposure
+    assert budget.short_use == [exposure / -1 for exposure in book.short_exposure]
+    assert budget.periods == 2, "the opening book at T0 held nothing, so that period is not split"
+    assert budget.mean_use_held is not None and budget.mean_return_at_full_use is not None
+    assert budget.timing is not None
+    assert (
+        budget.mean_use_held * budget.mean_return_at_full_use + budget.timing
+        == budget.mean_return
+    )
+    assert measure.headline(report).mean_use == budget.mean_use
+
+
+def test_a_record_written_before_the_budget_was_recorded_says_so(tmp_path: Path) -> None:
+    """A 0.16 `strategy.json` states no budget; the report omits the section by name rather than
+    guessing a denominator."""
+    root = tmp_path / "old"
+    run: dict[str, object] = dict.fromkeys(record_fields(RUN_KIND))
+    run.update(
+        {
+            "declared_digest": "d",
+            "instruments": ["A"],
+            "period": {"start": T0.isoformat(), "end": T1.isoformat()},
+            "initial_account": {"cash": "1000", "mode": "long_only", "positions": {}, "version": 0},
+            "datasets": [],
+            "strategies": [{"component_id": "u", "record": U}],
+            "datamodels": [],
+        }
+    )
+    write_run_record(root, RUN, run)
+    u = RunRecordWriter(root, RUN, U)
+    u.open()
+    u.append("vqapr.account", [_head(T0, 0, "1000", "1000")])
+    u.append("vqapr.account", [_head(T1, 1, "500", "1000"), _position(T1, 1, "A", "10", "50")])
+    u.finish(_strategy_record(U, [], budget=None), kind=STRATEGY_KIND)
+    u.release()
+
+    report = strategy_report(root, RUN, U)
+
+    assert report.book is not None and report.budget is None
+    assert "written before 0.17.0" in report.omitted["budget"]
+    assert measure.headline(report).mean_use is None
