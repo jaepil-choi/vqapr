@@ -13,6 +13,7 @@ there is no member to select and `--strategy` is gone. Several models means seve
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 from typing import Any
 
@@ -277,21 +278,29 @@ def run(args: argparse.Namespace, *, project_root: Path) -> dict[str, Any]:
     targets = [str(name) for name in args.target]
     if len(targets) == 1:
         return _run_one(targets[0], args, project_root=project_root)
+    started = time.perf_counter()
     jobs = int(getattr(args, "jobs", 1) or 1)
     store_root = getattr(args, "store_root", None) or project_root / WORKSPACE_DIRECTORY
     if jobs > 1:
-        return _run_each_in_workers(targets, args, project_root=project_root, jobs=jobs)
+        return _run_each_in_workers(
+            targets, args, project_root=project_root, jobs=jobs, started=started
+        )
     runs: dict[str, Any] = {}
     for target in targets:
         try:
             runs[target] = _run_one(target, args, project_root=project_root)
         except (VqaprError, InputError) as refused:
             runs[target] = _refusal_envelope(refused)
-    return _runs_envelope(runs, store_root, jobs=1)
+    return _runs_envelope(runs, store_root, jobs=1, started=started)
 
 
 def _run_each_in_workers(
-    targets: list[str], args: argparse.Namespace, *, project_root: Path, jobs: int
+    targets: list[str],
+    args: argparse.Namespace,
+    *,
+    project_root: Path,
+    jobs: int,
+    started: float,
 ) -> dict[str, Any]:
     """The runs in `jobs` spawned processes, each freezing its own run (design §2.3).
 
@@ -323,8 +332,11 @@ def _run_each_in_workers(
     strategy_runs = [t for t in targets if definitions[t].datamodel is None]
     outcomes: dict[str, Any] = {}
     # The batch bakes each panel-grain dataset it reads once, every worker maps it, and the
-    # files are gone when the batch returns (record `236`, `docs/issues/098`).
+    # files are gone when the batch returns (record `236`, `docs/issues/098`). The bake is timed
+    # because it is in no run's `timing` (record `299`).
+    before_bake = time.perf_counter()
     with batch_cubes(workspace, targets, reads) as cubes:
+        bake = time.perf_counter() - before_bake
         baked = "" if cubes is None else str(cubes)
         if datamodel_runs:
             outcomes.update(
@@ -352,7 +364,9 @@ def _run_each_in_workers(
         target: _worker_entry(target, definitions[target], outcomes[target], store_root)
         for target in targets
     }
-    return _runs_envelope(runs, store_root, jobs=min(jobs, len(targets)))
+    return _runs_envelope(
+        runs, store_root, jobs=min(jobs, len(targets)), started=started, bake=bake
+    )
 
 
 def _worker_entry(
@@ -428,11 +442,29 @@ def _refusal_envelope(refused: Exception) -> dict[str, Any]:
     return failure(refused, stage=Stage.RUN)
 
 
-def _runs_envelope(runs: dict[str, Any], store_root: Path, *, jobs: int) -> dict[str, Any]:
-    """The batch envelope: every run's entry, and the number of processes that ran them."""
+def _runs_envelope(
+    runs: dict[str, Any],
+    store_root: Path,
+    *,
+    jobs: int,
+    started: float,
+    bake: float | None = None,
+) -> dict[str, Any]:
+    """The batch envelope: every run's entry, the number of processes that ran them, and how
+    long the batch took.
+
+    `elapsed` is the command's wall clock and `bake` (a pool only) the part spent baking shared
+    panels before any worker started (record `299`). Each strategy's `timing.total` is its own
+    event loop, so a batch's start-up, loading and record writing were in no number at all: a
+    516 s batch whose longest run said 362.5 s left 150 s unaccounted for (testbed report
+    2026-09-15).
+    """
     ok = all(entry.get("ok", True) for entry in runs.values())
     envelope = success("run.complete", store_root=str(store_root), jobs=jobs, runs=runs)
     envelope["ok"] = ok
+    envelope["elapsed"] = round(time.perf_counter() - started, 3)
+    if bake is not None:
+        envelope["bake"] = round(bake, 3)
     return envelope
 
 

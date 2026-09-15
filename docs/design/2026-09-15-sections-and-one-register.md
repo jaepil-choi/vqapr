@@ -51,8 +51,10 @@ X-ray 결과까지 버리지 않는 것처럼.
 - **버전.** `vqapr.__version__`, `vqapr --version`(다른 명령처럼 JSON 봉투), 그리고 `run.json`·`strategy.json`의
   `package_version`. run identity에는 넣지 않는다(오너 결정 2026-09-15: 버전은 영수증이다). 같은 fingerprint라서
   거절할 때 그 기록을 쓴 버전을 말한다. showcase digest 스크립트는 이 키를 `timing`처럼 뺀다.
-- **배치 시간.** envelope에 배치 `elapsed`와 `bake`, run마다 `elapsed`. `timing.total`은 이벤트 루프만 잰다는
-  것을 `run-backtest/references/watching-and-failures.md`가 말한다. record는 바뀌지 않는다.
+- **배치 시간.** envelope에 배치 `elapsed`와(`--jobs`면) `bake`. `timing.total`은 이벤트 루프만 잰다는 것을
+  `run-backtest/references/watching-and-failures.md`가 말한다. record는 바뀌지 않는다. run마다의 `elapsed`는
+  하지 않는다: 풀 안의 run은 worker가 재야 하고 그러면 풀의 반환 모양이 바뀐다. 보고가 청한 것은 배치 시간 ·
+  bake · `total`의 뜻이다.
 
 ## 4. 하지 않는 것
 

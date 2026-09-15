@@ -56,6 +56,18 @@ vqapr run <run-id>
 
 runs that one alone into a new record. The shape is the same under `--jobs N`.
 
+## Where the time went
+
+Each strategy's `timing` is its own event loop: `total` runs from the first event to the last, and
+splits into the callbacks (`callback`) and the due stages (`due`, and each by name under
+`simulation.due.*`). It does not include loading and checking the run, building its panels, or
+writing the record.
+
+An envelope that names several runs carries `elapsed`: the whole command's wall clock. Under
+`--jobs N` it also carries `bake`, the part spent baking shared panels before any worker started.
+The gap between `elapsed` and the longest `timing.total` is start-up, loading and record writing.
+Size `--jobs` by one run's wall clock measured alone, not by `timing.total`.
+
 ## Reporting this to the user
 
 An `ok: false` batch is not "the backtest failed" when four of five runs completed. Say which
