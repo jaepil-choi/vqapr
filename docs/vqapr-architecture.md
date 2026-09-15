@@ -553,18 +553,19 @@ Compliance 규칙은 자기 id(`compliance_id`)를 한 번 선언하고, 싣기�
 ### 5.2 목표 포트폴리오 — intent
 
 - `PortfolioIntent`는 전략이 돌려주는 **경제적 내용**만 담는다: 목표(`PortfolioTarget` — 종목과 **비중**),
-  `cash_target`, `Budget`, 무엇을 읽었나(`source_refs`), 본 계좌 버전, 모델 상태 참조.
+  `cash_target`, 무엇을 읽었나(`source_refs`), 본 계좌 버전, 모델 상태 참조.
 - 두 단계가 있다. **제안된 의도**(전략의 것: 내용 + 출처, 시각 없음)와 **수락된 의도**(엔진의 것: 내용 + 도장 찍힌
   판단 시각 + 해석된 체결 목표). 대기 포인터가 가리키는 것은 두 번째다.
 - **목표는 비중뿐이다.** 수량을 선언할 수 없다. 콜백은 체결 가격도 NAV도 보지 못하므로 수량은 이미 틀린 가격으로
   계산된 것이 되고, `cash_target`까지 정확히 맞추기를 강요한다. 수량 변환은 체결 시각에 `plan_orders`에서 한 번만
   일어난다(§8.3).
-- `cash_target`은 `1 − Σw`로 유도하지 않는다. 구성이 정한 값이다(§7.5).
-- **`Budget`은 intent의 필드다** — 방향(롱온리 · 양방향), 현금 비중의 허용 범위, 종목 비중의 허용 범위. 목표 비중과
-  함께 이동하고 수락 단계와 `plan_orders`가 다시 검사한다. 한 개념이 소유하는 value object이므로 같은 모듈에 산다.
-- **만들 때 검사한다**: `Σw + cash_target = 1`, `cash_lower <= cash <= cash_upper`, 종목 유일, 유한한 값, 방향과
-  profile의 호환. 계산한 쪽(solver의 표류, 손으로 만든 목표, 버그)을 믿지 않는다. **종목별 상한은 만들 때 검사하지
-  않는다** — 상자는 전략의 재량이고, 지켜졌는지는 Compliance가 체결된 계좌에서 본다(§4.9).
+- `cash_target`은 `1 − Σw`, 비중이 남긴 것이다. 전략은 현금을 적지 않는다(§7.3).
+- **`Budget`은 intent의 필드가 아니다.** 전략 클래스가 `budget()`으로 한 번 선언하고(`portfolio/budget.py`), run이
+  동결해 전략의 identity와 `strategy.json`에 넣으며, decide 단계가 모든 `Rebalance`를 그것에 대어 한 번 검사한다
+  (§7.3, record `291`). 판단마다 실리면 전략이 아무 날에나 자기 한도를 넓힐 수 있고, 기록에는 분모가 남지 않는다.
+- **만들 때 검사한다**: `Σw + cash_target = 1`, 종목 유일, 유한한 값. 계산한 쪽(solver의 표류, 손으로 만든 목표,
+  버그)을 믿지 않는다. **종목별 상한은 만들 때 검사하지 않는다** — 상자는 전략의 재량이고, 지켜졌는지는
+  Compliance가 체결된 계좌에서 본다(§4.9).
 - 분수 · 로트는 intent에서 검사하지 않는다. 거래소가 안다.
 
 ### 5.3 거래소가 한 종목을 거래하는 규칙 — listing
@@ -745,9 +746,14 @@ StrategyModel과 DataModel에 똑같이 적용되고, 저장 · 복원 코드는
 
 ### 7.3 `Rebalance`와 `Hold`
 
-- `Rebalance`는 완전한 목표 포트폴리오 하나다: 비중 · 현금 · 그것이 지켜야 할 `Budget`. `Rebalance.of(long=…,
-  short=…, invested=…)`는 흔한 두 예산(롱온리, 양방향)을 만들고, `Rebalance.signed(weights)`는 부호가 방향이다.
-  잘못 부르는 모든 방법이 여기서 종목 이름을 인용하며 거절된다.
+- `Rebalance(weights)`는 완전한 목표 포트폴리오 하나다: 부호 있는 비중뿐이다. 현금은 `1 − Σw`로 유도된다.
+- 각 쪽의 크기는 전략이 `budget()`으로 한 번 선언한 `Budget`이 정한다: `Budget.fixed(long=, short=)`는 각 쪽이
+  정확히 그 값(선언하지 않으면 `fixed(long=1, short=-1)`, dollar neutral), `Budget.flexible(long_limit=,
+  short_limit=)`는 각 쪽이 0부터 한도까지. short 쪽은 음수로 쓰고 `short=0`이 롱온리다.
+  `self.budget().fill(signal, use=1)`이 부호 있는 signal을 선언된 크기로 표준 격자 위에 맞춘다.
+- decide 단계가 모든 `Rebalance`를 동결된 선언에 대어 검사하고, 어긋나면 각 쪽의 합과 선언을 인용하며 거절한다.
+  자르지도 채우지도 않는다. fixed에서 한 쪽을 채울 수 없는 날도 거절이므로, 그런 전략은 flexible을 선언하거나
+  `Hold`를 돌려준다.
 - 포지션을 다 비우는 것은 `Hold`가 아니라 빈 `Rebalance`(현금 100%)다. `Hold`는 "아무것도 하지 마라"이므로 포지션이
   남는다.
 
@@ -780,15 +786,18 @@ StrategyModel과 DataModel에 똑같이 적용되고, 저장 · 복원 코드는
 **`portfolio/`** — 신호를 목표 비중으로.
 
 - `weights.py`: **부호는 언제나 신호에서 오고 크기만 다르다.** `signal_weight`는 |신호|에 비례, `proportional_weight`는
-  신호 × 크기 panel에 비례, `equal_weight`는 균등. 셋 다 gross 1로 정규화한다 — 예산이 아니라 단위다. 예산은
-  `rescale(weights, long=, short=, grid=)`가 롱과 숏을 따로 맞춘다. `grid`가 있으면 먼저 격자에 올리고 나중에 맞춘다.
+  신호 × 크기 panel에 비례, `equal_weight`는 균등. 셋 다 gross 1로 정규화한다 — 예산이 아니라 단위다.
+  `rescale(weights, long=, short=, grid=)`는 롱과 숏을 따로 맞춘다. `grid`가 있으면 먼저 격자에 올리고 나중에 맞춘다.
   비어 있는 선택은 실패가 아니라 빈 비중이다. 결측 이름을 버리고 재정규화하지 않는다 — 실패한다.
+- `budget.py`: 전략이 선언하는 `Budget` 값(§7.3) — `fixed` · `flexible`, `check(weights)`는 장부를 판정하고
+  `fill(signal, use=)`은 선언된 각 쪽을 목표로 `rescale(..., grid=QUANTUM)`해 장부를 만든다. 예산은 이 선언이 정한다.
 - `optimize.py`: 상하한 · 거래정지 · 비용 아래서 잘라 내고 재분배하는 대신 **한 번에 푼다.** 선언된 목적은
   `min ||Lw − x^desired||² + Σ cost_i |w_i − w0_i| + λ||w − w0||₁`, 제약은 `Σw + c = 1`, `l <= w <= u`,
   `c_lo <= c <= c_hi`, `w_j = w0_j (j ∈ frozen)`. 구현은 선언의 부분집합이고 선언을 줄이지 않는다 — 비용 없는
   부분은 예산 초평면으로의 box projection이라 2n개의 breakpoint를 정렬해 승수를 **유리수로 정확히** 푼다. 반복도
   solver 패키지도 없다.
-  - 현금 `c`는 유도값이 아니라 결정 변수다 — 잘린 비중이 "갈 곳"이 현금이다.
+  - 풀이 안에서 현금 `c`는 결정 변수다 — 잘린 비중이 "갈 곳"이 현금이다. `cash_range`에는 전략이 선언한
+    `Budget`이 허용하는 현금을 넘긴다. 결과는 `Rebalance(result.weights)`이고, 판단의 현금은 다시 `1 − Σw`다.
   - 거래할 수 없는 종목은 제외가 아니라 `w_j = w0_j`다. 조용한 제외는 PRD §10.2 위반이다.
   - `L`(look-through 행렬)은 목적에만 들어가고 제약에는 들어가지 않는다. 제약은 물리적 `w`에만 걸린다 — 계좌는 물리
     보유를 들고 Compliance도 그것을 잰다. `L`은 전략이 구성 종목 데이터로 만든다. 패키지 helper는 없다(PRD §8.2).
@@ -835,8 +844,8 @@ StrategyModel과 DataModel에 똑같이 적용되고, 저장 · 복원 코드는
 
 ### 8.3 `plan_orders` — 비중이 수량이 되는 유일한 자리
 
-`domain/order.py::plan_orders(account, execution_time_nav, prices, weight_targets, cash_target, budget, rules,
-tradable) -> OrderBatch`.
+`domain/order.py::plan_orders(account, execution_time_nav, prices, weight_targets, cash_target, rules,
+tradable) -> OrderBatch`. budget은 받지 않는다 — 판단은 decide 단계에서 이미 선언에 대어 검사되었다(§7.3).
 
 - **함수이지 Protocol이 아니다.** 구현이 하나이고 층이 닫혀 있으므로 확장점의 겉모습을 만들지 않는다.
 - 전략은 가격이 움직이기 전의 평가 시각에 목표를 선언했으므로, 변환은 체결 가격과 NAV가 둘 다 알려진 **체결
@@ -1290,7 +1299,7 @@ src/vqapr/
 │   ├── wiring.py            배선표: Role · Clock · View · Receiver · WIRING · MARKET_CLOCK_ORDER
 │   ├── instrument.py        종목의 정체: Stock · ETF · Index · Factor · InstrumentRoster
 │   ├── schedule.py          Schedule(선언) → ScheduledEvent(얼린 사건)
-│   ├── intent.py            목표 포트폴리오: PortfolioIntent · PortfolioTarget · Budget · PortfolioDirection
+│   ├── intent.py            목표 포트폴리오: PortfolioIntent · PortfolioTarget
 │   ├── cost.py              체결 비용: FillCost · SideCost (매수 · 매도 각각의 비율)
 │   ├── listing.py           거래소가 종목을 거래하는 규칙: Side · TradeRule · TradeTerms · ExchangeRulesView
 │   ├── order.py             주문: OrderRequest · OrderBatch · plan_orders (목표 → 정수 주문)
@@ -1314,6 +1323,7 @@ src/vqapr/
 │   ├── transform.py         rank · neutralize · fama_french_cut_points · fama_french_assign
 │   └── evaluation.py        information_coefficient · rank IC · hit_rate · decay
 ├── portfolio/         [10]  신호를 목표 비중으로 (순수 함수)
+│   ├── budget.py            전략이 선언하는 Budget: fixed · flexible · check · fill
 │   ├── weights.py           signal_weight · equal_weight · proportional_weight · rescale
 │   ├── optimize.py          상하한과 예산 아래 원하는 비중에 가장 가까운 비중 (유리수로 정확히)
 │   ├── bounds.py            상자: no_short · single_name_cap · intersect → (하한, 상한)
@@ -1531,7 +1541,7 @@ PRD §0.3은 각 `UC-*`의 trigger · 허용된 읽기 · 계산 · 상태 전�
 | `UC-FACTOR-001` | §7.4 · §14.2 · §14.3 |
 | `UC-SIGNAL-001`, `UC-SIGNAL-002` | §7.1 · §7.5 |
 | `UC-ENSEMBLE-001`, `UC-ALPHA-PATH-001`, `UC-ALPHA-CHILD-001` | §7.4 · §3.4 (`trade_price` · `at`만 바꾼 child run) |
-| `UC-ALPHA-BUDGET-001` | §5.2 (`Budget` · 생성 시 검증) · §7.5 (`cash_range`) |
+| `UC-ALPHA-BUDGET-001` | §7.3 (`budget()` · decide 단계의 검사) · §7.5 (`portfolio/budget.py` · `cash_range`) |
 | `UC-BUILTIN-001` | §7.5 (leaf 규칙) |
 | `UC-ALPHA-ADAPTIVE-001`, `UC-STATE-001`, `UC-STATE-002` | §7.2 · §10.2 (`initial_model_memory`) |
 | `UC-PORTFOLIO-001`, `UC-PROFILE-001`, `UC-ACADEMIC-001` | §2.6 · §8.4 |
@@ -1569,7 +1579,7 @@ PRD §0.3은 각 `UC-*`의 trigger · 허용된 읽기 · 계산 · 상태 전�
 | 16-7 | 기간에 따라 바뀌는 비용 비율 | 비율은 거래소 설정의 상수. 비율이 바뀐 기간은 다른 거래소 설정 · 다른 run | 한 run 안에서 세율이 바뀌는 연구(예: 증권거래세 인하 전후를 한 번에) |
 | 16-8 | 종목별 실현 손익을 기본 기록으로 둘 것인가 | 기본이 아니다. 경제적 정의가 없다(평균 원가 대 FIFO, 비용의 원가 산입, 부분 매도, 부호 전환) | 보고서가 종목 귀속을 넘어 실현 손익을 요구할 때 |
 | 16-9 | 결합 결과가 멤버마다 실제 상태의 identity와 반영 범위(계좌 버전 범위 · 사건 범위 · 컷오프)를 보존해야 한다 | 요구사항이지만 부분만 구현됐다 — 경로 이동 여부(`moved`/`constant`)와 원천 id 목록만 발행한다. **충족된 요구로 읽지 말 것** | 앙상블의 근사 크기를 값으로 검사해야 할 때 |
-| 16-10 | `Budget`의 이름 | 내용은 방향 · 현금 범위 · 비중 범위. 퀀트에서 budget은 흔히 위험 예산을 뜻해 이름이 약하다 | 다음 깨지는 릴리스 |
+| 16-10 | `Budget`의 이름 | 내용은 롱 · 숏 각 쪽의 크기(fixed · flexible)이고 전략에 한 번 선언된다(record `291`). 퀀트에서 budget은 흔히 위험 예산을 뜻해 이름이 약하다 | 다음 깨지는 릴리스 |
 | 16-11 | domain의 `Panel` Protocol이 필요한가 | component가 data보다 위층이므로 구현(`data/panel.py`)을 직접 가리킬 수 있다 | 개념 트리 캠페인의 data 단계에서 확인 |
 
 **닫힌 것** (다시 열지 않는다): 전략은 미래 일정을 보지 않는다(§3.4 · §7.1). `RowsLookback`은 pivot된 표의 행을
@@ -1635,7 +1645,8 @@ PRD §0.3은 각 `UC-*`의 trigger · 허용된 읽기 · 계산 · 상태 전�
 37. 전략 콜백 안에서 다른 run을 돌리는 경로가 없다.
 38. DataModel 결과는 체결을 지나지 않는다. `DataCall`에는 계좌가 없다(경로의 부재로).
 39. 전략은 다른 전략의 저장된 결과를 `DataRequirement`로 읽는다.
-40. `PortfolioIntent` 생성은 `Σw + cash = 1`과 현금 범위를 검사한다. 종목별 상한은 생성에서 검사하지 않는다.
+40. `PortfolioIntent` 생성은 `Σw + cash = 1`을 검사한다. 각 쪽의 크기는 decide 단계가 동결된 `Budget`에 대어
+    검사하고, 종목별 상한은 어디서도 검사하지 않는다(Compliance가 관측한다).
 41. 같은 membership 산출물을 소비한 bucket run들은 lineage로 그것을 증명한다. bucket 합성 팩터와 부호 있는 직접 팩터가
     마찰 없는 profile에서 일치한다.
 
@@ -1704,7 +1715,7 @@ PRD §0.3은 각 `UC-*`의 trigger · 허용된 읽기 · 계산 · 상태 전�
 | `domain/wiring.py`, `extension/component.py::ComponentKind` | `domain/wiring.py` (`Role` 하나) |
 | `domain/instruments.py` | `domain/instrument.py` |
 | `domain/agendas.py` | `domain/schedule.py` |
-| `portfolio/intents.py`, `portfolio/budgets.py` | `domain/intent.py` |
+| `portfolio/intents.py`, `portfolio/budgets.py` | `domain/intent.py` (`Budget`은 record `291`에서 `portfolio/budget.py`로) |
 | `exchange/listings.py` | `domain/listing.py` |
 | `domain/orders.py`, `exchange/planning.py` | `domain/order.py` |
 | `domain/costs.py` | `domain/cost.py` — `fill.py`에 합치면 `fill → order → listing → fill` 순환이 생긴다 |

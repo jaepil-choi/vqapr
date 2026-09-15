@@ -65,7 +65,8 @@ They are pure, and the constraints are what keep them from becoming a second, in
   they need arrives as an argument. If sizing needs an external panel — market cap, say — the
   caller passes it, so that data goes through the strategy's declared requirements and lands in
   the result's lineage.
-- **They do not decide a budget.** An under-allocated result is not topped up.
+- **They do not decide a budget.** The strategy declares it in `budget()`, and
+  `self.budget().fill(signal)` sizes a signal to it. An under-allocated result is not topped up.
 - **They do not handle missing values quietly.** A required side input that is absent fails
   *before* the calculation rather than dropping the name and renormalising the rest.
 - **Same input, same output.** They do not know the run id, the decision time or the account

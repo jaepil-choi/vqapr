@@ -366,7 +366,8 @@ vqapr가 reference component를 제공할 수는 있지만 **project-owned propr
 - registered data, account state, clock, execution profile에 **접근하지 않는다.** 필요한 값은 전부 인자로
   받는다. 크기 결정에 외부 panel(시가총액 등)이 필요하면 그 panel을 호출자가 넘긴다. 그래야 그 data가
   StrategyModel의 declared requirement를 거쳐 §4.6의 lineage에 남는다.
-- **budget을 스스로 결정하지 않는다.** 선언된 것보다 적게 배분된 결과를 자동으로 채우지 않는다(§5.5).
+- **budget을 스스로 결정하지 않는다.** budget은 StrategyModel이 한 번 선언한다. 선언된 것보다 적게 배분된
+  결과를 자동으로 채우지 않는다(§5.5).
 - **결측을 조용히 처리하지 않는다.** 요구한 부수 입력이 없으면 계산 전에 실패하고, 해당 종목을 빼고
   나머지를 재정규화하지 않는다(§10.2).
 - 연구 결과 자체의 결측 해소는 built-in weighting의 책임이 아니다. 별도의 명시적 built-in으로 제공하되,
@@ -1098,8 +1099,8 @@ DataModel은 다시 실행하지 않아도 되고, 두 StrategyModel result는 �
 | budget이 fixed인지 flexible인지 | 합이 0.4인 결과가 "의도한 40%"인지 "정규화 안 된 것"인지 모른다 |
 | actual Account state나 Model state를 소비했는지 | 소비자가 dependency 종류와 재현 시작점을 알 수 없다 |
 
-이 선언은 **결과를 만들 때 검증한다.** 선언과 실제 값이 어긋나면 — fixed gross 1.0을 선언했는데 합이
-다르거나, long-only를 선언했는데 음수가 있으면 — 결과를 만들기 전에 실패한다.
+이 선언은 **결과를 만들 때 검증한다.** 선언과 실제 값이 어긋나면 — fixed `long=1`을 선언했는데 long 합이
+다르거나, `short=0`(long-only)을 선언했는데 음수가 있으면 — 결과를 만들기 전에 실패한다(§5.5).
 
 **읽는 쪽에서는 값의 차이를 실패로 보지 않는다.** fixed 1.0 결과와 flexible 0.4 결과는 둘 다 정상이며, 그
 둘을 어떻게 다룰지는 소비하는 StrategyModel의 경제적 결정이다. package가 생산자와 소비자 사이를 중재하지 않는다.
@@ -1223,12 +1224,34 @@ value와 momentum StrategyModel의 signed weight를 저장한 뒤 ensemble이 �
 
 ### 5.5 Budget semantics
 
-**fixed budget**은 선언한 gross/net budget을 채우는 것을 목표로 한다. **flexible budget**은 약한 signal, 높은
-cost, risk 조건 때문에 일부를 cash/residual로 남길 수 있다. package가 빈 weight를 자동 재정규화해 두 의미를
-바꾸지 않는다.
+budget은 **StrategyModel 클래스에 한 번 선언한다**(`budget()`). 판단(`Rebalance(weights)`)은 부호 있는 비중만
+담는다. run은 선언을 동결해 전략의 identity와 기록에 넣고, 모든 `Rebalance`를 decide 단계에서 그 선언에 대어
+검사한다. 어긋나면 거절하며, 자르지도 채우지도 않는다. 판단마다 budget을 실으면 전략이 아무 날에나 자기 한도를
+넓힐 수 있고, 기록에는 비교할 분모가 남지 않는다.
 
-budget을 **weight를 만드는 연산이 스스로 결정하지 않는다.** 선언된 예산보다 적게 배분된 결과를 연산이 자동으로
-채우면 flexible을 fixed로 몰래 바꾸는 것이므로 금지한다.
+| 선언 | long 쪽 | short 쪽 |
+|---|---|---|
+| `Budget.fixed(long=1, short=-1)` — 선언하지 않으면 이것 | 정확히 1 | 정확히 -1 |
+| `Budget.fixed(long=0.5, short=-0.5)` | 정확히 0.5 | 정확히 -0.5 |
+| `Budget.fixed(long=1, short=0)` | 정확히 1 | 없음 (long-only) |
+| `Budget.flexible(long_limit=1, short_limit=-1)` | 0 ~ 1 | -1 ~ 0 |
+
+- **fixed budget**은 각 쪽의 합이 선언값과 정확히 같다. **flexible budget**은 각 쪽이 한도까지 갈 수 있고, 약한
+  signal, 높은 cost, risk 조건 때문에 덜 쓸 수 있다.
+- short 쪽은 음수로 쓴다(`rescale`과 같다). `short=0`이 long-only다. 기본값이 dollar neutral이므로 **long-only
+  전략은 반드시 선언한다.** `fixed(long=0.5, short=-0.5)`는 전액 투자한 long-only 장부와 gross가 같다.
+- cash는 선언하지 않는다. `1 − net`으로 유도된다.
+- 종목별 한도는 여기에 속하지 않는다 — `bounds` kit와 Compliance(§7).
+
+`self.budget().fill(signal, use=1)`은 부호 있는 signal을 선언된 각 쪽의 크기로 맞춘다. 한 쪽 안의 상대적 확신은
+signal 그대로이고, 0은 0으로 남으며, 모든 비중은 표준 격자 위에 있다. `use`(0 < use ≤ 1)는 각 한도의 그 비율을
+쓰며 flexible budget만 받는다.
+
+fixed budget에서 한 쪽을 채울 수 없는 날 — short 이름이 없는 signal, 빈 장부 — 은 거절된다. 그런 날이 있는
+전략은 flexible을 선언하거나 `Hold`를 돌려준다.
+
+budget을 **weight를 만드는 연산이 스스로 결정하지 않는다.** 선언이 정한다. flexible budget보다 적게 배분된 결과를
+연산이 자동으로 채우면 flexible을 fixed로 몰래 바꾸는 것이므로 금지한다.
 
 #### 의도된 cash와 잔여는 다르다
 
@@ -1238,48 +1261,44 @@ budget을 **weight를 만드는 연산이 스스로 결정하지 않는다.** �
   구성, risk parity의 cash sleeve, market timing의 현금 비중)에서 cash는 **선택한 포지션**이다.
 - **배분하지 못한 잔여.** flexible budget에서 약한 signal, 높은 cost, risk 조건 때문에 남은 부분이다.
 
-두 경우의 숫자가 같아도 같은 것으로 보고해서는 안 된다. 결과는 어느 쪽인지 구분할 수 있어야 한다.
+두 경우의 숫자가 같아도 같은 것으로 보고해서는 안 된다. 선언과 source가 어느 쪽인지 말한다. **의도된 cash는
+flexible budget을 일정한 `use`로 채운 것이고**(매 판단 `fill(signal, use=0.9)` — 10%는 설계상 현금), **잔여는
+`use`나 채운 쪽이 signal을 따라 움직인 것이다.**
 
-#### budget semantics는 현금 범위 선언이다
-
-이 구분은 **현금에 허용 범위를 선언**하는 것으로 표현된다. 별도 개념이 아니라 제약의 한 종류다.
-
-| | 현금 범위 |
-|---|---|
-| fixed budget | 하한 = 상한 = 0 — 전부 배분해야 한다 |
-| flexible budget | 하한 0, 상한 자유 — 남겨도 된다 |
-| 의도된 현금 보유 | 원하는 값으로 하한·상한을 좁게 지정 |
-
-**의도된 cash는 범위를 좁게 선언한 것이고, 잔여는 넓게 두고 남은 것이다.** 그래서 결과만 봐도 어느 쪽인지
-알 수 있다. 그리고 현금은 **유도값이 아니라 결정된 값**이므로 결과에 그대로 남는다.
-
-#### 현금 하한은 거래비용이 들어갈 자리이기도 하다
+#### 덜 쓴 budget은 거래비용이 들어갈 자리이기도 하다
 
 배분은 판단 시점에 비중으로 정해지고 체결은 나중에 수량과 금액으로 일어난다. 이때 **가격이 얼마나
 움직였는지는 문제가 되지 않는다** — 체결 시점의 자산 가치로 다시 계산하므로 보유분과 목표 금액이 함께
 움직여 상쇄된다.
 
-문제가 되는 것은 **거래비용**이다. 비용은 목표 금액 위에 얹히므로 현금 하한을 0으로 선언하면, 즉 전액을
-배분하겠다고 선언하면 **비용만큼은 반드시 모자란다.** 매도 실패와 수량 반올림도 같은 방향으로 작은 차이를
-만든다.
+문제가 되는 것은 **거래비용**이다. 비용은 목표 금액 위에 얹히므로 long 쪽을 1로 채우면 — `fixed(long=1, …)`,
+또는 flexible을 `use=1`로 — **비용만큼은 반드시 모자란다.** 매도 실패와 수량 반올림도 같은 방향으로 작은
+차이를 만든다.
 
-그래서 현금 하한을 0보다 크게 두는 것은 예산 의미를 표현하는 동시에 **체결에서 생기는 차이를 흡수할 자리를
-만드는 것**이다. 이것을 하지 않은 결과로 일부 주문이 줄거나 체결되지 않는 것은 오류가 아니라 §6.3이 정한
-정상 동작이며, 어느 종목이 왜 줄었는지가 결과에 남는다.
+그래서 flexible budget을 1보다 조금 덜 쓰는 것(`use` < 1)은 예산 의미를 표현하는 동시에 **체결에서 생기는
+차이를 흡수할 자리를 만드는 것**이다. 이것을 하지 않은 결과로 일부 주문이 줄거나 체결되지 않는 것은 오류가
+아니라 §6.3이 정한 정상 동작이며, 어느 종목이 왜 줄었는지가 결과에 남는다.
 
 #### 실현된 budget은 의도한 budget과 다를 수 있다
 
 constraint 조정, lot rounding, cash clipping을 거치면 실현 gross/net이 의도한 값과 달라진다. 결과는 **의도한
 budget과 실현된 budget을 함께** 보여야 하며, 하나를 다른 하나로 대체해 보고하지 않는다(§9.4).
 
+#### 일부만 쓴 budget과 전부 쓴 budget의 비교는 report의 일이다
+
+NAV 수익만으로는 둘을 비교할 수 없다. report는 기록된 선언을 읽어 기간마다 각 쪽을 얼마나 썼는지 보이고, 평균
+수익을 `mean(use) × mean(full-budget 수익) + cov(use, full-budget 수익)`으로 나눈다. 마지막 항은 좋을 때 더 쓰는
+기술이다. benchmark 대비 Sharpe와 IR은 scale과 무관한 비교로 남는다.
+
 #### UC-ALPHA-BUDGET-001 — 약한 signal의 residual
 
-StrategyModel이 flexible budget을 선언하고, 기준보다 강한 종목만 선택한 결과 gross budget의 40%만 사용한다.
-결과는 자기 선언과 함께 저장되며 **package가 이를 1.0으로 자동 확대하지 않는다.**
+StrategyModel이 `Budget.flexible(long_limit=1, short_limit=-1)`을 선언하고, 기준보다 강한 종목이 적은 날 각 쪽
+한도의 40%만 쓴다(`fill(signal, use=0.4)`). 결과는 자기 선언과 함께 저장되며 **package가 이를 1로 자동 확대하지
+않는다.**
 
-**선언과 실제 weight가 어긋나면 결과를 만들기 전에 실패한다.** fixed gross 1.0을 선언했는데 합이 0.4이거나,
-long-only를 선언했는데 음수가 있는 경우다. **선언을 지키는 것은 StrategyModel의 책임**이며 package가 대신
-맞춰주지 않는다.
+**선언과 실제 weight가 어긋나면 결과를 만들기 전에 실패한다.** `fixed(long=1, …)`을 선언했는데 long 합이
+0.4이거나, `short=0`을 선언했는데 음수가 있는 경우다. run은 decide 단계에서 거절하며 자르거나 채우지 않는다.
+**선언을 지키는 것은 StrategyModel의 책임**이며 package가 대신 맞춰주지 않는다.
 
 이 결과를 읽는 다른 StrategyModel은 선언을 보고 **자기 규칙으로** 처리한다. 1.0으로 늘려 쓸지 0.4 그대로 쓸지는
 그 StrategyModel의 경제적 결정이며, package가 두 결과의 budget이 다르다는 이유로 실패시키지 않는다.
@@ -1402,8 +1421,8 @@ executable StrategyModel run은 signed, long-only, benchmark-relative 여부와 
 하나의 frozen intended portfolio**로 확정한다. construction 규칙은 profile마다 다를 수 있지만 이 경계를
 우회할 수 없다.
 
-frozen intended portfolio는 budget semantics, direction, instrument target, source lineage를 동결한다. cash를
-의도된 포지션으로 표현할지 잔여로 표현할지는 §5.5의 구분을 따른다. **StrategyModel result나 raw weight를
+run은 StrategyModel이 선언한 budget(§5.5)을 동결하고, frozen intended portfolio는 그 budget 안의 instrument
+target과 source lineage를 동결한다. cash는 `1 − net`이며, 의도된 포지션인지 잔여인지는 §5.5의 구분을 따른다. **StrategyModel result나 raw weight를
 execution profile에 직접 제출하지 않는다.**
 
 construction 내부에서 §2.7의 built-in weighting 함수를 조합할 수 있다. 그러나 그 함수들은 run identity,
@@ -2749,7 +2768,8 @@ acceptance는 내부 class, stage 수, storage layout이 아니라 **이 PRD의 
 - 제약은 **판단 시점에** 전략이 반영하고, 지켜졌는지는 Compliance가 committed 계좌에서 관측한다. **execution
   경로에는 제약 평가가 없다**(§7.1). 수량 변환 때문에 뒤늦게 생긴 위반은 `UC-CONSTRAINT-ADJUST-001`처럼 진단에
   남고 `UC-EXEC-003`의 Compliance가 잡으며, 그 때문에 execution을 되돌리지 않는다.
-- budget은 현금 범위 선언으로 표현되고, 현금은 유도값이 아니라 결과에 남는 결정된 값이다(§5.5).
+- budget은 StrategyModel이 한 번 선언하는 각 쪽의 크기(fixed 또는 flexible)이고, run이 동결해 모든
+  `Rebalance`를 그것에 대어 검사하며 자르거나 채우지 않고 거절한다. 현금은 `1 − net`이다(§5.5).
 - `UC-EXEC-001`에서 decision과 execution outcome을 분리하고 committed result만 다음 decision에 feedback한다.
 - `UC-EXEC-002`는 fill timing과 model limitation을 명시하며 look-ahead를 허용하지 않는다.
 - execution input row density는 callback event 집합·시각·순서를 바꾸지 않는다. 판단과 체결은 같고,
@@ -2980,16 +3000,16 @@ StrategyModel은 판단 1회에 평가 시각이 하나지만, 반복 계산 결
 | 확인한 것 | 정해진 것 |
 |---|---|
 | 상한에 걸려 잘린 비중은 어디로 가나 | **질문이 성립하지 않는다.** 자르고 재분배하는 것이 아니라 제약을 반영해 한 번에 구성한다. 현금이 결정 변수이므로 잔여를 흡수한다 |
-| 그러면 budget이란 무엇인가 | **현금 범위 선언**이다. 별도 개념이 아니라 제약의 한 종류다(§5.5) |
-| 현금을 유도할 수 있나 | **없다.** 결정된 값이며 결과에 남는다 |
+| 그러면 budget이란 무엇인가 | 전략이 **한 번 선언하는 각 쪽의 크기**(fixed 또는 flexible)다. 구성은 그 안에서 한다(§5.5) |
+| 현금은 무엇인가 | 구성 안에서는 잔여를 흡수하는 결정 변수, 판단이 끝나면 `1 − net`이다 |
 | 제약을 언제 평가하나 | **판단 시점.** execution은 체결만 한다. execution으로 미루면 그 시점에 할 수 있는 일이 기록밖에 없고, 다시 최적화하는 것은 §2.4가 금지한다 |
 | 거래 불가 종목은 | 제외가 아니라 **현재 비중 고정**을 제약으로 표현한다. 조용히 빠지면 §10.2 위반이다 |
 | 계산 결과를 믿나 | 구성은 믿는다 — 판단을 다시 채점하는 자리가 없다. 지켜졌는지는 Compliance가 committed 계좌에서 관측한다(§7) |
 | 수량 변환 때문에 생긴 위반은 | 판단 시점에 알 수 없다. 진단에 남기고 **Compliance가 잡는다**(`UC-EXEC-003`) |
 
 이 대입으로 오래 열려 있던 "budget과 cash를 어떻게 표현하는가"가 닫혔다. 열려 있던 이유가 *"조정이 실현
-budget을 바꾼다"*였는데, **조정이 아니라 제약 하 구성**이므로 의도(선언한 범위)와 실현(결정된 값)이 어긋나는
-것이 아니라 애초에 서로 다른 자리에 있다.
+budget을 바꾼다"*였는데, **조정이 아니라 제약 하 구성**이므로 의도(전략이 선언한 budget)와 실현(구성된 비중)이
+어긋나는 것이 아니라 애초에 서로 다른 자리에 있다.
 
 ### B.6 두 역할의 경계 — 무엇으로 가르는가
 

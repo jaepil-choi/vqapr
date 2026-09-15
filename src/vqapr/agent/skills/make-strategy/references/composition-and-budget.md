@@ -4,7 +4,7 @@
 
 - A strategy can read another strategy's result
 - Why the chain, rather than one calculation
-- Budget: fixed, flexible, and intended cash
+- Budget: fixed or flexible, declared once
 - Intended cash is not leftover cash
 
 ## A strategy can read another strategy's result
@@ -35,26 +35,27 @@ Convert inside one calculation and the original becomes an intermediate value th
 and then preserving it needs some extra apparatus. Chained, A's result stands on its own as a
 result, and nothing had to be added to keep it.
 
-## Budget: three shapes of one declaration
+## Budget: fixed or flexible, declared once
 
-Budget semantics are a **declared range for cash**, not a separate concept:
+The strategy declares its budget in `budget()`, once for the run
+([rebalance.md](rebalance.md) has the table):
 
-| | cash range |
-|---|---|
-| fixed budget | lower = upper = 0 — allocate everything |
-| flexible budget | lower 0, upper free — leaving some is allowed |
-| intended cash holding | a narrow range at the value you want |
+| | each side | on a weak day |
+|---|---|---|
+| `Budget.fixed(long=, short=)` | exactly its value | still filled in full, concentrated on the names picked |
+| `Budget.flexible(long_limit=, short_limit=)` | from 0 to its limit | may use less; the rest is cash |
+
+Cash is never declared: it is `1 - net`.
 
 ## The rule that follows
 
-**An operation that produces weights never decides the budget.** A result that allocated less than
-the declared budget is **not topped up**, by the package or by a helper.
+**An operation that produces weights never decides the budget — the declaration does.** A result
+that uses less than a flexible budget is **not topped up**, by the package or by a helper: that
+would turn a flexible budget into a fixed one silently. A book outside the declaration is refused,
+not clipped.
 
-Automatically filling it turns a flexible budget into a fixed one silently, and the two mean
-different things about the same book.
-
-So: do not renormalise to reach the budget, and do not treat "the weights do not sum to the
-target" as a bug to fix inside `decide()`.
+So: do not renormalise to reach the budget. Under `fixed`, `fill` reaches it; under `flexible`, a
+side used in part is the signal's answer, not a bug to fix inside `decide()`.
 
 ## Intended cash is not leftover cash
 
@@ -66,12 +67,15 @@ Arithmetically, whatever is not allocated is cash. Economically these are two di
 - **An unallocated residual.** Under a flexible budget, what a weak signal, high cost or a risk
   condition left behind.
 
-The two can be the same number and must not be reported as the same thing. Declaring a narrow
-range says "intended"; leaving it wide says "residual" — and the result then shows which it was,
-because **cash is a decided value rather than a derived one** and stays in the record as such.
+The two can be the same number and must not be reported as the same thing. The source says which:
+a flexible budget filled with a **constant** `use` — `fill(signal, use=0.9)` on every decision —
+holds its cash by design; a `use` the signal sets, or a side left empty because no name
+qualified, leaves a residual.
 
-When you report a book's cash, say which of the two it is. If the declaration does not make it
-clear, ask the user rather than choosing the flattering reading.
+When you report a book's cash, say which of the two it is. Comparing a partly used budget with a
+full one is the report's job, against the declaration the run recorded — not a reason to scale
+the book up. If the source does not make it clear, ask the user rather than choosing the
+flattering reading.
 
 ## More than NAV long: borrowed cash
 
@@ -79,9 +83,10 @@ A book that holds more than its NAV long needs cash below zero. Two declarations
 
 - **The run:** `initial_account.cash_mode: BORROWING`. Without it the account refuses negative
   cash and the planner cuts buys to the cash on hand, so the leverage silently does not happen.
-- **The strategy:** a budget whose `cash_lower` is below zero. `Rebalance.signed({"A": 1, "B": 1},
-  gross=2)` is 200% long with cash at -1, and `cash_lower=-1` means at most one NAV borrowed.
-  `Rebalance.of` caps `invested` at 1 and cannot express this.
+- **The strategy:** a budget whose book nets above 1. `Budget.fixed(long=2, short=0)` with
+  `Rebalance(self.budget().fill({"A": 1, "B": 1}))` is 200% long with cash at -1: one NAV
+  borrowed, and never more. A 130/30 book (`fixed(long=1.3, short=-0.3)`) borrows nothing; the
+  short pays for the extra long.
 
 Borrowed cash is free: no interest, no margin, no forced sale. A borrowing backtest's return is
 higher than a real one's by the financing cost, so say so when you report it. For a financing

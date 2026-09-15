@@ -40,7 +40,7 @@ script decides it silently.
 
 ## Why six long-only legs, not one signed book
 
-A signed SMB book built with `Rebalance.signed` holds all six portfolios in **one** account.
+One signed SMB book holds all six portfolios in **one** account.
 Between rebalances they drift against each other, so its daily return stops being "the average of
 three small portfolios minus the average of three big ones" — a definition that re-averages every
 day. Six accounts reproduce it exactly: value weights with drift inside each leg, and the
@@ -71,6 +71,9 @@ class FfLeg(vq.StrategyModel):
                                   lookback=vq.CalendarLookback(days=600, timezone=SEOUL)),
         }
 
+    def budget(self):
+        return vq.Budget.fixed(long=1, short=0)   # long-only, fully invested
+
     def decide(self, call):
         if call.at.month != 7:
             return vq.Hold(reason="forms only in July")
@@ -85,13 +88,14 @@ class FfLeg(vq.StrategyModel):
         chosen = {n: me[n] for n in me if size[n] == SIZE and bucket[n] == BM}
         if not chosen:
             return vq.Hold(reason=f"no eligible name in {SIZE}{BM}")
-        return vq.Rebalance.of(long=chosen, invested=1)   # conviction in proportion to size
+        return vq.Rebalance(self.budget().fill(chosen))   # in proportion to size
 ```
 
 - `CalendarLookback`, not `RowsLookback`: a sort is cross-sectional, and every name must see the
   same window. `current()` is the newest cross-section; `.at` says which instant it is.
-- The market leg returns `vq.Rebalance.of(long={"KOSPI": 1}, invested=1)` against its own
-  one-instrument execution table.
+- The long-only budget is declared, not assumed: undeclared, a strategy is dollar neutral.
+- The market leg declares the same budget and returns `vq.Rebalance({"KOSPI": 1})` against its
+  own one-instrument execution table.
 - The run: `schedule: {every: 12M, at: "15:29"}` with `start` on the first of July, the fill at the
   close (`15:30`, `trade_price: close`), the `academic` venue, and a large `initial_account`.
 - Exact weights: in the venue's `TradeRule` (the `vqapr new exchange --profile academic`

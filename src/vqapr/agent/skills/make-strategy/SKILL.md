@@ -72,17 +72,21 @@ class Momentum(vq.StrategyModel):
         )
         return {"prices": read}
 
+    def budget(self):
+        return vq.Budget.fixed(long=1, short=0)   # long-only, fully invested
+
     def decide(self, call):
         window = call.read("prices", "close")   # instants x instruments
         ...
-        return vq.Rebalance.of(long={"A": 2, "B": 1}, invested="0.9")
+        return vq.Rebalance(self.budget().fill({"A": 2, "B": 1}))
 ```
 
-The author declares what it reads and returns what it wants. **Identity, provenance and the
-account version are the framework's** and are never written by hand.
+The author declares what it reads and how large its book is, and returns what it wants.
+**Identity, provenance and the account version are the framework's** and are never written by
+hand.
 
-`inputs()` is evaluated at registration and at preflight, **before** any memory is restored and
-before a run's `initial_model_memory` is applied — so what a model reads cannot depend on either.
+`inputs()` and `budget()` are evaluated at registration and at preflight, **before** any memory is
+restored and before a run's `initial_model_memory` is applied — so neither can depend on memory.
 A family of settings that changes the reads is a family of registered components, one file and one
 id each.
 
@@ -103,18 +107,20 @@ not fit strict JSON goes through `save_payload` / `load_payload`, and preflight 
 before the first callback in a way that catches the two usual mistakes.
 [references/memory-and-payload.md](references/memory-and-payload.md).
 
-**`Rebalance.of` versus `Rebalance.signed`.** `of` splits `invested` **evenly** between the two
-sides, so it tops out at half a textbook long/short book and **cannot express "more shorts than
-longs"**. When the signal decides the split, `signed` is the one you want.
+**The budget is declared once.** `budget()` says how large each side of the book is, for the whole
+run: `vq.Budget.fixed(long=1, short=-1)` (each side exactly that) or
+`vq.Budget.flexible(long_limit=1, short_limit=-1)` (each side up to its limit). The short side is
+written negative. **Undeclared is dollar neutral, so a long-only strategy must declare
+`short=0`.** The run refuses a `Rebalance` outside the declaration; it never clips or tops up.
 [references/rebalance.md](references/rebalance.md) — read it before writing any short.
 
-**Conviction, not weights.** `long={"A": 2, "B": 1}` means A is liked twice as much as B.
-Normalising, rounding onto the canonical grid and balancing against cash is the package's
-arithmetic. **You never make weights sum to one by hand.**
+**Conviction, not weights.** `self.budget().fill({"A": 2, "B": 1, "C": -1})` means A is liked
+twice as much as B, and C is the short. `fill` scales each side to its declared size on the
+canonical grid; cash is what is left. **You never make weights sum to one by hand.**
 
-**A short is declared by which mapping a name appears in**, never by a negative number — except in
-`signed`, where a negative number *is* the short. Mixing the two conventions is the error the
-reference exists to prevent.
+**A fixed side is filled every time.** Under a fixed budget, a day with no name for a declared
+side — no negative score under `short=-1`, or nothing at all — is refused. A strategy with such
+days declares `flexible`, or returns `Hold` on them.
 
 ## Declining is a decision
 
@@ -150,8 +156,9 @@ express exactly are in [references/factor-portfolios.md](references/factor-portf
 
 A strategy can subscribe to another strategy's stored result — that is how an ensemble is built,
 and it needs no publishing step in between.
-[references/composition-and-budget.md](references/composition-and-budget.md) also covers budget
-semantics: **an under-allocated result is never topped up for you.**
+[references/composition-and-budget.md](references/composition-and-budget.md) also covers fixed
+versus flexible, and intended versus residual cash: **an under-allocated result is never topped up
+for you.**
 
 ## Validate before you believe it
 

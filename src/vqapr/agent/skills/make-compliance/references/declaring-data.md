@@ -24,8 +24,8 @@ observation heavy, and heavy observation cannot run often, so it would end up ru
 ## A fixed value for a period belongs to a DataModel
 
 A rule that needs a constant which is fixed for a period — a quarterly index divisor, a
-mandate limit that changes annually, a periodically-set risk budget — should **subscribe to it**,
-not carry it.
+mandate limit that changes annually, a periodically-set risk limit — should **subscribe to it**,
+not carry it. (A strategy's `budget()` is different: one declaration, frozen for the whole run.)
 
 Publish it as a DataModel output and read it here. Two reasons:
 

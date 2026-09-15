@@ -27,15 +27,20 @@ the rule     did the book actually exceed a limit  market clock     observation 
 discretion, so it is a kit call inside `decide()`, not a component the framework runs:
 
 ```python
-from vqapr.public import intersect, no_short, optimize, single_name_cap
+from vqapr.public import Budget, Rebalance, intersect, no_short, optimize, single_name_cap
 
+def budget(self):                                  # on the strategy class, once for the run
+    return Budget.flexible(long_limit=1, short_limit=0)
+
+# inside decide():
 names = tuple(sorted(call.window.instruments))
 lower, upper = intersect(no_short(names), single_name_cap(names, benchmark, Decimal("0.10")))
 result = optimize(desired=desired, current={}, lower=lower, upper=upper, cash_range=(Decimal("0"), Decimal("1")))
-return Rebalance(target_weights=result.weights, cash_weight=result.cash, budget=BUDGET)
+return Rebalance(result.weights)                   # cash is what the weights leave
 ```
 
-Every function is pure: names and numbers in, a `(lower, upper)` box out. A rule that needs data
+`cash_range` is the cash the declared budget admits; the run checks the weights against that
+budget. Every function is pure: names and numbers in, a `(lower, upper)` box out. A rule that needs data
 — `single_name_cap` needs the index weight per name — is handed it by the strategy, which
 **subscribes to that dataset itself**, so the dependency is visible on the strategy where it
 belongs. [references/the-box.md](references/the-box.md).
