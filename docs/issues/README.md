@@ -58,6 +58,14 @@ NAV로 크기를 정하는가).
 | `report-2026-09-15-batch-envelope-has-no-batch-elapsed-...` | `--jobs` 배치 envelope에 배치 경과 시간이 없고, `timing.total`이 무엇을 덮는지 문서가 없다 | **접수 2026-09-15** | 코드 + skill |
 | `report-2026-09-15-docs-do-not-say-a-decision-right-after-a-fill-...` | 체결 직후의 결정은 직전 목표의 비중을 읽는다 — 어디에도 쓰여 있지 않다 | **접수 2026-09-15** | skill |
 
+### 2026-09-14의 번호 없는 보고 하나 — scenario testbed run 4(`0.16.0` wheel) — 접수 (campaign `redesign/strategy-budget`)
+
+run 4가 낸 22건 중, budget 캠페인이 부수적으로 닫는 하나만 여기서 접수한다. 나머지는 아직 미분류다.
+
+| 파일 | 제목 | 상태 | 닫은 것 |
+|---|---|---|---|
+| `report-2026-09-14-sample-strategy-imports-from-private-vqapr-domain-intent` | `vqapr new sample`의 전략이 `Budget`·`PortfolioDirection`을 private `vqapr.domain.intent`에서 import한다 | **접수 2026-09-15.** 소스에서 확인(`agent/sample/reversal_5d.py:16`). budget이 전략 클래스의 선언(`vq.Budget`)이 되고 `PortfolioDirection`이 사라지면서 샘플은 `vqapr.public`만 import한다 | 코드 |
+
 ### 2026-09-11의 번호 없는 보고 넷 — incremental testbed(`0.14.4` wheel, `b8b47e6c`) — 접수
 
 기존 workspace에 전략 하나를 더하는 A/B(`kwam-enhanced-index/vqapr-incr-testbed`). 넷 다 소스에서 확인했다.
