@@ -6,9 +6,10 @@ the conversion belongs here, where the execution price and NAV are both known. I
 not a protocol: there is one implementation and the layer is closed.
 
 Sells come first. Buys are funded from cash and the rounded sale proceeds -- never from a sale the
-venue will refuse -- and when cash runs short they are clipped largest delta first, the instrument
-id breaking a tie, so the shortfall lands on the position that misses its target by least. What a
-buy can afford, costs included, is solved rather than searched.
+venue will refuse -- and when a funded account's cash runs short they are clipped largest delta
+first, the instrument id breaking a tie, so the shortfall lands on the position that misses its
+target by least. What a buy can afford, costs included, is solved rather than searched. A
+borrowing account's buys are not clipped: its cash may go below zero.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
-from vqapr.domain.account import AccountSnapshot
+from vqapr.domain.account import AccountSnapshot, CashMode
 from vqapr.domain.instrument import base_quantity_for
 from vqapr.domain.intent import Budget, PortfolioDirection
 from vqapr.domain.listing import ExchangeRulesView, Side
@@ -316,6 +317,7 @@ def _apply_venue_rules(
     desired: Mapping[str, Decimal],
     instruments: Iterable[str],
     tradable: Mapping[str, bool],
+    funded: bool = True,
 ) -> tuple[dict[str, Decimal], dict[str, Decimal]]:
     """Convert intended positions into positions the venue can actually trade.
 
@@ -340,6 +342,10 @@ def _apply_venue_rules(
 
     The order is still emitted. The refusal is the evidence that the fund tried and the market
     would not let it; only the funding arithmetic declines to count on it.
+
+    ``funded=False`` is a borrowing account (`CashMode.BORROWING`): cash may go below zero, so
+    there is nothing to fit the buys into and they are not clipped. The rounding onto the unit is
+    the same; how far the book borrows is the strategy's budget, already checked.
     """
 
     def _fillable(instrument_id: str) -> bool:
@@ -362,6 +368,8 @@ def _apply_venue_rules(
         delta = rules.quantize(instrument_id, desired[instrument_id] - current)
         resolved[instrument_id] = current + delta
     sized = dict(resolved)
+    if not funded:
+        return resolved, sized
 
     def _delta(instrument_id: str) -> Decimal:
         return resolved[instrument_id] - account.positions.get(instrument_id, Decimal(0))
@@ -519,6 +527,7 @@ def plan_orders(
     budget: Budget,
     rules: ExchangeRulesView | None = None,
     tradable: Mapping[str, bool] | None = None,
+    cash_mode: CashMode = CashMode.FUNDED,
 ) -> OrderBatch:
     """Convert a weight target into the delta that reaches it at execution-time prices.
 
@@ -533,8 +542,20 @@ def plan_orders(
     absent from it is assumed fillable, which keeps every caller that does not know about halts
     working exactly as before; a caller that passes it stops funding buys from sales the venue is
     going to refuse.
+
+    ``cash_mode`` is the account's: a funded account's buys are cut to the cash it has, a
+    borrowing account's are not (`_apply_venue_rules`).
     """
-    nav = _decimal(execution_time_nav, name="execution_time_nav", positive=True)
+    nav = _decimal(execution_time_nav, name="execution_time_nav")
+    if nav <= 0:
+        # A short or borrowing book can lose more than it started with, and nothing liquidates it
+        # earlier -- no margin call is modelled. Said as what happened, because "must be
+        # positive" read as a bad argument rather than a book that ran out.
+        raise ValueError(
+            f"the book is worth {nav} at this instant, so there is no NAV to size a target "
+            "against and the run stops here: a short or borrowing book lost everything it had, "
+            "and no margin call is modelled to have closed it earlier"
+        )
     cash = _decimal(cash_target, name="cash_target")
     if not budget.validates_cash(cash):
         raise ValueError("cash_target is outside the declared budget")
@@ -586,6 +607,7 @@ def plan_orders(
             desired=desired_quantities,
             instruments=instruments,
             tradable=dict(tradable or {}),
+            funded=cash_mode is CashMode.FUNDED,
         )
 
     requests: list[OrderRequest] = []

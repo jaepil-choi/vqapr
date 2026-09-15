@@ -138,6 +138,7 @@ class ExecutionHandler:
                 budget=pending.intent.budget,
                 rules=self._bound_rules(),
                 tradable=tradable,
+                cash_mode=self._context.account.cash_mode,
             )
         with self._context.due_boundary(
             stage=SimulationStage.DUE_EXCHANGE_EXECUTION,

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from vqapr.domain.account import Account, AccountMode, AccountSnapshot, AccountState
+from vqapr.domain.account import Account, AccountMode, AccountSnapshot, AccountState, CashMode
 from vqapr.domain.cost import SideCost
 from vqapr.domain.fill import Fill, FillBatch, ZeroDealtReason, fill_entries
 from vqapr.domain.instrument import InstrumentKind, InstrumentRoster, instrument
@@ -628,3 +628,82 @@ def test_a_fully_invested_batch_is_payable_under_the_accounts_own_arithmetic() -
         Decimal(0),
     )
     assert invested / nav > decimal("0.999")
+
+
+def test_a_borrowing_account_may_overdraw_and_a_funded_one_may_not() -> None:
+    """Cash below zero is the account's question, and `CashMode` is its answer (record 288).
+
+    The same buy of 150 on a book of 100: the funded account refuses it, the borrowing account
+    appends it and carries cash of -50 at an unchanged NAV. Direction is a separate fact -- this
+    borrowing account is long-only and still refuses a short.
+    """
+    root = AccountState(snapshot(cash="100"))
+    overdraw = FillBatch((Fill("A", decimal("15"), decimal("15"), decimal("10")),), 3)
+
+    funded = Account(mode=AccountMode.LONG_ONLY)
+    assert funded.cash_mode is CashMode.FUNDED, "funded is the default"
+    with pytest.raises(ValueError, match="cash negative in a funded account"):
+        funded.append(root, fill_entries(_AT, overdraw), expected_version=3)
+
+    borrowing = Account(mode=AccountMode.LONG_ONLY, cash_mode=CashMode.BORROWING)
+    appended = borrowing.append(root, fill_entries(_AT, overdraw), expected_version=3)
+    assert appended.next_snapshot.cash == decimal("-50")
+    assert appended.next_snapshot.positions == {"A": decimal("15")}
+    marked = borrowing.mark(appended.next_state, {"A": decimal("10")}, marked_at=_AT)
+    assert marked.mark.nav == decimal("100"), "borrowing moves money into the book, not into NAV"
+
+    short = FillBatch((Fill("B", decimal("-1"), decimal("-1"), decimal("10")),), 3)
+    with pytest.raises(ValueError, match="short"):
+        borrowing.append(root, fill_entries(_AT, short), expected_version=3)
+
+
+def test_a_borrowing_accounts_buys_are_not_cut_to_its_cash() -> None:
+    """A 2x long target: the borrowing account plans all of it, the funded one only its cash.
+
+    The limit on how far a book borrows is the strategy's budget -- `cash_lower=-1` is at most one
+    NAV borrowed -- and the planner no longer fits the buys into cash the account may overdraw.
+    """
+    leveraged = Budget(
+        PortfolioDirection.SIGNED, decimal("-1"), decimal("2"), decimal("-1"), decimal("1")
+    )
+    rules = ExchangeRulesView(
+        "v",
+        {
+            name: TradeRule(name, decimal("1"), decimal("1"), False, ListingAccess.SIGNED)
+            for name in ("A", "B")
+        },
+    )
+
+    def planned(cash_mode: CashMode) -> dict[str, Decimal]:
+        batch = plan_orders(
+            account=snapshot(version=0, cash="100"),
+            execution_time_nav=decimal("100"),
+            prices={"A": decimal("10"), "B": decimal("10")},
+            weight_targets={"A": decimal("1"), "B": decimal("1")},
+            cash_target=decimal("-1"),
+            budget=leveraged,
+            rules=rules,
+            cash_mode=cash_mode,
+        )
+        return {request.instrument_id: request.delta_quantity for request in batch.requests}
+
+    assert planned(CashMode.BORROWING) == {"A": decimal("10"), "B": decimal("10")}
+    funded = planned(CashMode.FUNDED)
+    assert sum(funded.values(), Decimal(0)) * decimal("10") <= decimal("100")
+
+
+def test_a_book_worth_nothing_stops_with_what_happened() -> None:
+    """A short or borrowing book can lose more than it had; the refusal says so (record 288).
+
+    It used to say `execution_time_nav must be positive`, which reads as a bad argument rather
+    than a book that ran out.
+    """
+    with pytest.raises(ValueError, match=r"the book is worth -5 at this instant.*no margin call"):
+        plan_orders(
+            account=snapshot(version=0, cash="0", positions={"A": "-1"}),
+            execution_time_nav=decimal("-5"),
+            prices={"A": decimal("5")},
+            weight_targets={},
+            cash_target=decimal("1"),
+            budget=_BUDGET,
+        )

@@ -10,8 +10,9 @@ the account changed.
 **One shape, an origin tag.** A fill, a dividend, a split and a subscription all move cash and
 quantities in some combination of the same two cells, so a `LedgerEntry` is those two deltas plus
 its `origin` and that origin's `detail`. The account checks what an account knows -- the state it
-holds (version order), that the result is a valid account (cash never negative; no negative
-position in a long-only book), that an entry is appended once -- and nothing else. Whether a fill's
+holds (version order), that the result is a valid account (no negative cash unless the account
+borrows; no negative position in a long-only book), that an entry is appended once -- and nothing
+else. Whether a fill's
 cash is its price times its quantity less its cost is checked by whoever made the fill, and turning
 a fill into entries is `domain/fill.py`'s, so this module never learns what its producers are.
 
@@ -41,6 +42,7 @@ __all__ = [
     "AccountMode",
     "AccountSnapshot",
     "AccountState",
+    "CashMode",
     "LedgerEntry",
     "Mark",
     "MarkBatch",
@@ -206,10 +208,12 @@ class AccountSnapshot(BaseModel):
     ) -> AccountSnapshot:
         """The engine's door: a snapshot from values it derived from a validated one.
 
-        No validation runs. The caller guarantees what the constructor would have checked --
-        a non-negative version and cash, finite quantities, and no zero position -- because it
-        computed them from a snapshot that already passed and from fills the batch already
-        validated. The mapping is copied into a read-only view so the result aliases nothing.
+        No validation runs. The caller guarantees a non-negative version, finite cash and
+        quantities, and no zero position, because it computed them from a snapshot that already
+        passed and from fills the batch already validated. Cash is the one field it may take
+        below the constructor's floor: a borrowing account's fills can overdraw it, and whether
+        they may is `Account.append`'s question, not the snapshot's. The mapping is copied into a
+        read-only view so the result aliases nothing.
         """
         return cls.model_construct(
             version=version, cash=cash, positions=MappingProxyType(dict(positions))
@@ -242,6 +246,9 @@ class AccountSnapshot(BaseModel):
     @field_validator("cash")
     @classmethod
     def _non_negative_cash(cls, value: Decimal) -> Decimal:
+        # A declared book starts with the money it has, whatever the account may do later. Cash
+        # below zero is reached only through a borrowing account's fills, and those snapshots
+        # come through `trusted`.
         if value < 0:
             raise ValueError("cash must be non-negative")
         return value
@@ -362,8 +369,8 @@ def fold(snapshot: AccountSnapshot, entries: Iterable[LedgerEntry]) -> AccountSn
 
     Arithmetic only (design §5.1: the ledger's incremental fold). A zero resulting quantity
     leaves the book -- a position is a non-zero holding; whether the result is a *valid* account
-    -- cash not negative, no short in a long-only book -- is the `Account`'s question, asked once
-    on the folded result rather than on every delta.
+    -- no negative cash unless the account borrows, no short in a long-only book -- is the
+    `Account`'s question, asked once on the folded result rather than on every delta.
     """
     cash = snapshot.cash
     positions = dict(snapshot.positions)
@@ -385,6 +392,25 @@ class AccountMode(StrEnum):
 
     LONG_ONLY = "long_only"
     SIGNED = "signed"
+
+
+class CashMode(StrEnum):
+    """Whether cash may go below zero: the account's second constraint, beside `AccountMode`.
+
+    Two facts, two fields. `AccountMode` says whether a *position* may be negative; this says
+    whether *cash* may. They vary independently -- a leveraged long-only book borrows and never
+    shorts, a dollar-neutral book shorts and never borrows -- so folding them into one enum would
+    need a member for every pair.
+
+    `FUNDED` is every purchase paid from cash on hand, and the default. `BORROWING` lets fills take
+    cash below zero with no floor of the account's own: how far the book leverages is the
+    strategy's `Budget` (`cash_lower`, a share of NAV), checked when the target is planned. The
+    borrowed cash costs nothing -- no interest, no margin, no forced sale -- and the run record
+    says the account borrowed, so a result read later cannot be mistaken for a funded one.
+    """
+
+    FUNDED = "funded"
+    BORROWING = "borrowing"
 
 
 @dataclass(frozen=True, slots=True)
@@ -453,14 +479,23 @@ class PreparedMark:
 class Account:
     """Owns append permission; `AcceptedRunState` owns publication."""
 
-    def __init__(self, *, mode: AccountMode, retained_marks: int = 1) -> None:
+    def __init__(
+        self,
+        *,
+        mode: AccountMode,
+        cash_mode: CashMode = CashMode.FUNDED,
+        retained_marks: int = 1,
+    ) -> None:
         if not isinstance(mode, AccountMode):
             raise TypeError("mode must be an AccountMode")
+        if not isinstance(cash_mode, CashMode):
+            raise TypeError("cash_mode must be a CashMode")
         if isinstance(retained_marks, bool) or not isinstance(retained_marks, int):
             raise TypeError("retained_marks must be an integer")
         if retained_marks < 1:
             raise ValueError("an Account must retain at least its current mark")
         self._mode = mode
+        self._cash_mode = cash_mode
         # The mark WINDOW: how many marks stay resident, a property of this run's memory and not
         # of the ledger (design §5.1). One unless a consumer declared it reads more; the full
         # series goes to the recorder.
@@ -470,6 +505,10 @@ class Account:
     @property
     def mode(self) -> AccountMode:
         return self._mode
+
+    @property
+    def cash_mode(self) -> CashMode:
+        return self._cash_mode
 
     @property
     def state(self) -> AccountState:
@@ -493,7 +532,8 @@ class Account:
 
         The producer proved each entry's own arithmetic. What is proved here is what only the
         ledger can: that `state` is the version the caller thinks it is, and that the folded book
-        is an account -- cash not negative, and no short position in a long-only account.
+        is an account -- no negative cash in a funded account, and no short position in a
+        long-only account.
         """
         if not isinstance(state, AccountState):
             raise TypeError("state must be an AccountState")
@@ -506,8 +546,8 @@ class Account:
         if expected_version != state.snapshot.version:
             raise ValueError("expected_version does not match the current account version")
         folded = fold(state.snapshot, entries)
-        if folded.cash < 0:
-            raise ValueError("fill batch would make cash negative")
+        if self._cash_mode is CashMode.FUNDED and folded.cash < 0:
+            raise ValueError("fill batch would make cash negative in a funded account")
         if self._mode is AccountMode.LONG_ONLY and any(
             quantity < 0 for quantity in folded.positions.values()
         ):
