@@ -1,6 +1,6 @@
 # Issue ledger — 상태 한 줄씩
 
-**작성 2026-09-02 · 갱신 2026-09-11.** 98개 중 **93개가 닫혔고, 닫힌 것은 `archive/`로 옮겼다.**
+**작성 2026-09-02 · 갱신 2026-09-15.** 98개 중 **93개가 닫혔고, 닫힌 것은 `archive/`로 옮겼다.**
 이 디렉터리에 평평하게 남는 것은 아직 열린 둘 — `023`(절반)과 `035`(판정만 남음) — 과, 2026-09-10에
 닫혔지만 그 record들이 인용하는 동안 한 릴리스만 여기 두는 `089`–`094`다(0.11.0 릴리스 때 archive로).
 
@@ -42,6 +42,21 @@
 | ~~`095`~~ | 물리 읽기의 검증에 문이 하나가 아니다 — 모듈 셋, 집행표는 세 번 스캔 | **닫힘 2026-09-10 — record `234`.** `data/validation.py` 한 문(`verify_source` · `require_verified` · `verify_roster`); 등록이 `source_digest`와 `execution_prices`를 두고 preflight·run·check는 digest만 대조(`dataset.source_changed` · `dataset.unverified`); `validate_execution_table`과 세 diagnosis 삭제; 같은 선언으로 다시 등록하면 측정만 갈린다; 경계 테스트가 스캔 커널을 한 모듈에 묶는다 | 닫힘 |
 | ~~`096`~~ | panel 읽기가 종목 순회 Python 루프다 — sample 전략이 for loop을 도는 이유 | **닫힘 2026-09-10 — records `232`·`233`.** 필드마다 name-major Arrow 블록 하나, `PanelWindow.matrix()`, 벡터화된 `counts`/`current`/`latest`, `scan.observation_table`; sample 전략·scaffold 둘·skill reference가 행렬 위에서 계산(`Decimal`은 `Rebalance` 경계에서만). 3,000종목 decide 8.8→1.5 ms, panel build 10.7→1.2 ms | 닫힘 |
 | ~~`097`~~ | `flow/engine/loop.py`의 추상 루프에 서브클래스가 하나뿐 | **닫힘 2026-09-10 — record `231`.** `EventLoop` 삭제, `RunLoop.run`이 걷기; `strategy_loop`/`datamodel_loop`는 `RunLoop`를 돌려주는 함수; `flow/engine/loop.py`는 이벤트 타입만 | 닫힘 |
+
+### 2026-09-15의 번호 없는 보고 다섯 — 시나리오 testbed run 5(`0.16.1` wheel, `9c54f211`) — 접수
+
+평가자 triage는 `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`(F-022–F-032). 다섯 다 평가자가 0.16.1
+공개 표면에서 재현했다. 오너 질문 셋은 보고로 오지 않았다: F-022(run의 `instruments:`가 전략의 읽기도 막는가) ·
+F-029(NAV ≤ 0으로 끝난 run을 envelope가 말해야 하는가) · F-031(거래 못 하는 보유가 있을 때 signed rebalance가 어느
+NAV로 크기를 정하는가).
+
+| 파일 | 제목 | 상태 | 어디로 가는가 |
+|---|---|---|---|
+| `report-2026-09-15-no-record-or-public-surface-names-the-vqapr-version-...` | run을 쓴 vqapr 버전을 record·envelope·`__version__`·`--version` 어디도 말하지 않는다 | **접수 2026-09-15** | 코드 + skill |
+| `report-2026-09-15-strategy-report-raises-bare-valueerror-...` | NAV ≤ 0인 record에서 `strategy_report`가 맨 `ValueError`로 여섯 절을 다 잃는다 | **접수 2026-09-15** | 코드 |
+| `report-2026-09-15-yaml-re-register-...-omits-the-replaced-fingerprint` | 선언 YAML로 바뀐 전략을 다시 등록하면 `replaced`가 없다(세 인자 형식만 말한다) | **접수 2026-09-15** | 코드 |
+| `report-2026-09-15-batch-envelope-has-no-batch-elapsed-...` | `--jobs` 배치 envelope에 배치 경과 시간이 없고, `timing.total`이 무엇을 덮는지 문서가 없다 | **접수 2026-09-15** | 코드 + skill |
+| `report-2026-09-15-docs-do-not-say-a-decision-right-after-a-fill-...` | 체결 직후의 결정은 직전 목표의 비중을 읽는다 — 어디에도 쓰여 있지 않다 | **접수 2026-09-15** | skill |
 
 ### 2026-09-11의 번호 없는 보고 넷 — incremental testbed(`0.14.4` wheel, `b8b47e6c`) — 접수
 
