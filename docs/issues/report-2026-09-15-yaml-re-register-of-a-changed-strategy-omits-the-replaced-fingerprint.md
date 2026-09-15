@@ -1,6 +1,6 @@
 # Re-registering a changed strategy through a YAML declaration replaces its fingerprint silently; only the three-argument form returns the `replaced` field the skill promises
 
-**Status: RECEIVED 2026-09-15 (접수) — reproduced by the evaluator on the 0.16.1 wheel (triage: `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`); fix plan with the owner.**
+**Status: CLOSED 2026-09-15 by record 296 (`redesign/sections-and-one-register`) — the merge answers `replaced` for both routes; a declaration says `replaced: {<id>: {fingerprint}}`.**
 
 | | |
 |---|---|

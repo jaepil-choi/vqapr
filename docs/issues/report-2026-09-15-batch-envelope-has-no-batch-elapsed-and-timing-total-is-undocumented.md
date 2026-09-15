@@ -1,6 +1,6 @@
 # A `--jobs` batch envelope has no batch elapsed time, and per-strategy `timing.total` misses about 30% of the wall time without saying what it covers
 
-**Status: RECEIVED 2026-09-15 (접수) — reproduced by the evaluator on the 0.16.1 wheel (triage: `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`); fix plan with the owner.**
+**Status: CLOSED 2026-09-15 by record 299 (`redesign/sections-and-one-register`) — a multi-run envelope carries `elapsed` and, under `--jobs`, `bake`; `watching-and-failures.md` says what `timing.total` covers.**
 
 | | |
 |---|---|

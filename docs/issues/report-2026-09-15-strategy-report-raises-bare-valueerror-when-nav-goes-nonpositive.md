@@ -1,6 +1,6 @@
 # `strategy_report` raises a bare `ValueError` when a record's NAV goes non-positive, losing every section instead of omitting `performance`
 
-**Status: RECEIVED 2026-09-15 (접수) — reproduced by the evaluator on the 0.16.1 wheel (triage: `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`); fix plan with the owner.**
+**Status: CLOSED 2026-09-15 by record 297 (`redesign/sections-and-one-register`) — sections are built one at a time; a NAV that is not positive omits `performance`, `book` and `intent` with one reason, and `vqapr export` writes `report.json`.**
 
 | | |
 |---|---|

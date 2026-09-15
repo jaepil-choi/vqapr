@@ -1,6 +1,6 @@
 # Nothing says that a decision taken right after a fill reads the book that fill just set, so "scale the current holdings" silently becomes "restore the previous target" on a daily schedule
 
-**Status: RECEIVED 2026-09-15 (접수) — reproduced by the evaluator on the 0.16.1 wheel (triage: `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`); fix plan with the owner.**
+**Status: CLOSED 2026-09-15 by commit `ab0a6b81` (skill only) — `make-strategy/references/reading-inputs.md` "Your own book, right after a fill".**
 
 | | |
 |---|---|

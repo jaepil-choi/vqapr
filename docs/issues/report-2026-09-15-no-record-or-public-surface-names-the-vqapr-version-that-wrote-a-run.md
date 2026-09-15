@@ -1,6 +1,6 @@
 # No record, envelope or public attribute names the vqapr version that wrote a run, so records from 0.16.0 and 0.16.1 of the same strategy file cannot be told apart
 
-**Status: RECEIVED 2026-09-15 (접수) — reproduced by the evaluator on the 0.16.1 wheel (triage: `docs/handoff/2026-09-15-scenario-testbed-run-5-findings.md`); fix plan with the owner.**
+**Status: CLOSED 2026-09-15 by record 298 (`redesign/sections-and-one-register`) — `package_version` in `strategy.json` and `datamodel.json`, `vqapr.__version__`, `vqapr --version`; not part of run identity (owner). A "changed in this version" skill note is an open owner question.**
 
 | | |
 |---|---|
