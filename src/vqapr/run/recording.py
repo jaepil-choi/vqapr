@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
 
+from vqapr._internal.version import package_version
 from vqapr.component.reference import ComponentRef
 from vqapr.domain.account import CashMode
 from vqapr.record import (
@@ -226,6 +227,9 @@ def freeze_strategy_record(
         # `callback` side (window and decide), the `due` side, and each due stage by name.
         # Seconds, rounded to the microsecond so the record is not a float's full expansion.
         timing={phase: round(seconds, 6) for phase, seconds in result.timing.items()},
+        # Which vqapr computed this, as a receipt: a run's identity does not fold it, so the same
+        # file run again after an upgrade is still this record, and the record says who wrote it.
+        package_version=package_version(),
     )
     writer.finish(record, kind=STRATEGY_KIND)
 
@@ -274,6 +278,7 @@ def freeze_datamodel_record(
             "first": min(times) if times else None,
             "last": max(times) if times else None,
         },
+        package_version=package_version(),
     )
     writer.finish(record, kind=DATAMODEL_KIND)
 

@@ -523,6 +523,10 @@ def _standing_record(existing: RunRecordExists, frozen: object, target: str) -> 
     a reader needs a traceback of.
     """
     kind = "datamodel" if getattr(frozen, "datamodel", None) is not None else "strategy"
+    written_by = existing.written_by
+    standing = f"{existing.run_id!r} already has a record at {existing.directory}" + (
+        "" if written_by is None else f", written by vqapr {written_by}"
+    )
     return VqaprError(
         stage=Stage.RECORD,
         failures=[
@@ -530,7 +534,7 @@ def _standing_record(existing: RunRecordExists, frozen: object, target: str) -> 
                 "record.exists",
                 f"a {kind} record is written once per run and fingerprint",
                 status=Status.CONFLICT,
-                observed=f"{existing.run_id!r} already has a record at {existing.directory}",
+                observed=standing,
                 fix=(
                     f"edit the {kind} (a new fingerprint records beside the old one), or replace "
                     f"this record and the dataset it published deliberately: "

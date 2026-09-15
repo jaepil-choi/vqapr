@@ -29,6 +29,12 @@ PERMITTED: frozenset[str] = frozenset(
         "src/vqapr/record/writer.py",
         # Reaches `_internal.filelock` and `_internal.atomic` (records `106`, `107`).
         "src/vqapr/workspace/registry.py",
+        # Reaches `_internal.version` to stamp each record with the vqapr that wrote it
+        # (record `298`).
+        "src/vqapr/run/recording.py",
+        # Reaches `_internal.version` for the skill manifest, and hands it on to the CLI, which
+        # reads through the surfaces (record `298`).
+        "src/vqapr/agent/skillset.py",
     }
 )
 
@@ -36,14 +42,17 @@ SHARED_PRIMITIVES: frozenset[str] = frozenset(
     {
         "vqapr._internal.filelock",
         "vqapr._internal.atomic",
+        "vqapr._internal.version",
     }
 )
 """`_internal` modules any layer may import directly.
 
 Not extension authorities and not scheduled for deletion: these are what the refactoring is
-consolidating INTO — one exclusive mutex (record `106`) and one durable write (record `107`), each
-replacing several copies that had drifted apart. Enumerated rather than a wildcard, so adding a
-third is a decision somebody takes on purpose.
+consolidating INTO — one exclusive mutex (record `106`), one durable write (record `107`) and one
+answer to "which vqapr is this" (record `298`: the skill manifest, `vqapr --version` and every
+record read it; the run layer stamps records and may not import the agent layer to ask), each
+replacing copies that had drifted apart or were missing. Enumerated rather than a wildcard, so
+adding one is a decision somebody takes on purpose.
 """
 
 

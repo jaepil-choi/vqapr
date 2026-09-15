@@ -152,6 +152,8 @@ def test_a_field_written_to_the_record_but_never_surfaced_is_refused_at_the_writ
         "period",
         # Seconds by phase (`docs/issues/archive/068`): where the run's wall clock went.
         "timing",
+        # The vqapr that wrote the record (record `298`), a receipt beside the fingerprint.
+        "package_version",
     }
     assert set(record_view({"kind": "strategy"})) == {*STRATEGY_FIELDS, "kind"}
 
@@ -174,6 +176,7 @@ def test_a_field_written_to_the_record_but_never_surfaced_is_refused_at_the_writ
         "source_digest",
         "declared_digest",
         "period",
+        "package_version",
     }
     assert set(record_view({"kind": "datamodel"})) == {*DATAMODEL_FIELDS, "kind"}
 

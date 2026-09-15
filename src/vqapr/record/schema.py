@@ -241,6 +241,9 @@ class StrategyRecord(_Record):
     roster: dict[str, Any] | None
     period: dict[str, Any]
     timing: dict[str, float]
+    package_version: str | None = None
+    """The vqapr that wrote this record (testbed report 2026-09-15). A receipt, never part of the
+    run's identity; `None` in a record written before it existed."""
 
 
 class DatamodelRecord(_Record):
@@ -261,6 +264,8 @@ class DatamodelRecord(_Record):
     source_digest: dict[str, str]
     declared_digest: str
     period: dict[str, Any]
+    package_version: str | None = None
+    """The vqapr that wrote this record, as on `StrategyRecord`."""
 
 
 _STRATEGY_FIELDS = tuple(StrategyRecord.model_fields)

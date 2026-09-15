@@ -21,8 +21,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # The lazy `__getattr__` below is the runtime door; this is the same name for the checker.
+    # The lazy `__getattr__` below is the runtime door; these are the same names for the checker.
     from vqapr import public
+
+    __version__: str
 
 __all__ = ("public",)
 
@@ -30,10 +32,13 @@ _CAPABILITIES = frozenset({"public"})
 
 
 def __getattr__(name: str):
-    """Resolve capability modules on first attribute access."""
-    if name in _CAPABILITIES:
-        import importlib
+    """Resolve capability modules, and `__version__`, on first attribute access."""
+    import importlib
 
+    if name == "__version__":
+        # The one version answer (record `298`), resolved the way a capability is.
+        return importlib.import_module("vqapr._internal.version").package_version()
+    if name in _CAPABILITIES:
         module = importlib.import_module(f"vqapr.{name}")
         globals()[name] = module
         return module

@@ -35,6 +35,7 @@ from vqapr.record.reader import (
 )
 from vqapr.record.schema import (
     COMPACT_FILENAME,
+    DATAMODEL_FILENAME,
     LOCK_TOUCH_EVERY,
     MEMBER_KINDS,
     PART_SUFFIX,
@@ -46,6 +47,7 @@ from vqapr.record.schema import (
     RUN_SCHEMA,
     SCHEMA,
     SPILL_BYTES,
+    STRATEGY_FILENAME,
     STRATEGY_KIND,
     TABLES_DIRECTORY,
     RunRecord,
@@ -128,6 +130,23 @@ class RunRecordExists(FileExistsError):
         """Rebuild through this constructor: a `--jobs` worker's standing record comes back as
         this exception, not as the pickling `TypeError` the default `cls(*args)` raised."""
         return (type(self), (self.run_id, self.directory))
+
+    @property
+    def written_by(self) -> str | None:
+        """The vqapr version the standing record says wrote it, or `None` when it says none.
+
+        The version is not part of a run's identity, so a file run again after an upgrade is
+        refused as this same record; the refusal says which version wrote the one standing
+        (record `298`). A record written before the field existed says nothing.
+        """
+        for name in (STRATEGY_FILENAME, DATAMODEL_FILENAME):
+            try:
+                facts = json.loads((Path(self.directory) / name).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            version = facts.get("package_version") if isinstance(facts, dict) else None
+            return version if isinstance(version, str) else None
+        return None
 
 
 @dataclass(slots=True)

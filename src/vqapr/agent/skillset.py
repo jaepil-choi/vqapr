@@ -25,9 +25,12 @@ import json
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from importlib import metadata, resources
+from importlib import resources
 from pathlib import Path
 from typing import Any
+
+# One answer for the manifest, `vqapr --version` and every record (record `298`).
+from vqapr._internal.version import package_version
 
 SKILLS_PACKAGE = "vqapr.agent.skills"
 
@@ -54,18 +57,6 @@ _NOT_A_SKILL = frozenset({"README.md", RELEASED_TABLE, "__init__.py", "__pycache
 
 def sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
-
-
-def package_version() -> str:
-    """설치된 distribution의 version, 읽을 수 없으면 표식.
-
-    editable install도 version을 보고한다. version이 움직이지 않아도 내용 판정은 해시가 하므로
-    이 값은 "언제 깔았나"의 기록이지 판정의 근거가 아니다.
-    """
-    try:
-        return metadata.version("vqapr")
-    except metadata.PackageNotFoundError:
-        return "unknown"
 
 
 def _walk(ref: Any, prefix: str = "") -> Iterator[tuple[str, bytes]]:

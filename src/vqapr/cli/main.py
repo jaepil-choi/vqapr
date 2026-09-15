@@ -19,9 +19,9 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, NoReturn
 
-from vqapr.agent.skillset import upgrade_note
+from vqapr.agent.skillset import package_version, upgrade_note
 from vqapr.cli import check, export, list_, new, register, rm, run, show, skill
-from vqapr.cli.envelope import UsageError, emit, failure, note
+from vqapr.cli.envelope import UsageError, emit, failure, note, success
 from vqapr.domain.errors import VALUE_INVALID, InputError, Stage
 from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME
 
@@ -257,6 +257,13 @@ def build_parser() -> _Parser:
             "accident -- pass the ancestor, or this directory, explicitly)"
         ),
     )
+    # Answered by `main` before parsing, since a command is otherwise required; declared here so
+    # `vqapr --help` lists it.
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="print the installed vqapr version as an envelope and exit",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
     for name, module in _COMMANDS.items():
         summary = _SUMMARIES[name]
@@ -316,6 +323,9 @@ def _resolve_project_root(explicit: Path | None) -> Path:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     typed = list(sys.argv[1:] if argv is None else argv)
+    if "--version" in typed and not set(typed) & set(_COMMANDS):
+        # Which vqapr this is (testbed report 2026-09-15), in the envelope every answer uses.
+        return emit(success("version", package_version=package_version()))
     try:
         args, extras = parser.parse_known_args(typed)
         if extras:

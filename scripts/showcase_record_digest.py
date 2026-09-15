@@ -53,8 +53,9 @@ import pyarrow.parquet as pq
 REPOSITORY = Path(__file__).resolve().parents[1]
 SHOWCASES = REPOSITORY / "showcases"
 
-DROPPED_KEYS = frozenset({"timing"})
-"""Keys whose whole subtree is wall clock, dropped wherever they appear."""
+DROPPED_KEYS = frozenset({"timing", "package_version"})
+"""Keys dropped wherever they appear: wall clock, and the version of vqapr that wrote the record
+(record `298`), which moves with every release while what the run computed does not."""
 
 ROOT_PLACEHOLDER = "<REPOSITORY>"
 HEX64 = re.compile(r"\b[0-9a-f]{64}\b")
