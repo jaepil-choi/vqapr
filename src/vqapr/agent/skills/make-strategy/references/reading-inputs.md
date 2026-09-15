@@ -5,6 +5,7 @@
 - Two read verbs, one per grain
 - `current()` versus `latest()`
 - The lookback pair — the one that is silently wrong
+- Your own book, right after a fill
 - Types
 
 ## Two read verbs, one per grain
@@ -58,6 +59,18 @@ anything date-aligned.
 number is finite, every check passes, and the matrix is meaningless.
 
 Scaffold with `--lookback N` for the first and `--calendar-lookback DAYS` for the second.
+
+## Your own book, right after a fill
+
+`call.account` is the book at the previous valuation. A decision taken right after a fill reads
+the book that fill just set, and that book's value proportions are the previous target's —
+exactly, at the fill's prices. So a rule that returns the proportions of `call.account.values`
+(or `call.account.weights()`) as its target returns the previous target, and on a daily schedule
+it keeps the first target's proportions for good.
+
+A target is a weight, never "scale what I hold". To let names drift and only resize their group,
+derive the proportions from prices — a name's weight at formation × its price now ÷ its price at
+the first fill — not from `call.account`. The fill still applies them one session later.
 
 ## Types
 
