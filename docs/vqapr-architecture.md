@@ -966,7 +966,8 @@ funded 계좌의 매수는 현금 안으로 깎이고, 차입 계좌의 매수�
 
 - **`현금 >= 0`은 funded 계좌(기본)의 불변식이다.** 비용 · 증거금 · 강제 청산을 모델링하지 않은 차입은 공짜 돈
   버튼이라, 차입은 run이 `initial_account.cash_mode: BORROWING`으로 선언할 때만 열린다(오너 결정 2026-09-15,
-  records 288-290). 얼마나 빌리는지는 전략의 `Budget.cash_lower`(NAV 대비)가 정하고, 계좌에는 금액 한도가 없다.
+  records 288-290). 얼마나 빌리는지는 전략의 `Budget`이 정하고(순노출이 1을 넘는 만큼 — `fixed(long=2, short=0)`은
+  NAV 하나를 빌린다, record 291), 계좌에는 금액 한도가 없다.
   빌린 현금의 이자는 0이고 `run.json`의 `initial_account.cash_mode`가 그것을 말한다. NAV가 0 이하가 되면 다음 주문
   계획에서 run이 이유를 말하며 멈춘다(증거금 청산은 없다). 매수를 현금만큼 자르는 venue(KRX, `partial_fills:
   cash-limited`)와의 조합은 `check`가 거절한다(`weights.cash_conflict`).

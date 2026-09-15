@@ -55,6 +55,11 @@ budget이 결정마다 붙어 있었다. `Rebalance`가 `budget=`을 싣고, 그
   `report-2026-09-14-sample-strategy-imports-from-private-vqapr-domain-intent`를 닫는다.
 - **`vqapr show model`** — `budget` 키.
 - **docstring** — `bounds`(`Rebalance(optimize(...).weights)`), `optimize`의 `cash_range`.
+- **borrowing과 합침(develop의 288-290)** — 먼저 끝난 borrowing 캠페인은 레버리지 한도를 옛 `Budget.cash_lower`로
+  말했다. 여기서는 순노출이 1을 넘는 budget이 그 한도다: `Budget.fixed(long=2, short=0)`은 cash -1, NAV 하나를
+  빌리고 그 이상은 decide 단계가 거절한다. 130/30(`fixed(long=1.3, short=-0.3)`)은 빌리지 않는다. rebase 뒤
+  `plan_orders`는 `cash_mode`만 받고, borrowing test · run 템플릿 주석 · account docstring · make-strategy와
+  make-exchange skill · architecture §9.4의 한 문장을 새 모양으로 옮겼다.
 
 ## 대안과 선택
 

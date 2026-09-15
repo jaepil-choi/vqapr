@@ -1,7 +1,8 @@
 """A borrowing account holds more than its NAV long (records 288-289).
 
 The owner's case (2026-09-15): on the academic venue, a book that buys 200% of NAV. The strategy's
-budget is the limit -- `Rebalance.signed({...}, gross=2)` declares cash at -1 -- and the account
+budget is the limit -- `Budget.fixed(long=2, short=0)` nets the book at 2, cash at -1 -- and the
+account
 declared `initial_account.cash_mode: BORROWING` lets the fills take cash below zero. The same run
 on a funded account is cut to its cash, and a funded run keeps the stored spelling, the record and
 the identity it had before `cash_mode` existed: FUNDED is never written.
@@ -28,7 +29,7 @@ STRATEGIES = textwrap.dedent(
     from decimal import Decimal
 
     from vqapr.public import (
-        AcademicExchange, DatasetInput, Hold, ListingAccess, Rebalance, RowsLookback,
+        AcademicExchange, Budget, DatasetInput, Hold, ListingAccess, Rebalance, RowsLookback,
         StrategyModel, TradeRule,
     )
 
@@ -43,12 +44,15 @@ STRATEGIES = textwrap.dedent(
                 ),
             }
 
+        def budget(self):
+            return Budget.fixed(long=2, short=0)
+
         def decide(self, call):
             state = self.memory if isinstance(self.memory, dict) else {}
             if state.get("formed") or not call.read("prices", "close").latest():
                 return Hold(reason="formed")
             self.memory = {"formed": True}
-            return Rebalance.signed({"A005930": 1, "A000660": 1}, gross=2)
+            return Rebalance(self.budget().fill({"A005930": 1, "A000660": 1}))
 
 
     class LeverageExchange(AcademicExchange):

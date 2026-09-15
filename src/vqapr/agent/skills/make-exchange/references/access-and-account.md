@@ -28,8 +28,8 @@ start from `--profile krx` itself: you would be removing its access rule from ev
 
 ## Borrowing needs a venue that fills past the cash
 
-`initial_account.cash_mode: BORROWING` lets the account's cash go below zero, so a budget with
-`cash_lower < 0` buys more than NAV. `--profile krx` cuts every buy to the cash on hand
+`initial_account.cash_mode: BORROWING` lets the account's cash go below zero, so a budget whose
+book nets above 1 (`Budget.fixed(long=2, short=0)`) buys more than NAV. `--profile krx` cuts every buy to the cash on hand
 (`partial_fills: cash-limited` in its settings), so on KRX the account would never borrow.
 `check` refuses that pair as `weights.cash_conflict`.
 

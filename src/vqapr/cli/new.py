@@ -228,7 +228,7 @@ runs:
       # SIGNED book. A costed long/short book needs a venue whose listings set access=SIGNED.
       mode: LONG_ONLY                # {_ACCOUNT_MODES}
       # cash_mode: BORROWING         # {_CASH_MODES} (default FUNDED). BORROWING lets fills take
-                                     #   cash below zero, so a budget with cash_lower < 0 buys
+                                     #   cash below zero, so a budget netting above 1 buys
                                      #   more than NAV. No interest is charged. Needs a venue that
                                      #   does not cut buys to cash: `--profile krx` does
       positions: {{}}                  # mapping of instrument -> quantity, or empty

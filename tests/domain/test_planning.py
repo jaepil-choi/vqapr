@@ -606,12 +606,10 @@ def test_a_borrowing_account_may_overdraw_and_a_funded_one_may_not() -> None:
 def test_a_borrowing_accounts_buys_are_not_cut_to_its_cash() -> None:
     """A 2x long target: the borrowing account plans all of it, the funded one only its cash.
 
-    The limit on how far a book borrows is the strategy's budget -- `cash_lower=-1` is at most one
-    NAV borrowed -- and the planner no longer fits the buys into cash the account may overdraw.
+    How far a book borrows is the strategy's budget, checked at the decide stage (record 291):
+    a book netting 2 has one NAV borrowed. The planner no longer fits the buys into cash the
+    account may overdraw.
     """
-    leveraged = Budget(
-        PortfolioDirection.SIGNED, decimal("-1"), decimal("2"), decimal("-1"), decimal("1")
-    )
     rules = ExchangeRulesView(
         "v",
         {
@@ -627,7 +625,6 @@ def test_a_borrowing_accounts_buys_are_not_cut_to_its_cash() -> None:
             prices={"A": decimal("10"), "B": decimal("10")},
             weight_targets={"A": decimal("1"), "B": decimal("1")},
             cash_target=decimal("-1"),
-            budget=leveraged,
             rules=rules,
             cash_mode=cash_mode,
         )
@@ -651,5 +648,4 @@ def test_a_book_worth_nothing_stops_with_what_happened() -> None:
             prices={"A": decimal("5")},
             weight_targets={},
             cash_target=decimal("1"),
-            budget=_BUDGET,
         )

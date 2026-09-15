@@ -404,7 +404,7 @@ class CashMode(StrEnum):
 
     `FUNDED` is every purchase paid from cash on hand, and the default. `BORROWING` lets fills take
     cash below zero with no floor of the account's own: how far the book leverages is the
-    strategy's `Budget` (`cash_lower`, a share of NAV), checked when the target is planned. The
+    strategy's `Budget` (a book netting above 1 borrows), checked at the decide stage. The
     borrowed cash costs nothing -- no interest, no margin, no forced sale -- and the run record
     says the account borrowed, so a result read later cannot be mistaken for a funded one.
     """
