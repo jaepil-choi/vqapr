@@ -102,7 +102,7 @@ def test_a_workspace_written_by_0_3_0_opens_and_the_next_write_drops_the_four_se
     # An idempotent re-registration writes nothing, so the sections outlive it; the next write
     # that changes the document rewrites all of it, and they are gone.
     with Workspace.transaction(reopened) as t:
-        assert t.register_component(_strategy("alpha", tmp_path)) is False
+        assert t.register_component(_strategy("alpha", tmp_path)) is None, "replaced nothing"
     assert set(RETIRED_KEYS) <= set(yaml.safe_load(path.read_text(encoding="utf-8")))
     with Workspace.transaction(reopened) as t:
         t.register_run(_run("daily", "alpha"))

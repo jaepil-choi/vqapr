@@ -919,10 +919,22 @@ class Transaction:
     def register_dataset(self, registration: DatasetRegistration, source: SourceSpec) -> bool:
         return self._stage(lambda state: merge_dataset(state, registration, source))
 
-    def register_component(self, ref: ComponentRef) -> bool:
+    def register_component(self, ref: ComponentRef) -> ComponentRef | None:
+        """Stage one component and say what it replaced.
+
+        The merge is the one place that knows what the id held before, so every route that
+        registers a component -- a declaration, `register <kind> <id> <file.py>`, the Python
+        doors -- takes its answer from here: the previous reference when an edit moved the id's
+        fingerprint, `None` for a new id or the same bytes. The two routes used to answer
+        differently because only one of them looked (testbed report 2026-09-15).
+        """
         if not isinstance(ref, ComponentRef):
             raise TypeError("ref must be a ComponentRef")
-        return self._stage(lambda state: merge_component(state, ref))
+        previous = self._staging._state().components.get(ref.component_id)
+        self._stage(lambda state: merge_component(state, ref))
+        if previous is None or previous.fingerprint == ref.fingerprint:
+            return None
+        return previous
 
     def register_run(self, definition: RunDefinition) -> bool:
         if not isinstance(definition, RunDefinition):

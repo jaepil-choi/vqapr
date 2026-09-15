@@ -84,7 +84,7 @@ def test_an_edited_component_re_registers_in_place(tmp_path: Path) -> None:
     assert second.fingerprint != first.fingerprint
 
     with Workspace.transaction(workspace) as t:
-        assert t.register_component(second) is True
+        assert t.register_component(second) == first, "the answer is what the edit replaced"
     assert workspace.component("mom").fingerprint == second.fingerprint
     assert len(workspace.components) == 1, "an edit must not mint a second component id"
 
@@ -100,14 +100,14 @@ def test_there_is_no_force_parameter_left_to_promise(tmp_path: Path) -> None:
 
 
 def test_re_registering_an_unchanged_component_stays_idempotent(tmp_path: Path) -> None:
-    """A second registration of the same bytes writes nothing and says so."""
+    """A second registration of the same bytes replaces nothing and says so."""
     workspace, source = _workspace(tmp_path)
     ref = _ref(source)
     with Workspace.transaction(workspace) as t:
         t.register_component(ref)
 
     with Workspace.transaction(workspace) as t:
-        assert t.register_component(ref) is False
+        assert t.register_component(ref) is None
 
 
 def test_remove_withdraws_a_registration_and_is_idempotent(tmp_path: Path) -> None:

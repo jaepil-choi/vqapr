@@ -350,7 +350,7 @@ def test_datamodel_component_round_trips_through_workspace(tmp_path: Path) -> No
     )
 
     with Workspace.transaction(workspace) as t:
-        assert t.register_component(expected) is True
+        assert t.register_component(expected) is None, "a new id replaced nothing"
     assert Workspace.open(tmp_path).component("reversal") == expected
     assert Workspace.open(tmp_path).components == (expected,)
 

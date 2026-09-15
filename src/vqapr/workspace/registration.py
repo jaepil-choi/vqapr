@@ -880,8 +880,9 @@ def _require_declared_ids(section: Any) -> None:
 
 def _component(
     component_id: str, body: object, project_root: Path, transaction: Transaction, *, base: Path
-) -> str:
-    """Register one authored component through the door its kind declares.
+) -> tuple[str, ComponentRef | None]:
+    """Register one authored component through the door its kind declares; return its id and
+    the reference it replaced (`Transaction.register_component`).
 
     A relative path resolves against the **declaration's own directory**, not the process working
     directory, so a document sits beside the component it declares and stays portable. `vqapr new`
@@ -897,22 +898,24 @@ def _component(
         kind=_COMPONENT_KINDS[model.kind],
         config=model.config,
     )
-    transaction.register_component(ref)
-    return str(ref.component_id)
+    return str(ref.component_id), transaction.register_component(ref)
 
 
 class Registered(dict[str, list[str | dict[str, Any]]]):
     """What one declaration registered, by section -- a plain mapping to every caller that
     indexes it -- plus `spoken`, the point-in-time meaning of what was just declared, one
-    sentence per PIT-bearing concept (`docs/issues/archive/027`). Rendered by `vqapr register` as
-    `spoken`, beside `registered`. Every section lists ids; `instruments` lists the roster's
+    sentence per PIT-bearing concept (`docs/issues/archive/027`), and `replaced`, the old
+    fingerprint of each component an edit moved, by id. Rendered by `vqapr register` as `spoken`
+    and `replaced` beside `registered`. Every section lists ids; `instruments` lists the roster's
     per-category receipt instead."""
 
     spoken: list[str]
+    replaced: dict[str, dict[str, str]]
 
     def __init__(self) -> None:
         super().__init__()
         self.spoken = []
+        self.replaced = {}
 
 
 def apply(
@@ -982,9 +985,12 @@ def apply(
             registered.spoken.extend(measured.spoken())
 
         for component_id, body in section("components").items():
-            registered.setdefault("components", []).append(
-                _component(str(component_id), body, project_root, transaction, base=base)
+            staged, replaced = _component(
+                str(component_id), body, project_root, transaction, base=base
             )
+            registered.setdefault("components", []).append(staged)
+            if replaced is not None:
+                registered.replaced[staged] = {"fingerprint": replaced.fingerprint}
 
         definitions: list[tuple[str, RunDefinition]] = []
         for run_id, body in section("runs").items():
@@ -1124,17 +1130,15 @@ def register_authored(
     # Found by parsing before the register call, so "two strategies in one file" is refused as
     # that, rather than surfacing as whatever the loader happens to say about an ambiguous import.
     object_name = _sole_subclass(path, expected, component_id)
-    # What held the id before this command, so the payload can say an edit REPLACED it
-    # (`docs/issues/archive/067`): a plain re-register is the edit loop and refuses nothing, and the
-    # old fingerprint is how the user learns which past run records are pinned to the code
-    # they just moved away from. Read before the write; `Workspace.create` is what
-    # `register_component` opens anyway, so this adds no state on a first registration.
-    previous = {
-        str(item.component_id): item for item in Workspace.create(project_root).components
-    }.get(component_id)
-    ref = register_component(
+    ref = prepare_component(
         project_root, component_id, path, object_name, kind=_COMPONENT_KINDS[kind]
     )
+    # The merge says what the id held before, the same answer a declaration gets
+    # (`Transaction.register_component`): a plain re-register is the edit loop and refuses
+    # nothing, and the old fingerprint is how the user learns which past run records are pinned
+    # to the code they just moved away from (`docs/issues/archive/067`).
+    with Workspace.transaction(project_root) as transaction:
+        replaced = transaction.register_component(ref)
     # Returns data, not an envelope. Rendering belongs to the surface: this module is below it,
     # and importing `cli.envelope` from here is what closed an import cycle through the whole CLI.
     payload: dict[str, Any] = {
@@ -1146,8 +1150,8 @@ def register_authored(
             "source": str(path),
         },
     }
-    if previous is not None and previous.fingerprint != ref.fingerprint:
-        payload["replaced"] = {"fingerprint": previous.fingerprint}
+    if replaced is not None:
+        payload["replaced"] = {"fingerprint": replaced.fingerprint}
     return payload
 
 

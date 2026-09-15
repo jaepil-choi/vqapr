@@ -17,8 +17,9 @@ It replaces the registration in place, with no flag — there is no `register --
 `vqapr skill install --force` overwrites edited skill files.
 
 The success payload then carries `replaced: {fingerprint: <the old one>}`, and says nothing about
-it when the id was new or the bytes unchanged. The id stays, whatever names it keeps working, and
-the next run's record carries a new `source_digest`.
+it when the id was new or the bytes unchanged. A declaration answers the same way, per component:
+`replaced: {<component-id>: {fingerprint: <the old one>}}`. The id stays, whatever names it keeps
+working, and the next run's record carries a new `source_digest`.
 
 ## That digest is a receipt rather than a gate
 

@@ -83,5 +83,9 @@ def run(args: argparse.Namespace, *, project_root: Path) -> dict[str, Any]:
     document = read_declaration(declaration)
     registered = apply(document, project_root, base=declaration.parent, declaration=declaration)
     # What was just declared, said once in words (`docs/issues/archive/027`): one sentence per
-    # point-in-time concept, or nothing for a declaration that carries none.
-    return success("workspace.register", registered=dict(registered), spoken=registered.spoken)
+    # point-in-time concept, or nothing for a declaration that carries none. `replaced` is present
+    # only when an edit moved a component's fingerprint, as in the three-argument form.
+    replaced = {"replaced": registered.replaced} if registered.replaced else {}
+    return success(
+        "workspace.register", registered=dict(registered), spoken=registered.spoken, **replaced
+    )
