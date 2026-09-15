@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from vqapr.domain.account import AccountMode
+from vqapr.domain.account import AccountMode, CashMode
 from vqapr.domain.errors import VqaprError
 from vqapr.workspace.registration import _enum, apply
 from vqapr.workspace.registry import Workspace
@@ -40,8 +40,11 @@ def _failure(error: VqaprError) -> dict:
     return error.as_dict()["failures"][0]
 
 
-def _register_run_with_mode(root: Path, mode: str) -> dict:
+def _register_run_with_mode(root: Path, mode: str, cash_mode: str | None = None) -> dict:
     Workspace.create(root)
+    account = {"cash": "1000", "mode": mode, "positions": {}}
+    if cash_mode is not None:
+        account["cash_mode"] = cash_mode
     document = {
         "runs": {
             "r": {
@@ -55,7 +58,7 @@ def _register_run_with_mode(root: Path, mode: str) -> dict:
                     "dataset": "venue-daily",
                     "trade_price": "close", "fill": {"at": "15:30"},
                 },
-                "initial_account": {"cash": "1000", "mode": mode, "positions": {}},
+                "initial_account": account,
                 "writes": "r-weights",
                 "strategies": {"alpha": {}},
             }
@@ -74,6 +77,17 @@ def test_the_account_mode_refusal_names_the_permitted_set(tmp_path: Path) -> Non
     assert failure["requirement"] == "runs.r.initial_account.mode must be one of: long_only, signed"
     assert failure["examples"] == ["long_only", "signed"]
     assert failure["source"]["key_path"] == "runs.r.initial_account.mode"
+
+
+def test_the_cash_mode_refusal_names_the_permitted_set(tmp_path: Path) -> None:
+    """Record 289: the second closed set in the block is judged the same way."""
+    failure = _register_run_with_mode(tmp_path, "LONG_ONLY", cash_mode="LEVERAGED")
+
+    assert failure["code"] == "declaration.value_not_permitted"
+    assert failure["requirement"] == (
+        "runs.r.initial_account.cash_mode must be one of: funded, borrowing"
+    )
+    assert failure["source"]["key_path"] == "runs.r.initial_account.cash_mode"
 
 
 def test_no_exception_repr_reaches_observed(tmp_path: Path) -> None:
@@ -99,6 +113,7 @@ def test_the_suggestion_names_the_nearest_member(tmp_path: Path) -> None:
     ("enum", "written", "key_path", "expected"),
     [
         (AccountMode, "LONG_SHORT", "initial_account.mode", "long_only, signed"),
+        (CashMode, "LEVERAGED", "initial_account.cash_mode", "funded, borrowing"),
         (_Unit, "week", "schedule.unit", "d, h, m"),
     ],
 )

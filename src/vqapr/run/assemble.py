@@ -785,6 +785,7 @@ def _run_strategy(
             # read; declaring nothing keeps one.
             account=Account(
                 mode=initial_mode,
+                cash_mode=frozen.initial_account_cash_mode,
                 retained_marks=retained_marks(strategy.account_history()),
             ),
             exchange=exchange,

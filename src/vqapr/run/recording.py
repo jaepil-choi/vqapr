@@ -17,6 +17,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from vqapr.component.reference import ComponentRef
+from vqapr.domain.account import CashMode
 from vqapr.record import (
     DATAMODEL_KIND,
     STRATEGY_KIND,
@@ -80,6 +81,13 @@ def freeze_run_record(root: Path, frozen: FrozenRun, *, source_digests: Mapping[
             if frozen.initial_account_snapshot is None or frozen.initial_account_mode is None
             else {
                 "mode": frozen.initial_account_mode.value,
+                # Only when the account borrows: a funded run's record keeps the bytes it had
+                # before `cash_mode` existed, and a borrowing one says so (record 289).
+                **(
+                    {"cash_mode": frozen.initial_account_cash_mode.value}
+                    if frozen.initial_account_cash_mode is not CashMode.FUNDED
+                    else {}
+                ),
                 "version": frozen.initial_account_snapshot.version,
                 "cash": frozen.initial_account_snapshot.cash,
                 "positions": dict(frozen.initial_account_snapshot.positions),

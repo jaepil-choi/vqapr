@@ -37,7 +37,7 @@ from vqapr.data.scan import DECLARABLE_FIELD_TYPE_NAMES
 from vqapr.data.source import SourceSpec
 from vqapr.data.verification import verify_roster, verify_source
 from vqapr.domain import identifiers
-from vqapr.domain.account import AccountMode
+from vqapr.domain.account import AccountMode, CashMode
 from vqapr.domain.errors import (
     INCOMPLETE,
     MISSING,
@@ -999,6 +999,8 @@ def apply(
                 # (`docs/issues/archive/017`), rather than surfacing from the model as one line
                 # of many.
                 _enum(AccountMode, account["mode"], name=f"{name}.initial_account.mode")
+            if isinstance(account, dict) and "cash_mode" in account:
+                _enum(CashMode, account["cash_mode"], name=f"{name}.initial_account.cash_mode")
             try:
                 definition = RunDefinition.model_validate({"run_id": str(run_id), **declared_run})
             except (ValidationError, TypeError, ValueError) as invalid:

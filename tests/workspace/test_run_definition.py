@@ -228,6 +228,7 @@ def test_a_run_declares_no_valuation_and_no_monitoring() -> None:
         "end",
         "initial_account_snapshot",
         "initial_account_mode",
+        "initial_account_cash_mode",
     }
 
 

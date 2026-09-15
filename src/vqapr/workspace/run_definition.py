@@ -38,7 +38,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from vqapr.component.reference import ComponentRef
 from vqapr.data.requirement import DataRequirement
-from vqapr.domain.account import AccountMode, AccountSnapshot
+from vqapr.domain.account import AccountMode, AccountSnapshot, CashMode
 from vqapr.domain.fill import FillRule
 from vqapr.domain.identifiers import ModelStateRef, ScheduleId
 from vqapr.domain.instants import require_tz_aware
@@ -278,19 +278,23 @@ class DataModelEntry:
 
 
 class _InitialAccount(BaseModel):
-    """`runs.<id>.initial_account` on disk: the YAML spelling of two `RunDefinition` fields.
+    """`runs.<id>.initial_account` on disk: the YAML spelling of three `RunDefinition` fields.
 
-    Not a domain type -- the domain is an `AccountSnapshot` and an `AccountMode` -- and not a
-    document/domain pair either: it is the one block whose stored shape differs from the two
-    fields it carries, so the codec for it is written once, here, as the model that reads and
+    Not a domain type -- the domain is an `AccountSnapshot`, an `AccountMode` and a `CashMode` --
+    and not a document/domain pair either: it is the one block whose stored shape differs from
+    the fields it carries, so the codec for it is written once, here, as the model that reads and
     writes that block. Written and read by member NAME (`LONG_ONLY`), which is what the template
     shows; the enum's value is the lower-case spelling.
+
+    `cash_mode` is written only when it is not `FUNDED` (record 289): a run declared before the
+    field existed stores, registers and identifies exactly as it did.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=False)
 
     cash: Decimal
     mode: AccountMode
+    cash_mode: CashMode = CashMode.FUNDED
     positions: dict[str, Decimal] = {}
     version: int = 0
 
@@ -304,9 +308,23 @@ class _InitialAccount(BaseModel):
                 return value
         return value
 
+    @field_validator("cash_mode", mode="before")
+    @classmethod
+    def _cash_mode_by_name(cls, value: object) -> object:
+        if isinstance(value, str):
+            try:
+                return CashMode[value.upper()]
+            except KeyError:
+                return value
+        return value
+
     @field_serializer("mode")
     def _name(self, mode: AccountMode) -> str:
         return mode.name
+
+    @field_serializer("cash_mode")
+    def _cash_mode_name(self, cash_mode: CashMode) -> str:
+        return cash_mode.name
 
     @field_serializer("cash")
     def _cash(self, cash: Decimal) -> str:
@@ -559,7 +577,8 @@ class RunDefinition(BaseModel):
     one place that difference is written: `strategy`/`datamodel` are a block naming its
     `component` on disk and an entry here (the pre-2026-09-09 `strategies: {id: {...}}` mapping
     is still read); `execution` on disk is a `RunExecution`; one `initial_account` block is a
-    snapshot and a mode; and `run_id` is the key the entry sits under, not a field of it.
+    snapshot, a mode and a cash mode; and `run_id` is the key the entry sits under, not a field
+    of it.
     `writes` is spelled the same in both.
     """
 
@@ -598,6 +617,9 @@ class RunDefinition(BaseModel):
     end: datetime | None = None
     initial_account_snapshot: AccountSnapshot | None = None
     initial_account_mode: AccountMode | None = None
+    initial_account_cash_mode: CashMode = CashMode.FUNDED
+    """Whether the account's cash may go below zero (record 289). `BORROWING` lets fills overdraw
+    it; how far is the strategy's budget. Declared as `initial_account.cash_mode`."""
 
     # ---- the stored spelling in, and out ----------------------------------------------------
 
@@ -677,6 +699,7 @@ class RunDefinition(BaseModel):
                     version=declared.version, cash=declared.cash, positions=declared.positions
                 )
                 body["initial_account_mode"] = declared.mode
+                body["initial_account_cash_mode"] = declared.cash_mode
         if "instruments" in body and body["instruments"] is None:
             body["instruments"] = ()
         return body
@@ -705,9 +728,19 @@ class RunDefinition(BaseModel):
             ordered["initial_account"] = _InitialAccount(
                 cash=self.initial_account_snapshot.cash,
                 mode=self.initial_account_mode,
+                cash_mode=self.initial_account_cash_mode,
                 positions=dict(self.initial_account_snapshot.positions),
                 version=self.initial_account_snapshot.version,
-            ).model_dump(mode="json")
+            ).model_dump(
+                mode="json",
+                # FUNDED is never written, so a run declared before `cash_mode` existed keeps its
+                # stored bytes (record 289).
+                exclude=(
+                    {"cash_mode"}
+                    if self.initial_account_cash_mode is CashMode.FUNDED
+                    else None
+                ),
+            )
         if self.strategy is not None:
             ordered["strategy"] = {
                 "component": self.strategy.component_id,
@@ -795,6 +828,14 @@ class RunDefinition(BaseModel):
             raise ValueError("exchange and execution must be declared together")
         _require_period(self.start, self.end, "declared")
         _require_account(self.initial_account_snapshot, self.initial_account_mode, "declared")
+        if (
+            self.initial_account_cash_mode is not CashMode.FUNDED
+            and self.initial_account_snapshot is None
+        ):
+            raise ValueError(
+                "initial_account_cash_mode is declared inside initial_account: a run with no "
+                "initial account has no cash to borrow"
+            )
         _require_instruments(self.instruments)
         return self
 

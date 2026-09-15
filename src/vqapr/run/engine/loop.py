@@ -384,6 +384,8 @@ def strategy_loop(
         raise ValueError("state AccountState must match FrozenRun initial account snapshot")
     if frozen_run.initial_account_mode != account.mode:
         raise ValueError("Account mode must match FrozenRun initial account mode")
+    if frozen_run.initial_account_cash_mode != account.cash_mode:
+        raise ValueError("Account cash mode must match FrozenRun initial account cash mode")
     carried = set(state.current.component_state_refs)
     stateful = {rule.compliance_id for rule in compliance}
     if isinstance(exchange, Component):

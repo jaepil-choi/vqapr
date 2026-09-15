@@ -13,8 +13,8 @@ screen.
 
 from __future__ import annotations
 
-from vqapr.cli.new import _ACCOUNT_MODES, _RUN_TEMPLATE
-from vqapr.domain.account import AccountMode
+from vqapr.cli.new import _ACCOUNT_MODES, _CASH_MODES, _RUN_TEMPLATE
+from vqapr.domain.account import AccountMode, CashMode
 
 
 def test_the_template_never_names_a_mode_that_does_not_exist() -> None:
@@ -71,3 +71,13 @@ def test_the_template_spells_modes_the_way_the_parser_accepts_them() -> None:
             f"the template offers {mode.value!r}, which is the enum's value rather than the name "
             "the spec parser accepts"
         )
+
+
+def test_the_cash_modes_are_offered_the_same_way() -> None:
+    """Record 289: `cash_mode` is the second closed set in the block, rendered from its enum."""
+    assert " or ".join(mode.name for mode in CashMode) == _CASH_MODES
+    comment = next(
+        line for line in _RUN_TEMPLATE.splitlines() if line.strip().startswith("# cash_mode:")
+    )
+    for mode in CashMode:
+        assert mode.name in comment, f"the template never offers {mode.name}"

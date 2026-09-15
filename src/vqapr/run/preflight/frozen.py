@@ -20,7 +20,7 @@ from vqapr.data.dataset import DatasetRegistration
 from vqapr.data.execution_table import ExecutionTable
 from vqapr.data.requirement import DataRequirement
 from vqapr.data.source import SourceSpec
-from vqapr.domain.account import AccountMode, AccountSnapshot
+from vqapr.domain.account import AccountMode, AccountSnapshot, CashMode
 from vqapr.domain.identifiers import ModelStateRef, ScheduleId
 from vqapr.domain.memory import ModelMemory, opening_memory
 from vqapr.domain.schedule import ScheduledEvent
@@ -238,6 +238,7 @@ class FrozenRun:
     end: datetime | None = None
     initial_account_snapshot: AccountSnapshot | None = None
     initial_account_mode: AccountMode | None = None
+    initial_account_cash_mode: CashMode = CashMode.FUNDED
     instruments: tuple[str, ...] = ()
     instrument_set: frozenset[str] = field(init=False, repr=False, compare=False)
     requirements: tuple[DataRequirement, ...] = ()
@@ -276,6 +277,11 @@ class FrozenRun:
             "initial_account_snapshot",
             _require_account(self.initial_account_snapshot, self.initial_account_mode, "frozen"),
         )
+        if (
+            self.initial_account_cash_mode is not CashMode.FUNDED
+            and self.initial_account_snapshot is None
+        ):
+            raise ValueError("a frozen run without an initial account cannot borrow")
         # The uniqueness check needs this set anyway; keeping it turns per-callback universe
         # membership from a linear tuple scan into a hash lookup.
         object.__setattr__(self, "instrument_set", _require_instruments(self.instruments))
@@ -392,6 +398,13 @@ class FrozenRun:
                             (instrument, str(quantity))
                             for instrument, quantity in snapshot.positions.items()
                         ),
+                    )
+                    # Folded only when the account borrows, so every funded run keeps the
+                    # identity it had before `cash_mode` existed (record 289).
+                    + (
+                        ()
+                        if self.initial_account_cash_mode is CashMode.FUNDED
+                        else (self.initial_account_cash_mode.value,)
                     )
                     if snapshot is not None and mode is not None
                     else None

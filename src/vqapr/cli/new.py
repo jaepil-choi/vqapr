@@ -35,7 +35,7 @@ from vqapr.agent.sample.materialize import materialize as materialize_sample
 from vqapr.agent.scaffold import class_name_for, lookback_declaration, render
 from vqapr.cli.envelope import success
 from vqapr.domain.errors import EXISTS, INCOMPLETE, VALUE_INVALID, FailureSource, InputError
-from vqapr.public import AccountMode, Role
+from vqapr.public import AccountMode, CashMode, Role
 from vqapr.workspace.registry import WORKSPACE_DIRECTORY, WORKSPACE_FILENAME, Workspace
 
 
@@ -178,6 +178,9 @@ again: adding or renaming a member updates the template in the same edit.
 `.value` is the lowercase `long_only` a reader must not type here.
 """
 
+_CASH_MODES = " or ".join(mode.name for mode in CashMode)
+"""The cash modes, derived from the enum for the same reason as `_ACCOUNT_MODES` (record 289)."""
+
 _RUN_TEMPLATE = f"""\
 # Run declaration -- register with `vqapr register <this-file.yaml>`, then `vqapr run RUN_ID`
 #
@@ -224,6 +227,10 @@ runs:
       # The venue must permit the direction too: `--profile krx` is long-only and cannot hold a
       # SIGNED book. A costed long/short book needs a venue whose listings set access=SIGNED.
       mode: LONG_ONLY                # {_ACCOUNT_MODES}
+      # cash_mode: BORROWING         # {_CASH_MODES} (default FUNDED). BORROWING lets fills take
+                                     #   cash below zero, so a budget with cash_lower < 0 buys
+                                     #   more than NAV. No interest is charged. Needs a venue that
+                                     #   does not cut buys to cash: `--profile krx` does
       positions: {{}}                  # mapping of instrument -> quantity, or empty
     writes: my-alpha-weights         # the dataset this run puts in the warehouse: its allocation,
                                      #   one row per instrument per decision. Other runs read it

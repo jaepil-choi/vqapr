@@ -691,6 +691,7 @@ def freeze(
         end=end,
         initial_account_snapshot=definition.initial_account_snapshot,
         initial_account_mode=definition.initial_account_mode,
+        initial_account_cash_mode=definition.initial_account_cash_mode,
         instruments=definition.instruments,
         requirements=tuple(requirements),
         datasets=datasets,
